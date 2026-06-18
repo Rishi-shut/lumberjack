@@ -300,12 +300,13 @@ class LocalStorageDB {
 
   public linkAccount(email: string, username: string) {
     const user = this.getUser();
+    const oldName = user.username;
     user.isGuest = false;
     user.email = email;
     user.username = username;
     this.saveUser(user);
     this.logTelemetry('auth', `Account linked for user: ${username} (${email})`);
-    this.syncPlayerToLeaderboard();
+    this.syncPlayerToLeaderboard(oldName);
   }
 
   public updateUsername(newUsername: string) {
@@ -314,7 +315,7 @@ class LocalStorageDB {
     user.username = newUsername;
     this.saveUser(user);
     this.logTelemetry('profile', `Username changed from ${oldName} to ${newUsername}`);
-    this.syncPlayerToLeaderboard();
+    this.syncPlayerToLeaderboard(oldName);
   }
 
   // --- Game Submission Transaction ---
@@ -628,12 +629,19 @@ class LocalStorageDB {
     }
   }
 
-  private syncPlayerToLeaderboard() {
+  private syncPlayerToLeaderboard(oldUsername?: string) {
     const user = this.getUser();
-    const leaderboard = this.getLeaderboard();
+    let leaderboard = this.getLeaderboard();
 
-    // Find if player already in leaderboard
-    const idx = leaderboard.findIndex(entry => entry.username === user.username);
+    // Remove duplicates or old usernames of the player to avoid double ranks
+    leaderboard = leaderboard.filter(entry => {
+      const isMock = ['LumberKing_99', 'CyberSlicer', 'OlafChops', 'SamuraiWood', 'ForestGump', 'YetiChop', 'LaserNinja', 'CocoNut', 'Valkyrie_9', 'MinerMax'].includes(entry.username);
+      if (isMock) return true;
+      if (entry.username === user.username) return false;
+      if (oldUsername && entry.username === oldUsername) return false;
+      return true;
+    });
+
     const playerEntry: LeaderboardEntry = {
       username: user.username,
       country: 'US', // default profile country
@@ -645,11 +653,7 @@ class LocalStorageDB {
       frame: user.equippedFrame
     };
 
-    if (idx >= 0) {
-      leaderboard[idx] = playerEntry;
-    } else {
-      leaderboard.push(playerEntry);
-    }
+    leaderboard.push(playerEntry);
 
     // Re-sort leaderboard by score descending
     leaderboard.sort((a, b) => b.score - a.score);
@@ -707,6 +711,45 @@ class LocalStorageDB {
     localStorage.removeItem(this.key('telemetry'));
     this.initDatabase();
     this.logTelemetry('admin', `Admin RESET all local user and database data to default seed values.`);
+  }
+
+  public syncToCloud(): { success: boolean; timestamp: string } {
+    const user = this.getUser();
+    const shop = this.getShop();
+    const ach = this.getAchievements();
+    const mis = this.getMissions();
+    const settings = this.getSettings();
+    const tele = this.getTelemetry();
+
+    const backup = { user, shop, ach, mis, settings, tele };
+    localStorage.setItem(this.key('cloud_sync_backup'), JSON.stringify(backup));
+    
+    const timeStr = new Date().toLocaleString();
+    this.logTelemetry('sync', `Backed up profile, inventory, settings, and achievements to simulated cloud.`);
+    return { success: true, timestamp: timeStr };
+  }
+
+  public loadFromCloudBackup(): { success: boolean; error?: string } {
+    const backupStr = localStorage.getItem(this.key('cloud_sync_backup'));
+    if (!backupStr) {
+      return { success: false, error: 'No cloud backups found on the server!' };
+    }
+
+    try {
+      const backup = JSON.parse(backupStr);
+      localStorage.setItem(this.key('user'), JSON.stringify(backup.user));
+      localStorage.setItem(this.key('shop'), JSON.stringify(backup.shop));
+      localStorage.setItem(this.key('achievements'), JSON.stringify(backup.ach));
+      localStorage.setItem(this.key('missions'), JSON.stringify(backup.mis));
+      localStorage.setItem(this.key('settings'), JSON.stringify(backup.settings));
+      localStorage.setItem(this.key('telemetry'), JSON.stringify(backup.tele));
+
+      this.logTelemetry('sync', `Restored profile, inventory, settings, and achievements from simulated cloud backup.`);
+      this.syncPlayerToLeaderboard();
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: 'Corrupt backup data!' };
+    }
   }
 }
 
