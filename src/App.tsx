@@ -72,6 +72,7 @@ export const App: React.FC = () => {
   
   // Game Play States
   const [activeWorld, setActiveWorld] = useState<string | null>(null);
+  const [lastActiveWorld, setLastActiveWorld] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<string>('medium');
   const [gameStartTime, setGameStartTime] = useState<number>(0);
   const [showSummary, setShowSummary] = useState(false);
@@ -93,6 +94,42 @@ export const App: React.FC = () => {
     newXpNeeded: number;
   } | null>(null);
 
+  // Custom Alert/Confirm Modal State
+  const [customModal, setCustomModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    isConfirm: boolean;
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    isConfirm: false
+  });
+
+  const showAlert = (title: string, message: string) => {
+    setCustomModal({
+      isOpen: true,
+      title,
+      message,
+      isConfirm: false
+    });
+  };
+
+  const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setCustomModal({
+      isOpen: true,
+      title,
+      message,
+      isConfirm: true,
+      onConfirm: () => {
+        onConfirm();
+        setCustomModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   // Sync state from LocalStorage DB helper
   const refreshState = () => {
     setUser(db.getUser());
@@ -105,6 +142,7 @@ export const App: React.FC = () => {
   // Switch to gameplay
   const handlePlayWorld = (worldId: string) => {
     setActiveWorld(worldId);
+    setLastActiveWorld(worldId);
     setGameStartTime(Date.now());
   };
 
@@ -367,6 +405,8 @@ export const App: React.FC = () => {
             equippedChar={user.equippedCharacter}
             difficulty={difficulty}
             onDifficultyChange={setDifficulty}
+            showAlert={showAlert}
+            showConfirm={showConfirm}
           />
         )}
         {currentPage === 'dashboard' && (
@@ -381,6 +421,8 @@ export const App: React.FC = () => {
             user={user}
             shopItems={shopItems}
             onPurchaseComplete={refreshState}
+            showAlert={showAlert}
+            showConfirm={showConfirm}
           />
         )}
         {currentPage === 'missions' && (
@@ -388,6 +430,7 @@ export const App: React.FC = () => {
             user={user}
             missions={missions}
             onMissionClaim={refreshState}
+            showAlert={showAlert}
           />
         )}
         {currentPage === 'leaderboard' && (
@@ -400,12 +443,16 @@ export const App: React.FC = () => {
           <Settings
             user={user}
             onSettingsChange={refreshState}
+            showAlert={showAlert}
+            showConfirm={showConfirm}
           />
         )}
         {currentPage === 'admin' && (
           <Admin
             user={user}
             onAdminChange={refreshState}
+            showAlert={showAlert}
+            showConfirm={showConfirm}
           />
         )}
       </main>
@@ -485,9 +532,53 @@ export const App: React.FC = () => {
               </div>
             )}
 
-            <button className="neon-btn-cyan" style={{ width: '100%' }} onClick={handleCloseSummary}>
-              RETURN TO HUB
-            </button>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+              <button className="neon-btn-magenta" style={{ flex: 1 }} onClick={handleCloseSummary}>
+                RETURN TO HUB
+              </button>
+              {!gameSummary.banned && (
+                <button 
+                  className="neon-btn-cyan" 
+                  style={{ flex: 1 }} 
+                  onClick={() => {
+                    handleCloseSummary();
+                    if (lastActiveWorld) {
+                      handlePlayWorld(lastActiveWorld);
+                    }
+                  }}
+                >
+                  RETRY RUN
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Custom Alert/Confirm Popup Dialog */}
+      {customModal.isOpen && (
+        <div className="custom-modal-overlay">
+          <div className="custom-modal-container">
+            <h3 className="custom-modal-title">{customModal.title}</h3>
+            <p className="custom-modal-message">{customModal.message}</p>
+            <div className="custom-modal-actions">
+              {customModal.isConfirm ? (
+                <>
+                  <button className="neon-btn-magenta" onClick={() => setCustomModal(prev => ({ ...prev, isOpen: false }))}>
+                    CANCEL
+                  </button>
+                  <button className="neon-btn-cyan" onClick={() => {
+                    if (customModal.onConfirm) customModal.onConfirm();
+                  }}>
+                    CONFIRM
+                  </button>
+                </>
+              ) : (
+                <button className="neon-btn-cyan" style={{ padding: '12px 36px' }} onClick={() => setCustomModal(prev => ({ ...prev, isOpen: false }))}>
+                  OK
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

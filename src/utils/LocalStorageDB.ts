@@ -115,7 +115,7 @@ const DEFAULT_SHOP_ITEMS: ShopItem[] = [
   { id: 'world_forest', name: 'Pine Forest', description: 'A peaceful woodland setting.', type: 'world', cost: 0, currency: 'coins', unlocked: true, rarity: 'common' },
   { id: 'world_city', name: 'Metro Heights', description: 'Chop down steel girders and balconies.', type: 'world', cost: 800, currency: 'coins', unlocked: false, rarity: 'rare' },
   { id: 'world_ice', name: 'Glacial Spires', description: 'Chop slippery pillars of pure ice.', type: 'world', cost: 1500, currency: 'coins', unlocked: false, rarity: 'rare' },
-  { id: 'world_cyber', name: 'Neon Grid', description: 'Chop down central server cores in cyberspace.', type: 'world', cost: 3000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'world_cyber', name: 'Vector Core', description: 'Chop down central server cores in cyberspace.', type: 'world', cost: 3000, currency: 'coins', unlocked: false, rarity: 'epic' },
   { id: 'world_volcano', name: 'Magma Core', description: 'Chop volcanic magma crystals beside lava.', type: 'world', cost: 5000, currency: 'coins', unlocked: false, rarity: 'legendary' },
 ];
 

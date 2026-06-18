@@ -354,7 +354,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
                      difficulty === 'hard' ? 20.0 :
                      difficulty === 'extreme' ? 15.0 :
                      difficulty === 'nightmare' ? 10.0 :
-                     difficulty === 'impossible' ? 5.0 : 30.0;
+                     difficulty === 'impossible' ? 8.0 : 30.0;
 
   // Game Variables Ref (to avoid closures in animation frame)
   const stateRef = useRef({
@@ -384,6 +384,24 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     lastTime: 0,
     keys: {} as Record<string, boolean>,
     obstacleBuffer: 0, // spacing tracker for branches
+    trailFade: 0,
+    trailSide: 'left' as 'left' | 'right',
+    bgSquirrelY: 350,
+    bgSquirrelDir: 1,
+    bgUfoX: -100,
+    bgUfoY: 120,
+    bgHeroX: -200,
+    bgHeroY: 160,
+    bgCatEyeOffset: 0,
+    bgCatEyeTimer: 0,
+    bgYetiFrame: 0,
+    bgYetiTimer: 0,
+    bgSnowballX: -150,
+    bgPacmanX: -120,
+    bgGhostX: -70,
+    bgLavaMonsterY: 0,
+    bgLavaMonsterTimer: 0,
+    bgMarshmallowY: 0,
   });
 
   // World configs
@@ -413,12 +431,12 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
         };
       case 'world_cyber':
         return {
-          bgColor: '#08020f',
-          gridColor: '#1a052e',
-          treeColor: '#00f0ff',
-          branchColor: '#ff00ff',
-          accentColor: '#39ff14',
-          textColor: '#39ff14',
+          bgColor: '#111317',
+          gridColor: '#181b22',
+          treeColor: '#3e4654',
+          branchColor: '#5c6475',
+          accentColor: '#d28c38',
+          textColor: '#d28c38',
           blockType: 'cyber',
           weather: 'matrix'
         };
@@ -476,8 +494,8 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     if (difficulty === 'easy') { minSpacing = 3; obstacleProb = 0.3; }
     else if (difficulty === 'hard') { minSpacing = 1; obstacleProb = 0.55; }
     else if (difficulty === 'extreme') { minSpacing = 1; obstacleProb = 0.65; }
-    else if (difficulty === 'nightmare') { minSpacing = 0; obstacleProb = 0.70; }
-    else if (difficulty === 'impossible') { minSpacing = 0; obstacleProb = 0.80; }
+    else if (difficulty === 'nightmare') { minSpacing = 1; obstacleProb = 0.70; }
+    else if (difficulty === 'impossible') { minSpacing = 1; obstacleProb = 0.75; }
 
     const state = stateRef.current;
 
@@ -526,6 +544,8 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     state.playerSide = side;
     state.isChopping = true;
     state.chopAnimTime = 0.08; // 80ms animation frame
+    state.trailFade = 1.0;
+    state.trailSide = side;
 
     // Get lowest block
     const lowestBlock = state.blocks[0];
@@ -715,7 +735,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     sound.stopMusic();
     
     const state = stateRef.current;
-    state.deathTimer = 2.0; // 2 seconds delay
+    state.deathTimer = 0.5; // 0.5 seconds delay
     state.combo = 0;
     state.comboLevel = 0;
 
@@ -830,8 +850,8 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       if (difficulty === 'easy') decayMultiplier = 0.6;
       else if (difficulty === 'hard') decayMultiplier = 1.4;
       else if (difficulty === 'extreme') decayMultiplier = 1.8;
-      else if (difficulty === 'nightmare') decayMultiplier = 2.4;
-      else if (difficulty === 'impossible') decayMultiplier = 3.0;
+      else if (difficulty === 'nightmare') decayMultiplier = 2.0;
+      else if (difficulty === 'impossible') decayMultiplier = 2.4;
 
       decayMultiplier *= (1.0 + (state.score * 0.003));
       state.timeRemaining -= dt * decayMultiplier;
@@ -912,6 +932,63 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
         // Stop and call React Game Over callback
         onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected);
       }
+    }
+
+    // Slashing trail fade decay
+    if (state.trailFade > 0) {
+      state.trailFade -= dt * 4;
+      if (state.trailFade < 0) state.trailFade = 0;
+    }
+
+    // Background animation updates
+    const canvas = canvasRef.current;
+    if (canvas) {
+      // 1. Forest squirrel & UFO
+      state.bgSquirrelY += dt * 25 * state.bgSquirrelDir;
+      if (state.bgSquirrelY > 520 || state.bgSquirrelY < 180) {
+        state.bgSquirrelDir *= -1;
+      }
+      state.bgUfoX += dt * 45;
+      if (state.bgUfoX > canvas.width + 120) {
+        state.bgUfoX = -120;
+        state.bgUfoY = 80 + Math.random() * 100;
+      }
+
+      // 2. City superhero & cat eyes
+      state.bgHeroX += dt * 160;
+      if (state.bgHeroX > canvas.width + 200) {
+        state.bgHeroX = -200;
+        state.bgHeroY = 100 + Math.random() * 120;
+      }
+      state.bgCatEyeTimer += dt;
+      if (state.bgCatEyeTimer > 1.2) {
+        state.bgCatEyeOffset = state.bgCatEyeOffset === 0 ? 4 : 0;
+        state.bgCatEyeTimer = 0;
+      }
+
+      // 3. Ice Yeti & snowball
+      state.bgYetiTimer += dt;
+      if (state.bgYetiTimer > 0.45) {
+        state.bgYetiFrame = (state.bgYetiFrame + 1) % 2;
+        state.bgYetiTimer = 0;
+      }
+      state.bgSnowballX += dt * 70;
+      if (state.bgSnowballX > canvas.width + 150) {
+        state.bgSnowballX = -150;
+      }
+
+      // 4. Cyber PAC-MAN & Ghost
+      state.bgPacmanX += dt * 95;
+      state.bgGhostX += dt * 95;
+      if (state.bgPacmanX > canvas.width + 120) {
+        state.bgPacmanX = -120;
+        state.bgGhostX = -70;
+      }
+
+      // 5. Volcano Monster & Marshmallow
+      state.bgLavaMonsterTimer += dt;
+      state.bgLavaMonsterY = Math.sin(state.bgLavaMonsterTimer * 3) * 12;
+      state.bgMarshmallowY = Math.sin(Date.now() / 250) * 8;
     }
 
     state.bgScroll += dt * 5; // parallax slow background drift
@@ -1073,7 +1150,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
 
     // Grid lines for Cyber
     if (config.blockType === 'cyber') {
-      ctx.strokeStyle = 'rgba(57, 255, 20, 0.05)';
+      ctx.strokeStyle = 'rgba(210, 140, 56, 0.08)';
       ctx.lineWidth = 2;
       const gridSpacing = 40;
       for (let x = 0; x < canvas.width; x += gridSpacing) {
@@ -1110,7 +1187,48 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.lineTo(canvas.width * 0.8, canvas.height - 250);
       ctx.lineTo(canvas.width + 100, canvas.height);
       ctx.fill();
-    } else if (config.blockType === 'city') {
+
+      // Bizarre Squirrel on tree trunk
+      ctx.fillStyle = '#8B5A2B';
+      ctx.fillRect(45, state.bgSquirrelY, 8, 14); // body
+      ctx.fillStyle = '#A05A2C';
+      ctx.fillRect(44 + (state.bgSquirrelDir > 0 ? 4 : -2), state.bgSquirrelY - 6, 7, 7); // head
+      ctx.fillStyle = '#5C4033';
+      ctx.fillRect(40, state.bgSquirrelY + 5, 5, 12); // tail
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(48 + (state.bgSquirrelDir > 0 ? 1 : -4), state.bgSquirrelY - 4, 1.5, 1.5); // eye
+
+      // UFO Beaming sheep
+      ctx.fillStyle = '#9ca3af';
+      ctx.beginPath();
+      ctx.ellipse(state.bgUfoX, state.bgUfoY, 24, 9, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#4b5563';
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.45)';
+      ctx.beginPath();
+      ctx.arc(state.bgUfoX, state.bgUfoY - 3, 8, Math.PI, 0);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255, 255, 100, 0.16)';
+      ctx.beginPath();
+      ctx.moveTo(state.bgUfoX - 10, state.bgUfoY + 4);
+      ctx.lineTo(state.bgUfoX - 35, state.bgUfoY + 120);
+      ctx.lineTo(state.bgUfoX + 35, state.bgUfoY + 120);
+      ctx.lineTo(state.bgUfoX + 10, state.bgUfoY + 4);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      const sheepY = state.bgUfoY + 40 + Math.sin(Date.now() / 250) * 12;
+      ctx.fillRect(state.bgUfoX - 6, sheepY, 12, 8); // body
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(state.bgUfoX + 2, sheepY - 2, 4, 4); // head
+      ctx.fillRect(state.bgUfoX - 5, sheepY + 8, 2, 3); // legs
+      ctx.fillRect(state.bgUfoX + 3, sheepY + 8, 2, 3);
+    } 
+    else if (config.blockType === 'city') {
       // Draw dark skyline
       ctx.fillStyle = '#111625';
       const buildingWidth = 80;
@@ -1127,7 +1245,158 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
         }
         ctx.fillStyle = '#111625';
       }
-    } else if (config.blockType === 'volcano') {
+
+      // Flying superhero
+      ctx.fillStyle = '#ff3300'; // cape
+      ctx.beginPath();
+      ctx.moveTo(state.bgHeroX - 18, state.bgHeroY + 2);
+      ctx.lineTo(state.bgHeroX - 6, state.bgHeroY - 5);
+      ctx.lineTo(state.bgHeroX - 6, state.bgHeroY + 9);
+      ctx.fill();
+
+      ctx.fillStyle = '#0066ff'; // suit
+      ctx.fillRect(state.bgHeroX - 6, state.bgHeroY - 3, 18, 7);
+      ctx.fillStyle = '#ffcc99'; // head
+      ctx.beginPath();
+      ctx.arc(state.bgHeroX + 15, state.bgHeroY, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Funny Cat Billboard
+      const billX = canvas.width - 130;
+      const billY = canvas.height - 240;
+      ctx.fillStyle = '#374151'; // frame
+      ctx.fillRect(billX, billY, 80, 56);
+      ctx.fillRect(billX + 36, billY + 56, 8, 40); // stand
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(billX, billY, 80, 56);
+
+      ctx.fillStyle = '#1f2937'; // inner board
+      ctx.fillRect(billX + 4, billY + 4, 72, 48);
+
+      ctx.fillStyle = '#f97316'; // cat face
+      ctx.beginPath();
+      ctx.arc(billX + 40, billY + 30, 16, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath(); // cat ears
+      ctx.moveTo(billX + 26, billY + 20); ctx.lineTo(billX + 22, billY + 10); ctx.lineTo(billX + 32, billY + 18);
+      ctx.moveTo(billX + 54, billY + 20); ctx.lineTo(billX + 58, billY + 10); ctx.lineTo(billX + 48, billY + 18);
+      ctx.fill();
+
+      ctx.fillStyle = '#facc15'; // yellow eyes
+      ctx.beginPath();
+      ctx.arc(billX + 34, billY + 28, 4.5, 0, Math.PI * 2);
+      ctx.arc(billX + 46, billY + 28, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#000000'; // shifting pupils
+      ctx.fillRect(billX + 33 + state.bgCatEyeOffset/2, billY + 26, 2, 4);
+      ctx.fillRect(billX + 45 + state.bgCatEyeOffset/2, billY + 26, 2, 4);
+    } 
+    else if (config.blockType === 'ice') {
+      // Background icebergs
+      ctx.fillStyle = '#bde0fe';
+      ctx.beginPath();
+      ctx.moveTo(-50, canvas.height);
+      ctx.lineTo(canvas.width * 0.25, canvas.height - 180);
+      ctx.lineTo(canvas.width * 0.6, canvas.height);
+      ctx.fill();
+
+      ctx.fillStyle = '#e0f2fe';
+      ctx.beginPath();
+      ctx.moveTo(canvas.width * 0.45, canvas.height);
+      ctx.lineTo(canvas.width * 0.75, canvas.height - 220);
+      ctx.lineTo(canvas.width + 50, canvas.height);
+      ctx.fill();
+
+      // yeti dancing
+      const yetiX = 60;
+      const yetiY = canvas.height - 130;
+      ctx.fillStyle = '#f8fafc'; // white fur
+      ctx.beginPath();
+      ctx.arc(yetiX, yetiY, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#93c5fd'; // blue face
+      ctx.beginPath();
+      ctx.arc(yetiX, yetiY - 6, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000000'; // eyes
+      ctx.fillRect(yetiX - 3, yetiY - 8, 1.5, 1.5);
+      ctx.fillRect(yetiX + 1.5, yetiY - 8, 1.5, 1.5);
+      ctx.fillStyle = '#ef4444'; // red mouth
+      ctx.fillRect(yetiX - 2, yetiY - 3, 4, 1.5);
+
+      ctx.strokeStyle = '#f8fafc'; // waving yeti arms
+      ctx.lineWidth = 5.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      if (state.bgYetiFrame === 0) {
+        ctx.moveTo(yetiX - 20, yetiY);
+        ctx.lineTo(yetiX - 32, yetiY - 20);
+        ctx.moveTo(yetiX + 20, yetiY);
+        ctx.lineTo(yetiX + 32, yetiY - 20);
+      } else {
+        ctx.moveTo(yetiX - 20, yetiY);
+        ctx.lineTo(yetiX - 32, yetiY + 12);
+        ctx.moveTo(yetiX + 20, yetiY);
+        ctx.lineTo(yetiX + 32, yetiY + 12);
+      }
+      ctx.stroke();
+
+      // Rolling snowball
+      ctx.fillStyle = '#f1f5f9';
+      ctx.beginPath();
+      ctx.arc(state.bgSnowballX, canvas.height - 110, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // running penguin
+      const pengX = state.bgSnowballX + 40;
+      ctx.fillStyle = '#0f172a'; // black body
+      ctx.fillRect(pengX, canvas.height - 116, 11, 15);
+      ctx.fillStyle = '#ffffff'; // white belly
+      ctx.fillRect(pengX + 2, canvas.height - 112, 7, 9);
+      ctx.fillStyle = '#f97316'; // orange beak
+      ctx.fillRect(pengX + 8, canvas.height - 114, 4, 2.5);
+    }
+    else if (config.blockType === 'cyber') {
+      // PAC-MAN chasing Red Ghost
+      const pacY = 160;
+      ctx.fillStyle = '#ef4444'; // Red Ghost
+      ctx.fillRect(state.bgGhostX - 9, pacY - 9, 18, 15);
+      ctx.beginPath(); ctx.arc(state.bgGhostX, pacY - 9, 9, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#ffffff'; // eyes
+      ctx.fillRect(state.bgGhostX - 5, pacY - 11, 3, 3);
+      ctx.fillRect(state.bgGhostX + 2, pacY - 11, 3, 3);
+      ctx.fillStyle = '#0000ff';
+      ctx.fillRect(state.bgGhostX - 4, pacY - 10, 1.5, 1.5);
+      ctx.fillRect(state.bgGhostX + 3, pacY - 10, 1.5, 1.5);
+
+      ctx.fillStyle = '#eab308'; // Pacman yellow
+      ctx.beginPath();
+      const mouthOpen = (Math.floor(Date.now() / 120) % 2 === 0);
+      const startAngle = mouthOpen ? 0.2 * Math.PI : 0;
+      const endAngle = mouthOpen ? 1.8 * Math.PI : 2 * Math.PI;
+      ctx.arc(state.bgPacmanX, pacY, 13, startAngle, endAngle);
+      ctx.lineTo(state.bgPacmanX, pacY);
+      ctx.closePath();
+      ctx.fill();
+
+      // 404 block
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(canvas.width - 180, 80, 120, 50);
+      ctx.fillRect(canvas.width - 180, 80, 120, 50);
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.fillText('404 WOOD', canvas.width - 170, 102);
+      ctx.fillText('NOT FOUND', canvas.width - 170, 116);
+    }
+    else if (config.blockType === 'volcano') {
       // Volcano mountains with lava glows
       ctx.fillStyle = '#140800';
       ctx.beginPath();
@@ -1144,6 +1413,49 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.lineTo(canvas.width * 0.5, canvas.height);
       ctx.lineTo(canvas.width * 0.45, canvas.height);
       ctx.fill();
+
+      // Lava monster rising
+      const monstX = 100;
+      const monstY = canvas.height - 100 + state.bgLavaMonsterY;
+      ctx.fillStyle = '#d946ef'; // Lava monster magenta purple
+      ctx.beginPath();
+      ctx.arc(monstX, monstY, 26, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(monstX - 26, monstY, 52, 45);
+
+      ctx.fillStyle = '#facc15'; // eyes
+      ctx.beginPath();
+      ctx.arc(monstX - 10, monstY - 5, 5, 0, Math.PI * 2);
+      ctx.arc(monstX + 10, monstY - 5, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(monstX - 11, monstY - 6, 2, 2);
+      ctx.fillRect(monstX + 9, monstY - 6, 2, 2);
+
+      ctx.strokeStyle = '#d946ef'; // waving arms
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(monstX - 22, monstY + 12);
+      ctx.lineTo(monstX - 38, monstY - 10 + Math.sin(Date.now() / 150) * 10);
+      ctx.moveTo(monstX + 22, monstY + 12);
+      ctx.lineTo(monstX + 38, monstY - 10 - Math.sin(Date.now() / 150) * 10);
+      ctx.stroke();
+
+      // Marshmallow with sunglasses floating
+      const marshX = canvas.width - 120;
+      const marshY = canvas.height - 90 + state.bgMarshmallowY;
+      ctx.fillStyle = '#ffffff'; // marshmallow body
+      ctx.fillRect(marshX - 12, marshY - 16, 24, 25);
+      ctx.strokeStyle = '#7c2d12'; // toasted border
+      ctx.lineWidth = 2;
+      ctx.strokeRect(marshX - 12, marshY - 16, 24, 25);
+
+      ctx.fillStyle = '#000000'; // sunglasses
+      ctx.fillRect(marshX - 9, marshY - 11, 8, 4);
+      ctx.fillRect(marshX + 2, marshY - 11, 8, 4);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(marshX - 9, marshY - 11); ctx.lineTo(marshX + 10, marshY - 11); ctx.stroke();
     }
   };
 
@@ -1288,62 +1600,146 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
 
   const drawObstacle = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, side: 'left' | 'right') => {
     ctx.save();
-    ctx.fillStyle = config.branchColor;
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(x, y, w, h);
-
+    
     if (config.blockType === 'forest') {
-      // Branch leaves
-      ctx.fillStyle = '#3a5f3d';
-      if (side === 'left') {
-        ctx.beginPath();
-        ctx.arc(x, y + h / 2, 25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      } else {
-        ctx.beginPath();
-        ctx.arc(x + w, y + h / 2, 25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      }
-    } else if (config.blockType === 'city') {
-      // Metal support beam truss
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      // Wood textured branch
+      ctx.fillStyle = '#8B5A2B';
+      ctx.fillRect(x, y + 4, w, h - 8);
+      // Wood details (shading lines)
+      ctx.fillStyle = '#5C4033';
+      ctx.fillRect(x, y + 6, w, 2);
+      ctx.fillRect(x, y + h - 10, w, 2);
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y + 4, w, h - 8);
+
+      // Leaves clusters
+      ctx.fillStyle = '#2e5c32';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      const leafX = side === 'left' ? x - 5 : x + w + 5;
+      
+      // Draw 3 overlapping leaf circles for depth
+      ctx.beginPath(); ctx.arc(leafX, y + h/2 - 12, 18, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(leafX + (side==='left' ? -10 : 10), y + h/2 + 6, 16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#47854d'; // lighter green highlight
+      ctx.beginPath(); ctx.arc(leafX, y + h/2, 20, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    } 
+    else if (config.blockType === 'city') {
+      // Metal support beam girder
+      ctx.fillStyle = '#5a6375';
+      ctx.fillRect(x, y + 2, w, h - 4);
+      ctx.strokeStyle = '#2d3340';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(x, y + 2, w, h - 4);
+
+      // Girder truss cross lines
+      ctx.strokeStyle = '#3e4654';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + w, y + h);
-      ctx.moveTo(x + w, y);
-      ctx.lineTo(x, y + h);
+      ctx.moveTo(x, y + 2);
+      ctx.lineTo(x + w, y + h - 2);
+      ctx.moveTo(x + w, y + 2);
+      ctx.lineTo(x, y + h - 2);
       ctx.stroke();
-    } else if (config.blockType === 'cyber') {
-      // Glowing neon laser obstacle
-      ctx.fillStyle = '#ff00ff';
-      ctx.shadowColor = '#ff00ff';
-      ctx.shadowBlur = 15;
-      ctx.fillRect(x, y + 5, w, 10);
-      // warning sign
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 8px sans-serif';
-      ctx.fillText('⚡ DANGER', x + w / 2 - 25, y + 13);
-    } else if (config.blockType === 'volcano') {
-      // Molten crystal spikes
-      ctx.fillStyle = '#ff3300';
+
+      // Rivets (small circles)
+      ctx.fillStyle = '#1f242e';
+      ctx.beginPath();
+      ctx.arc(x + 10, y + h/2, 3, 0, Math.PI*2);
+      ctx.arc(x + w - 10, y + h/2, 3, 0, Math.PI*2);
+      ctx.fill();
+    } 
+    else if (config.blockType === 'cyber') {
+      // Cyber circuit conduit with black/yellow warning stripes (No neon glows!)
+      ctx.fillStyle = '#3a414d';
+      ctx.fillRect(x, y + 3, w, h - 6);
+      ctx.strokeStyle = '#1d2127';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y + 3, w, h - 6);
+
+      // Draw hazard stripes
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x + 2, y + 4, w - 4, h - 8);
+      ctx.clip();
+      
+      ctx.strokeStyle = '#e5a93b'; // Amber yellow hazard lines
+      ctx.lineWidth = 6;
+      for (let offset = -20; offset < w + 20; offset += 16) {
+        ctx.beginPath();
+        ctx.moveTo(x + offset, y);
+        ctx.lineTo(x + offset + 12, y + h);
+        ctx.stroke();
+      }
+      ctx.restore();
+    } 
+    else if (config.blockType === 'volcano') {
+      // Jagged volcanic obsidian crystal spike with glowing magma veins
+      ctx.fillStyle = '#1c1c1f'; // dark obsidian grey
       ctx.beginPath();
       if (side === 'left') {
         ctx.moveTo(x + w, y);
-        ctx.lineTo(x, y + h / 2);
+        ctx.lineTo(x + 10, y + 4);
+        ctx.lineTo(x, y + h/2);
+        ctx.lineTo(x + 10, y + h - 4);
         ctx.lineTo(x + w, y + h);
       } else {
         ctx.moveTo(x, y);
-        ctx.lineTo(x + w, y + h / 2);
+        ctx.lineTo(x + w - 10, y + 4);
+        ctx.lineTo(x + w, y + h/2);
+        ctx.lineTo(x + w - 10, y + h - 4);
         ctx.lineTo(x, y + h);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Lava magma cracks inside spike
+      ctx.strokeStyle = '#ff4500';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      if (side === 'left') {
+        ctx.moveTo(x + w - 10, y + h/2);
+        ctx.lineTo(x + w/2, y + h/2 - 4);
+        ctx.lineTo(x + 15, y + h/2 + 2);
+      } else {
+        ctx.moveTo(x + 10, y + h/2);
+        ctx.lineTo(x + w/2, y + h/2 - 4);
+        ctx.lineTo(x + w - 15, y + h/2 + 2);
+      }
+      ctx.stroke();
+    } 
+    else if (config.blockType === 'ice') {
+      // Frosted light blue icy branch with hanging icicles
+      ctx.fillStyle = '#a5f3fc';
+      ctx.fillRect(x, y + 2, w, h - 8);
+      ctx.strokeStyle = '#0891b2';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y + 2, w, h - 8);
+
+      // Icicles hanging down
+      ctx.fillStyle = '#e0f2fe';
+      ctx.beginPath();
+      for (let offset = 10; offset < w; offset += 18) {
+        ctx.moveTo(x + offset, y + h - 6);
+        ctx.lineTo(x + offset + 4, y + h + 8);
+        ctx.lineTo(x + offset + 8, y + h - 6);
       }
       ctx.fill();
       ctx.stroke();
+    } 
+    else {
+      // Fallback
+      ctx.fillStyle = config.branchColor;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
     }
+    
     ctx.restore();
   };
 
@@ -1462,6 +1858,55 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     }
 
     drawPixelSprite(ctx, px, py + bounceY, frame, pSize);
+
+    // Draw swing trail if active
+    if (state.trailFade > 0 && trailId !== 'trail_none') {
+      ctx.save();
+      const pivotX = px + 25;
+      const pivotY = py + 25 + bounceY;
+      const startAngle = -Math.PI / 4;
+      const endAngle = Math.PI / 2.2;
+      
+      let strokeStyle: string | CanvasGradient = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = state.trailFade * 0.7;
+      
+      if (trailId === 'trail_fire') {
+        const grad = ctx.createRadialGradient(pivotX, pivotY, 20, pivotX, pivotY, 65);
+        grad.addColorStop(0, '#ffa500');
+        grad.addColorStop(0.5, '#ff4500');
+        grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        strokeStyle = grad;
+        ctx.shadowColor = '#ff4500';
+        ctx.shadowBlur = 12;
+        ctx.lineWidth = 18;
+      } else if (trailId === 'trail_spark') {
+        strokeStyle = '#00ffff';
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 16;
+        ctx.lineWidth = 8;
+      } else if (trailId === 'trail_rainbow') {
+        const grad = ctx.createLinearGradient(pivotX - 30, pivotY - 30, pivotX + 30, pivotY + 30);
+        grad.addColorStop(0, '#ff0000');
+        grad.addColorStop(0.2, '#ff7f00');
+        grad.addColorStop(0.4, '#ffff00');
+        grad.addColorStop(0.6, '#00ff00');
+        grad.addColorStop(0.8, '#0000ff');
+        grad.addColorStop(1, '#8b00ff');
+        strokeStyle = grad;
+        ctx.lineWidth = 15;
+      } else if (trailId === 'trail_dust') {
+        strokeStyle = '#a05a2c';
+        ctx.lineWidth = 16;
+      }
+      
+      ctx.strokeStyle = strokeStyle;
+      ctx.beginPath();
+      ctx.arc(pivotX, pivotY, 45, startAngle, endAngle, false);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // Draw Weapon
     const weapon = WEAPONS[weaponId] || WEAPONS.weap_axe_wood;
@@ -1583,7 +2028,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
         comboColor = '#ff8c00'; // Orange fire
         animScale = 1.1 + Math.sin(Date.now() / 100) * 0.05;
       } else if (state.comboLevel === 2) {
-        comboColor = '#00ffff'; // Electric Neon Cyan
+        comboColor = '#ffcc00'; // Sparkling Gold
         animScale = 1.2 + Math.sin(Date.now() / 50) * 0.08;
       }
 

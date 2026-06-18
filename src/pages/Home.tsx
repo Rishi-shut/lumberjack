@@ -10,6 +10,8 @@ interface HomeProps {
   equippedChar: string;
   difficulty: string;
   onDifficultyChange: (diff: string) => void;
+  showAlert: (title: string, message: string) => void;
+  showConfirm: (title: string, message: string, onConfirm: () => void) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -19,7 +21,9 @@ export const Home: React.FC<HomeProps> = ({
   onPurchaseComplete,
   equippedChar,
   difficulty,
-  onDifficultyChange
+  onDifficultyChange,
+  showAlert,
+  showConfirm
 }) => {
   const shopItems = db.getShop();
   const worlds = shopItems.filter(item => item.type === 'world');
@@ -29,16 +33,19 @@ export const Home: React.FC<HomeProps> = ({
       onPlayWorld(world.id);
     } else {
       // Prompt buy
-      const confirmBuy = window.confirm(`Unlock ${world.name} for ${world.cost} ${world.currency}?`);
-      if (confirmBuy) {
-        const res = db.purchaseShopItem(world.id);
-        if (res.success) {
-          alert(`${world.name} unlocked!`);
-          onPurchaseComplete();
-        } else {
-          alert(`Unlock failed: ${res.reason}`);
+      showConfirm(
+        'Unlock World',
+        `Unlock ${world.name} for ${world.cost} ${world.currency}?`,
+        () => {
+          const res = db.purchaseShopItem(world.id);
+          if (res.success) {
+            showAlert('World Unlocked', `${world.name} unlocked!`);
+            onPurchaseComplete();
+          } else {
+            showAlert('Unlock Failed', `Unlock failed: ${res.reason}`);
+          }
         }
-      }
+      );
     }
   };
 

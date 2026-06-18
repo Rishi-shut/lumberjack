@@ -5,11 +5,15 @@ import { db, UserProfile } from '../utils/LocalStorageDB';
 interface AdminProps {
   user: UserProfile;
   onAdminChange: () => void;
+  showAlert: (title: string, message: string) => void;
+  showConfirm: (title: string, message: string, onConfirm: () => void) => void;
 }
 
 export const Admin: React.FC<AdminProps> = ({
   user,
   onAdminChange,
+  showAlert,
+  showConfirm
 }) => {
   const stats = db.getAdminStats();
   const [grantType, setGrantType] = useState<'coins' | 'diamonds'>('coins');
@@ -17,26 +21,32 @@ export const Admin: React.FC<AdminProps> = ({
 
   const handleBanToggle = () => {
     const nextBan = !user.isBanned;
-    const confirmAction = window.confirm(`Are you sure you want to ${nextBan ? 'BAN' : 'UNBAN'} the player ${user.username}?`);
-    if (confirmAction) {
-      db.adminBanUser(nextBan);
-      onAdminChange();
-    }
+    showConfirm(
+      'Confirm Action',
+      `Are you sure you want to ${nextBan ? 'BAN' : 'UNBAN'} the player ${user.username}?`,
+      () => {
+        db.adminBanUser(nextBan);
+        onAdminChange();
+      }
+    );
   };
 
   const handleGrantCurrency = () => {
     db.adminGrantCurrency(grantType, grantAmount);
-    alert(`Successfully granted ${grantAmount} ${grantType} to ${user.username}!`);
+    showAlert('Success', `Successfully granted ${grantAmount} ${grantType} to ${user.username}!`);
     onAdminChange();
   };
 
   const handleResetData = () => {
-    const confirmAction = window.confirm("WARNING: This will completely wipe all local storage data, including your high scores, inventory, and coins, and restore initial seed data. Do you want to proceed?");
-    if (confirmAction) {
-      db.adminResetAllData();
-      alert("Database restored to initial seed configuration!");
-      onAdminChange();
-    }
+    showConfirm(
+      'WARNING: WIPE DATA',
+      "This will completely wipe all local storage data, including your high scores, inventory, and coins, and restore initial seed data. Do you want to proceed?",
+      () => {
+        db.adminResetAllData();
+        showAlert('Database Restored', "Database restored to initial seed configuration!");
+        onAdminChange();
+      }
+    );
   };
 
   return (

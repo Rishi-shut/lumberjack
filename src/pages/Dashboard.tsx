@@ -30,7 +30,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Badges & Frames options
   const BADGES = ['Chop Icon', 'Star Badge', 'Gold Trophy', 'Cyber Core'];
-  const FRAMES = ['Standard', 'Neon Glow', 'Frozen Crystal', 'Volcanic Ash'];
+  const FRAMES = ['Standard', 'Foliage Glow', 'Frozen Crystal', 'Volcanic Ash'];
 
   const handleEquipProfile = (badge: string, frame: string) => {
     db.equipProfileDetails(badge, frame);

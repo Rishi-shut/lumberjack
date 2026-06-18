@@ -7,12 +7,16 @@ interface ShopProps {
   user: UserProfile;
   shopItems: ShopItem[];
   onPurchaseComplete: () => void;
+  showAlert: (title: string, message: string) => void;
+  showConfirm: (title: string, message: string, onConfirm: () => void) => void;
 }
 
 export const Shop: React.FC<ShopProps> = ({
   user,
   shopItems,
   onPurchaseComplete,
+  showAlert,
+  showConfirm
 }) => {
   const [activeTab, setActiveTab] = useState<'character' | 'weapon' | 'trail' | 'title' | 'chests' | 'season_pass'>('character');
   
@@ -32,25 +36,28 @@ export const Shop: React.FC<ShopProps> = ({
       }
     } else {
       // Buy action
-      const confirmBuy = window.confirm(`Unlock ${item.name} for ${item.cost} ${item.currency}?`);
-      if (confirmBuy) {
-        const res = db.purchaseShopItem(item.id);
-        if (res.success) {
-          sound.playChest();
-          alert(`${item.name} unlocked and added to inventory!`);
-          db.equipItem(item.id, item.type as any);
-          onPurchaseComplete();
-        } else {
-          alert(`Failed to purchase: ${res.reason}`);
+      showConfirm(
+        'Purchase Item',
+        `Unlock ${item.name} for ${item.cost} ${item.currency}?`,
+        () => {
+          const res = db.purchaseShopItem(item.id);
+          if (res.success) {
+            sound.playChest();
+            showAlert('Unlock Success', `${item.name} unlocked and added to inventory!`);
+            db.equipItem(item.id, item.type as any);
+            onPurchaseComplete();
+          } else {
+            showAlert('Purchase Failed', `Failed to purchase: ${res.reason}`);
+          }
         }
-      }
+      );
     }
   };
 
   const handleOpenChest = (chestType: 'mystery' | 'treasure' | 'epic') => {
     let cost = chestType === 'mystery' ? 150 : (chestType === 'treasure' ? 500 : 1500);
     if (user.coins < cost) {
-      alert("Not enough coins to buy this chest!");
+      showAlert('No Funds', 'Not enough coins to buy this chest!');
       return;
     }
 
@@ -75,7 +82,7 @@ export const Shop: React.FC<ShopProps> = ({
         }
         onPurchaseComplete();
       } else {
-        alert(`Failed to open chest: ${result.reason}`);
+        showAlert('Chest Error', `Failed to open chest: ${result.reason}`);
         setOpeningChest(null);
       }
     }, 1200); // 1.2s wiggle and opening delay
@@ -91,14 +98,14 @@ export const Shop: React.FC<ShopProps> = ({
 
   const handleBuyPremiumPass = () => {
     if (user.diamonds < 20) {
-      alert("Not enough diamonds! Earn them by playing or completing daily missions.");
+      showAlert('No Diamonds', 'Not enough diamonds! Earn them by playing or completing daily missions.');
       return;
     }
     
     // Deduct gems via admin/direct hook
     db.adminGrantCurrency('diamonds', -20);
     db.logTelemetry('shop', 'Unlocked Season Pass Premium track.');
-    alert("Season Pass Premium Track Activated!");
+    showAlert('Season Pass Activated', 'Season Pass Premium Track Activated!');
     onPurchaseComplete();
   };
 

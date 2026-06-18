@@ -6,11 +6,15 @@ import { sound } from '../utils/AudioEngine';
 interface SettingsProps {
   user: UserProfile;
   onSettingsChange: () => void;
+  showAlert: (title: string, message: string) => void;
+  showConfirm: (title: string, message: string, onConfirm: () => void) => void;
 }
 
 export const Settings: React.FC<SettingsProps> = ({
   user,
   onSettingsChange,
+  showAlert,
+  showConfirm
 }) => {
   const [settings, setSettings] = useState(db.getSettings());
   const [emailInput, setEmailInput] = useState('');
@@ -69,15 +73,15 @@ export const Settings: React.FC<SettingsProps> = ({
   }, [rebinding, settings]);
 
   const handleLinkAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailInput.trim() || !usernameInput.trim()) {
-      alert('Please fill out all fields.');
-      return;
-    }
-    db.linkAccount(emailInput, usernameInput);
-    alert('Account successfully synchronized with simulated cloud databases!');
-    onSettingsChange();
-  };
+     e.preventDefault();
+     if (!emailInput.trim() || !usernameInput.trim()) {
+       showAlert('Incomplete Fields', 'Please fill out all fields.');
+       return;
+     }
+     db.linkAccount(emailInput, usernameInput);
+     showAlert('Link Success', 'Account successfully synchronized with simulated cloud databases!');
+     onSettingsChange();
+   };
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -242,23 +246,26 @@ export const Settings: React.FC<SettingsProps> = ({
               const res = db.syncToCloud();
               if (res.success) {
                 localStorage.setItem('infinite_chop_cloud_sync_time', res.timestamp);
-                alert('Local game data sync backup completed successfully!');
+                showAlert('Sync Completed', 'Local game data sync backup completed successfully!');
                 onSettingsChange();
               }
             }}>
               BACKUP SAVE TO CLOUD
             </button>
             <button className="neon-btn-magenta" onClick={() => {
-              const confirmAction = window.confirm('Wipe current local data and restore from cloud backup?');
-              if (confirmAction) {
-                const res = db.loadFromCloudBackup();
-                if (res.success) {
-                  alert('Ecosystem data restored successfully from cloud backup!');
-                  onSettingsChange();
-                } else {
-                  alert(`Restore failed: ${res.error}`);
+              showConfirm(
+                'Restore Data',
+                'Wipe current local data and restore from cloud backup?',
+                () => {
+                  const res = db.loadFromCloudBackup();
+                  if (res.success) {
+                    showAlert('Restore Success', 'Ecosystem data restored successfully from cloud backup!');
+                    onSettingsChange();
+                  } else {
+                    showAlert('Restore Failed', `Restore failed: ${res.error}`);
+                  }
                 }
-              }
+              );
             }}>
               RESTORE SAVE FROM CLOUD
             </button>

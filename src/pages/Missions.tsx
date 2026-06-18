@@ -6,12 +6,14 @@ interface MissionsProps {
   user: UserProfile;
   missions: GameMission[];
   onMissionClaim: () => void;
+  showAlert: (title: string, message: string) => void;
 }
 
 export const Missions: React.FC<MissionsProps> = ({
   user,
   missions,
-  onMissionClaim
+  onMissionClaim,
+  showAlert
 }) => {
   const dailyMissions = missions.filter(m => m.type === 'daily');
   const weeklyMissions = missions.filter(m => m.type === 'weekly');
@@ -19,10 +21,10 @@ export const Missions: React.FC<MissionsProps> = ({
   const handleClaim = (missionId: string) => {
     const res = db.claimMissionReward(missionId);
     if (res.success) {
-      alert(`Claimed reward! +🪙 ${res.coins} Coins, +💎 ${res.diamonds} Gems.`);
+      showAlert('Reward Claimed', `Claimed reward! +🪙 ${res.coins} Coins, +💎 ${res.diamonds} Gems.`);
       onMissionClaim();
     } else {
-      alert(`Claim failed: ${res.reason}`);
+      showAlert('Claim Failed', `Claim failed: ${res.reason}`);
     }
   };
 
