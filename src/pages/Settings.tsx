@@ -203,7 +203,7 @@ export const Settings: React.FC<SettingsProps> = ({
         </h3>
 
         {user.isGuest ? (
-          <form onSubmit={handleLinkAccount} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end' }}>
+          <form onSubmit={handleLinkAccount} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', marginBottom: '20px' }}>
             <div style={{ flex: 1, minWidth: '240px' }}>
               <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Synchronize Email</label>
               <input 
@@ -225,7 +225,7 @@ export const Settings: React.FC<SettingsProps> = ({
             </button>
           </form>
         ) : (
-          <div style={{ padding: '16px', background: 'rgba(57,255,20,0.02)', border: '1px solid rgba(57,255,20,0.1)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ padding: '16px', background: 'rgba(57,255,20,0.02)', border: '1px solid rgba(57,255,20,0.1)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div>
               <span style={{ fontSize: '0.75rem', color: 'var(--neon-green)', fontFamily: 'var(--font-retro)' }}>SYNCHRONIZED</span>
               <h4 style={{ fontWeight: 'bold', fontSize: '1.1rem', marginTop: '4px' }}>Linked Username: {user.username}</h4>
@@ -234,6 +234,41 @@ export const Settings: React.FC<SettingsProps> = ({
             <span style={{ fontSize: '2rem' }}>☁️</span>
           </div>
         )}
+
+        <div style={{ padding: '16px', background: 'rgba(0,0,0,0.15)', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+          <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '12px' }}>Simulate Cloud Backup Operations</h4>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+            <button className="neon-btn" onClick={() => {
+              const res = db.syncToCloud();
+              if (res.success) {
+                localStorage.setItem('infinite_chop_cloud_sync_time', res.timestamp);
+                alert('Local game data sync backup completed successfully!');
+                onSettingsChange();
+              }
+            }}>
+              BACKUP SAVE TO CLOUD
+            </button>
+            <button className="neon-btn-magenta" onClick={() => {
+              const confirmAction = window.confirm('Wipe current local data and restore from cloud backup?');
+              if (confirmAction) {
+                const res = db.loadFromCloudBackup();
+                if (res.success) {
+                  alert('Ecosystem data restored successfully from cloud backup!');
+                  onSettingsChange();
+                } else {
+                  alert(`Restore failed: ${res.error}`);
+                }
+              }
+            }}>
+              RESTORE SAVE FROM CLOUD
+            </button>
+            {localStorage.getItem('infinite_chop_cloud_sync_time') && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '10px' }}>
+                Last synced: {localStorage.getItem('infinite_chop_cloud_sync_time')}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
     </div>
