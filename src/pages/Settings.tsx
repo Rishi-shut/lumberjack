@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX, Key, Cloud, Link } from 'lucide-react';
+import { Volume2, VolumeX, Key, Cloud, Link, Sliders } from 'lucide-react';
 import { db, UserProfile } from '../utils/LocalStorageDB';
 import { sound } from '../utils/AudioEngine';
 
@@ -19,11 +19,8 @@ export const Settings: React.FC<SettingsProps> = ({
   const [settings, setSettings] = useState(db.getSettings());
   const [emailInput, setEmailInput] = useState('');
   const [usernameInput, setUsernameInput] = useState(user.username);
-  
-  // Key rebinding state
   const [rebinding, setRebinding] = useState<'left' | 'right' | null>(null);
 
-  // Sync Audio Engine on component mount / state updates
   useEffect(() => {
     sound.setMute(settings.muted);
     sound.setMasterVolume(settings.masterVolume);
@@ -49,7 +46,6 @@ export const Settings: React.FC<SettingsProps> = ({
     setRebinding(action);
   };
 
-  // Listen for rebind keys
   useEffect(() => {
     if (!rebinding) return;
 
@@ -84,40 +80,45 @@ export const Settings: React.FC<SettingsProps> = ({
    };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 12px' }}>
       
-      <div className="grid-2">
-        {/* Audio Mixers */}
-        <div className="game-card">
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '20px', borderBottom: '1px solid var(--panel-border)', paddingBottom: '10px' }}>
-            AUDIO SETTINGS
-          </h3>
+      <div className="grid-2" style={{ gap: '24px' }}>
+        
+        {/* LEFT PAGE: Audio Control Panel (Wood Console) */}
+        <div className="material-wood" style={{ padding: '24px 28px', background: 'linear-gradient(180deg, #322116, #1c130d)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '2px dashed #422a1b', paddingBottom: '12px' }}>
+            <Sliders size={18} style={{ color: 'var(--neon-yellow)' }} />
+            <h3 className="retro-title" style={{ fontSize: '0.85rem', color: 'var(--neon-yellow)', margin: 0 }}>
+              CABIN AUDIO PANEL
+            </h3>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Mute Toggle */}
-            <div className="switch-container">
-              <span style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            
+            {/* Tactile Wood Switch for Mute */}
+            <div className="material-leather" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+              <span style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
                 {settings.muted ? <VolumeX size={18} style={{ color: 'var(--neon-red)' }} /> : <Volume2 size={18} style={{ color: 'var(--neon-green)' }} />}
-                Mute Game Audio
+                MASTER MUTE SWITCH
               </span>
               <button 
-                className={settings.muted ? 'neon-btn-magenta' : 'neon-btn'} 
-                style={{ padding: '6px 16px', fontSize: '0.65rem' }}
+                className={settings.muted ? 'neon-btn-magenta' : 'neon-btn-yellow'} 
+                style={{ padding: '6px 14px', fontSize: '0.65rem', borderWidth: '2px' }}
                 onClick={handleToggleMute}
               >
-                {settings.muted ? 'MUTED' : 'UNMUTED'}
+                {settings.muted ? 'MUTED' : 'ACTIVE'}
               </button>
             </div>
 
-            {/* Sliders */}
+            {/* Carved Volume Sliders */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.85rem' }}>
-                <span>Master Volume</span>
-                <span>{Math.round(settings.masterVolume * 100)}%</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.82rem', fontFamily: 'var(--font-retro)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>MASTER MIX</span>
+                <span style={{ color: 'var(--neon-yellow)' }}>{Math.round(settings.masterVolume * 100)}%</span>
               </div>
               <input 
                 type="range" min="0" max="1" step="0.05"
-                style={{ width: '100%', accentColor: 'var(--neon-cyan)' }}
+                style={{ width: '100%', accentColor: 'var(--neon-yellow)' }}
                 value={settings.masterVolume}
                 onChange={(e) => handleVolumeChange('masterVolume', Number(e.target.value))}
                 disabled={settings.muted}
@@ -125,13 +126,13 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
 
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.85rem' }}>
-                <span>Music Loop Volume</span>
-                <span>{Math.round(settings.musicVolume * 100)}%</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.82rem', fontFamily: 'var(--font-retro)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>MUSIC MUSIC</span>
+                <span style={{ color: 'var(--neon-cyan)' }}>{Math.round(settings.musicVolume * 100)}%</span>
               </div>
               <input 
                 type="range" min="0" max="1" step="0.05"
-                style={{ width: '100%', accentColor: 'var(--neon-magenta)' }}
+                style={{ width: '100%', accentColor: 'var(--neon-cyan)' }}
                 value={settings.musicVolume}
                 onChange={(e) => handleVolumeChange('musicVolume', Number(e.target.value))}
                 disabled={settings.muted}
@@ -139,13 +140,13 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
 
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.85rem' }}>
-                <span>Sound Effects (SFX) Volume</span>
-                <span>{Math.round(settings.sfxVolume * 100)}%</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.82rem', fontFamily: 'var(--font-retro)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>SOUND EFFECTS (SFX)</span>
+                <span style={{ color: 'var(--neon-red)' }}>{Math.round(settings.sfxVolume * 100)}%</span>
               </div>
               <input 
                 type="range" min="0" max="1" step="0.05"
-                style={{ width: '100%', accentColor: 'var(--neon-green)' }}
+                style={{ width: '100%', accentColor: 'var(--neon-red)' }}
                 value={settings.sfxVolume}
                 onChange={(e) => handleVolumeChange('sfxVolume', Number(e.target.value))}
                 disabled={settings.muted}
@@ -154,123 +155,153 @@ export const Settings: React.FC<SettingsProps> = ({
           </div>
         </div>
 
-        {/* Keyboard Controls rebinding */}
-        <div className="game-card">
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '20px', borderBottom: '1px solid var(--panel-border)', paddingBottom: '10px' }}>
-            DESKTOP KEY BINDINGS
-          </h3>
+        {/* RIGHT PAGE: Keyboard Rebinding (Leather Console) */}
+        <div className="material-leather" style={{ padding: '24px 28px', color: '#fbf5f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '2px dashed #352110', paddingBottom: '12px' }}>
+            <Key size={18} style={{ color: 'var(--neon-cyan)' }} />
+            <h3 className="retro-title" style={{ fontSize: '0.85rem', color: 'var(--neon-cyan)', margin: 0 }}>
+              DESKTOP CONTROLS DESK
+            </h3>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {rebinding && (
-              <div style={{ padding: '12px', background: 'rgba(255,0,255,0.05)', border: '1px solid var(--neon-magenta)', borderRadius: '8px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--neon-magenta)' }}>
-                Press any key on your keyboard to assign to Chop {rebinding.toUpperCase()}...
+              <div style={{ padding: '12px', background: 'rgba(0,240,255,0.05)', border: '2px dashed var(--neon-cyan)', borderRadius: '6px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--neon-cyan)', fontFamily: 'var(--font-retro)' }}>
+                Press any keyboard key for Chop {rebinding.toUpperCase()}...
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+            {/* Left Action key rebinder */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1c130d', border: '2px solid #3d2c20', borderRadius: '8px' }}>
               <div>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Chop LEFT Action</h4>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Current Key: <kbd style={{ padding: '2px 6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>{settings.keyLeft}</kbd></p>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0 }}>CHOP LEFT ACTION</h4>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Current: <kbd style={{ padding: '2px 6px', background: '#352110', border: '1px solid #1e130d', borderRadius: '4px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem' }}>{settings.keyLeft.toUpperCase()}</kbd>
+                </p>
               </div>
               <button 
                 className="neon-btn-cyan" 
-                style={{ padding: '6px 12px', fontSize: '0.65rem' }}
+                style={{ padding: '6px 14px', fontSize: '0.65rem', borderWidth: '2px' }}
                 onClick={() => startRebind('left')}
                 disabled={!!rebinding}
               >
-                REBIND
+                ENGRAVE
               </button>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+            {/* Right Action key rebinder */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1c130d', border: '2px solid #3d2c20', borderRadius: '8px' }}>
               <div>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Chop RIGHT Action</h4>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Current Key: <kbd style={{ padding: '2px 6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>{settings.keyRight}</kbd></p>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0 }}>CHOP RIGHT ACTION</h4>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Current: <kbd style={{ padding: '2px 6px', background: '#352110', border: '1px solid #1e130d', borderRadius: '4px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem' }}>{settings.keyRight.toUpperCase()}</kbd>
+                </p>
               </div>
               <button 
                 className="neon-btn-cyan" 
-                style={{ padding: '6px 12px', fontSize: '0.65rem' }}
+                style={{ padding: '6px 14px', fontSize: '0.65rem', borderWidth: '2px' }}
                 onClick={() => startRebind('right')}
                 disabled={!!rebinding}
               >
-                REBIND
+                ENGRAVE
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Cloud Sync Account Linking */}
-      <div className="game-card" style={{ marginTop: '30px' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '20px', borderBottom: '1px solid var(--panel-border)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Cloud size={18} style={{ color: 'var(--neon-cyan)' }} /> CLOUD SYNCHRONIZATION
+      {/* Cloud Sync account binding (Aged Parchment) */}
+      <div 
+        className="material-paper" 
+        style={{ 
+          marginTop: '32px', 
+          padding: '24px 28px',
+          color: '#2b2112',
+          boxShadow: 'inset 0 0 15px rgba(184,142,83,0.15), 0 8px 16px rgba(0,0,0,0.3)'
+        }}
+      >
+        <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '2px solid #e9dcb9', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: '#8c5922', textShadow: 'none' }}>
+          <Cloud size={18} style={{ color: '#8c5922' }} /> CLOUD SYNCHRONIZATION LEDGER
         </h3>
 
         {user.isGuest ? (
           <form onSubmit={handleLinkAccount} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', marginBottom: '20px' }}>
             <div style={{ flex: 1, minWidth: '240px' }}>
-              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Synchronize Email</label>
+              <label style={{ fontSize: '0.78rem', color: '#5c4b3c', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Synchronize Email</label>
               <input 
                 type="email" required placeholder="name@domain.com" className="form-input" 
+                style={{ background: '#f5ecd6', border: '2px solid #e9dcb9', color: '#3b2410', fontSize: '0.85rem' }}
                 value={emailInput} onChange={(e) => setEmailInput(e.target.value)}
               />
             </div>
             
             <div style={{ flex: 1, minWidth: '240px' }}>
-              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Username</label>
+              <label style={{ fontSize: '0.78rem', color: '#5c4b3c', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Challenger Username</label>
               <input 
                 type="text" required placeholder="Lumbermaster" className="form-input" 
+                style={{ background: '#f5ecd6', border: '2px solid #e9dcb9', color: '#3b2410', fontSize: '0.85rem' }}
                 value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)}
               />
             </div>
 
-            <button type="submit" className="neon-btn-cyan" style={{ height: '40px', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Link size={14} /> LINK & BACKUP DATA
+            <button type="submit" className="neon-btn-cyan" style={{ height: '40px', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem' }}>
+              <Link size={14} /> LINK CONTRACT
             </button>
           </form>
         ) : (
-          <div style={{ padding: '16px', background: 'rgba(57,255,20,0.02)', border: '1px solid rgba(57,255,20,0.1)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ padding: '16px', background: '#ebf5eb', border: '2px solid #c2e0c2', borderRadius: '#2b2112', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--neon-green)', fontFamily: 'var(--font-retro)' }}>SYNCHRONIZED</span>
-              <h4 style={{ fontWeight: 'bold', fontSize: '1.1rem', marginTop: '4px' }}>Linked Username: {user.username}</h4>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Backup email: {user.email}</p>
+              <span style={{ fontSize: '0.62rem', color: '#388e3c', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>SYNCHRONIZED CONTRACT</span>
+              <h4 style={{ fontWeight: '900', fontSize: '1.05rem', marginTop: '4px', color: '#3b2410' }}>Linked Hero: {user.username}</h4>
+              <p style={{ fontSize: '0.78rem', color: '#5c4b3c', margin: 0 }}>Backup dispatch email: {user.email}</p>
             </div>
-            <span style={{ fontSize: '2rem' }}>☁️</span>
+            <span style={{ fontSize: '2.5rem' }}>☁️</span>
           </div>
         )}
 
-        <div style={{ padding: '16px', background: 'rgba(0,0,0,0.15)', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
-          <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '12px' }}>Simulate Cloud Backup Operations</h4>
+        {/* Sync telemetry backup */}
+        <div style={{ padding: '18px', background: '#f5ecd6', borderRadius: '8px', border: '2px solid #e9dcb9' }}>
+          <h4 style={{ fontSize: '0.85rem', fontWeight: '850', color: '#3b2410', marginBottom: '12px' }}>Simulate Cloud Backup Operations</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-            <button className="neon-btn" onClick={() => {
-              const res = db.syncToCloud();
-              if (res.success) {
-                localStorage.setItem('infinite_chop_cloud_sync_time', res.timestamp);
-                showAlert('Sync Completed', 'Local game data sync backup completed successfully!');
-                onSettingsChange();
-              }
-            }}>
+            <button 
+              className="neon-btn-yellow"
+              style={{ fontSize: '0.7rem', padding: '8px 18px', borderWidth: '2px' }}
+              onClick={() => {
+                const res = db.syncToCloud();
+                if (res.success) {
+                  localStorage.setItem('infinite_chop_cloud_sync_time', res.timestamp);
+                  showAlert('Sync Completed', 'Local game data sync backup completed successfully!');
+                  onSettingsChange();
+                }
+              }}
+            >
               BACKUP SAVE TO CLOUD
             </button>
-            <button className="neon-btn-magenta" onClick={() => {
-              showConfirm(
-                'Restore Data',
-                'Wipe current local data and restore from cloud backup?',
-                () => {
-                  const res = db.loadFromCloudBackup();
-                  if (res.success) {
-                    showAlert('Restore Success', 'Ecosystem data restored successfully from cloud backup!');
-                    onSettingsChange();
-                  } else {
-                    showAlert('Restore Failed', `Restore failed: ${res.error}`);
+            
+            <button 
+              className="neon-btn-magenta" 
+              style={{ fontSize: '0.7rem', padding: '8px 18px', borderWidth: '2px' }}
+              onClick={() => {
+                showConfirm(
+                  'Restore Data',
+                  'Wipe current local data and restore from cloud backup?',
+                  () => {
+                    const res = db.loadFromCloudBackup();
+                    if (res.success) {
+                      showAlert('Restore Success', 'Ecosystem data restored successfully from cloud backup!');
+                      onSettingsChange();
+                    } else {
+                      showAlert('Restore Failed', `Restore failed: ${res.error}`);
+                    }
                   }
-                }
-              );
-            }}>
+                );
+              }}
+            >
               RESTORE SAVE FROM CLOUD
             </button>
+            
             {localStorage.getItem('infinite_chop_cloud_sync_time') && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '10px' }}>
+              <span style={{ fontSize: '0.75rem', color: '#7c654e', fontStyle: 'italic' }}>
                 Last synced: {localStorage.getItem('infinite_chop_cloud_sync_time')}
               </span>
             )}
@@ -281,4 +312,5 @@ export const Settings: React.FC<SettingsProps> = ({
     </div>
   );
 };
+
 export default Settings;

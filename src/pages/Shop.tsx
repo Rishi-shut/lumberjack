@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Star, RefreshCw, Key } from 'lucide-react';
+import { ShoppingBag, Star, RefreshCw, Key, Award, Shield } from 'lucide-react';
 import { db, ShopItem, UserProfile } from '../utils/LocalStorageDB';
 import { sound } from '../utils/AudioEngine';
 
@@ -29,16 +29,14 @@ export const Shop: React.FC<ShopProps> = ({
 
   const handleAction = (item: ShopItem) => {
     if (item.unlocked) {
-      // Equip action
       const success = db.equipItem(item.id, item.type as any);
       if (success) {
         onPurchaseComplete();
       }
     } else {
-      // Buy action
       showConfirm(
         'Purchase Item',
-        `Unlock ${item.name} for ${item.cost} ${item.currency}?`,
+        `Unlock ${item.name} for ${item.cost} ${item.currency === 'coins' ? 'Coins' : 'Gems'}?`,
         () => {
           const res = db.purchaseShopItem(item.id);
           if (res.success) {
@@ -61,17 +59,14 @@ export const Shop: React.FC<ShopProps> = ({
       return;
     }
 
-    // Start opening animation
     setOpeningChest(chestType);
     setChestReward(null);
     setWiggleClass(true);
 
-    // Play wiggle audio
     sound.playChop('hammer');
 
     setTimeout(() => {
       setWiggleClass(false);
-      // Execute local DB chest opening
       const result = db.openChest(chestType);
       
       if (result.success) {
@@ -85,7 +80,7 @@ export const Shop: React.FC<ShopProps> = ({
         showAlert('Chest Error', `Failed to open chest: ${result.reason}`);
         setOpeningChest(null);
       }
-    }, 1200); // 1.2s wiggle and opening delay
+    }, 1200);
   };
 
   const isEquipped = (item: ShopItem) => {
@@ -102,7 +97,6 @@ export const Shop: React.FC<ShopProps> = ({
       return;
     }
     
-    // Deduct gems via admin/direct hook
     db.adminGrantCurrency('diamonds', -20);
     db.logTelemetry('shop', 'Unlocked Season Pass Premium track.');
     showAlert('Season Pass Activated', 'Season Pass Premium Track Activated!');
@@ -110,93 +104,200 @@ export const Shop: React.FC<ShopProps> = ({
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Tab Selectors */}
-      <div className="tab-headers">
-        <button className={`tab-btn ${activeTab === 'character' ? 'active' : ''}`} onClick={() => setActiveTab('character')}>Heroes</button>
-        <button className={`tab-btn ${activeTab === 'weapon' ? 'active' : ''}`} onClick={() => setActiveTab('weapon')}>Weapons</button>
-        <button className={`tab-btn ${activeTab === 'trail' ? 'active' : ''}`} onClick={() => setActiveTab('trail')}>Trails</button>
-        <button className={`tab-btn ${activeTab === 'title' ? 'active' : ''}`} onClick={() => setActiveTab('title')}>Titles</button>
-        <button className={`tab-btn ${activeTab === 'chests' ? 'active' : ''}`} onClick={() => setActiveTab('chests')}>Chests</button>
-        <button className={`tab-btn ${activeTab === 'season_pass' ? 'active' : ''}`} onClick={() => setActiveTab('season_pass')}>Season Pass</button>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 12px' }}>
+      
+      {/* Aldrich's Merchant Header */}
+      <div 
+        className="material-wood" 
+        style={{
+          padding: '24px 28px',
+          marginBottom: '32px',
+          background: 'linear-gradient(180deg, #3d281a 0%, #20140d 100%)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
+          boxShadow: '0 8px 16px rgba(0,0,0,0.5)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <span style={{ fontSize: '2.5rem', lineHeight: 1 }}>🧙‍♂️</span>
+          <div>
+            <h2 className="retro-title" style={{ fontSize: '1.15rem', margin: 0, color: 'var(--neon-yellow)' }}>
+              ALDRICH'S TRADE DECK
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '4px 0 0' }}>
+              "Fine woodcrafting gear for the seasoned wanderer."
+            </p>
+          </div>
+        </div>
+
+        {/* Player Treasury pocket bags */}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="material-leather" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--neon-yellow)', fontWeight: 'bold', fontSize: '0.9rem' }}>
+            <span>🪙</span>
+            <span>{user.coins.toLocaleString()}</span>
+          </div>
+          <div className="material-leather" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--neon-cyan)', fontWeight: 'bold', fontSize: '0.9rem' }}>
+            <span>💎</span>
+            <span>{user.diamonds}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Grid for standard Shop items (unlocked items) */}
+      {/* Shop Category Tabs */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderBottom: '3px solid #2b1d14', paddingBottom: '10px', marginBottom: '32px' }}>
+        {(['character', 'weapon', 'trail', 'title', 'chests', 'season_pass'] as const).map(tab => {
+          const isActive = activeTab === tab;
+          const label = tab === 'character' ? 'Heroes' :
+                        tab === 'weapon' ? 'Weapons' :
+                        tab === 'trail' ? 'Trails' :
+                        tab === 'title' ? 'Titles' :
+                        tab === 'chests' ? 'Chests' : 'Season Pass';
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={isActive ? 'neon-btn-yellow' : 'neon-btn'}
+              style={{
+                padding: '10px 18px',
+                fontSize: '0.75rem',
+                borderWidth: '2px',
+                borderRadius: '6px',
+                boxShadow: 'none',
+                transform: isActive ? 'translateY(2px)' : 'none'
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Item Catalog Grid */}
       {['character', 'weapon', 'trail', 'title'].includes(activeTab) && (
         <div className="grid-3">
           {filteredItems.map(item => {
             const equipped = isEquipped(item);
             
-            // Custom item previews (visual color boxes)
-            let boxColor = '#242a38';
+            let boxColor = '#1e140f';
             if (item.type === 'weapon') {
-              if (item.id === 'weap_axe_golden') boxColor = '#FFD700';
-              else if (item.id === 'weap_axe_fire') boxColor = '#FF4500';
-              else if (item.id === 'weap_laser') boxColor = '#00FFFF';
-              else if (item.id === 'weap_blade') boxColor = '#FF00FF';
+              if (item.id === 'weap_axe_golden') boxColor = '#d4af37';
+              else if (item.id === 'weap_axe_fire') boxColor = '#a73a15';
+              else if (item.id === 'weap_laser') boxColor = '#3a8eb5';
+              else if (item.id === 'weap_blade') boxColor = '#8a2b5c';
             }
 
             return (
               <div 
                 key={item.id} 
-                className="game-card" 
+                className="material-wood" 
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  border: equipped ? '1px solid var(--neon-cyan)' : '1px solid var(--panel-border)',
-                  background: equipped ? 'linear-gradient(180deg, rgba(0, 240, 255, 0.02) 0%, transparent 100%)' : 'var(--panel-bg)'
+                  padding: '20px',
+                  background: equipped ? 'linear-gradient(180deg, #32261f 0%, #201510 100%)' : 'linear-gradient(180deg, #2b1d14 0%, #1c130d 100%)',
+                  borderColor: equipped ? 'var(--neon-cyan)' : '#3d2c20',
+                  boxShadow: '0 6px 12px rgba(0,0,0,0.4)'
                 }}
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
                     <div>
-                      <h3 style={{ fontSize: '1.15rem', fontWeight: 'bold' }}>{item.name}</h3>
-                      <span className={`rarity-tag rarity-${item.rarity}`} style={{ marginTop: '4px', display: 'inline-block' }}>{item.rarity}</span>
+                      <h3 className="retro-title" style={{ fontSize: '0.88rem', margin: 0, textShadow: 'none', color: '#fff' }}>
+                        {item.name}
+                      </h3>
+                      <span className={`rarity-tag rarity-${item.rarity}`} style={{ marginTop: '6px', display: 'inline-block', fontSize: '8px', padding: '2px 6px' }}>
+                        {item.rarity}
+                      </span>
                     </div>
                     
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>
                       {item.type.toUpperCase()}
                     </span>
                   </div>
 
-                  {/* Character/Weapon Preview Frame */}
+                  {/* Character/Weapon Preview Showcase Frame */}
                   <div style={{
                     width: '100%',
                     height: '100px',
-                    background: 'rgba(0,0,0,0.2)',
+                    background: '#150d09',
                     borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '16px',
-                    border: '1px solid rgba(255,255,255,0.03)'
+                    border: '2px solid #3d2c20',
+                    position: 'relative',
+                    boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.6)'
                   }}>
                     {item.type === 'character' ? (
-                      <span style={{ fontSize: '2rem' }}>
+                      <span style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 3px rgba(0,0,0,0.5))' }} className="character-breath">
                         {item.id === 'char_lumberjack' ? '🪓' : (item.id === 'char_viking' ? '🛡️' : (item.id === 'char_knight' ? '⚔️' : (item.id === 'char_samurai' ? '🥷' : (item.id === 'char_wizard' ? '🧙' : (item.id === 'char_alien' ? '👽' : '🤖')))))}
                       </span>
                     ) : item.type === 'weapon' ? (
-                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: boxColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#000', fontSize: '0.8rem' }}>
-                        W
+                      <div style={{ 
+                        width: '44px', 
+                        height: '44px', 
+                        borderRadius: '50%', 
+                        backgroundColor: boxColor, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        fontWeight: 'bold', 
+                        color: '#fff', 
+                        fontSize: '1.2rem',
+                        border: '2px solid #fff',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.4)'
+                      }}>
+                        🪓
                       </div>
                     ) : item.type === 'trail' ? (
-                      <span style={{ fontSize: '1.5rem' }}>✨ {item.name.split(' ')[0]}</span>
+                      <span style={{ fontSize: '1.8rem' }} className="character-breath">✨ {item.name.split(' ')[0]}</span>
                     ) : (
-                      <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-retro)', color: 'var(--neon-yellow)' }}>🏆 {item.name}</span>
+                      <span style={{ fontSize: '0.72rem', fontFamily: 'var(--font-retro)', color: 'var(--neon-yellow)' }}>🏆 {item.name}</span>
                     )}
                   </div>
 
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>{item.description}</p>
+                  {/* Wooden Shelf Shadow bar */}
+                  <div style={{ height: '8px', background: '#1b120c', borderTop: '2px solid #322116', margin: '0 -20px 14px', borderRadius: '4px' }} />
+
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.4', marginBottom: '20px' }}>
+                    {item.description}
+                  </p>
                 </div>
 
-                <button 
-                  className={equipped ? 'neon-btn-cyan' : (item.unlocked ? 'neon-btn' : 'neon-btn-magenta')}
-                  style={{ width: '100%', pointerEvents: equipped ? 'none' : 'auto', textShadow: 'none', background: equipped ? 'var(--neon-cyan)' : 'transparent', color: equipped ? '#000' : '' }}
-                  onClick={() => handleAction(item)}
-                >
-                  {equipped ? 'EQUIPPED' : (item.unlocked ? 'EQUIP' : `BUY: ${item.cost} ${item.currency === 'coins' ? 'Coins' : 'Gems'}`)}
-                </button>
+                {/* Pricing & Equip triggers */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {!item.unlocked && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      background: '#150d09',
+                      border: '2px dashed #422a1b',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '0.7rem',
+                      fontFamily: 'var(--font-retro)',
+                      color: item.currency === 'coins' ? 'var(--neon-yellow)' : 'var(--neon-cyan)',
+                      alignSelf: 'center'
+                    }}>
+                      {item.currency === 'coins' ? '🪙' : '💎'} {item.cost}
+                    </div>
+                  )}
+                  
+                  <button 
+                    className={equipped ? 'neon-btn-cyan' : (item.unlocked ? 'neon-btn' : 'neon-btn-magenta')}
+                    style={{ width: '100%', pointerEvents: equipped ? 'none' : 'auto', fontSize: '0.75rem', padding: '10px' }}
+                    onClick={() => handleAction(item)}
+                  >
+                    {equipped ? 'EQUIPPED' : (item.unlocked ? 'EQUIP' : 'UNLOCK CONTRACT')}
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -206,94 +307,105 @@ export const Shop: React.FC<ShopProps> = ({
       {/* Category: CHESTS */}
       {activeTab === 'chests' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          {/* Animated opening modal */}
+          
+          {/* Animated chest opening dialog overlay */}
           {openingChest && (
             <div style={{
               position: 'fixed',
               top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.85)',
-              zIndex: 999,
+              backgroundColor: 'rgba(12, 8, 6, 0.95)',
+              zIndex: 99999,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              backdropFilter: 'blur(10px)'
+              backdropFilter: 'blur(12px)',
+              padding: '24px'
             }}>
-              <div 
-                style={{
-                  fontSize: '6rem',
-                  marginBottom: '20px',
-                  transition: 'transform 0.1s ease',
-                  transform: wiggleClass ? 'rotate(10deg) scale(1.1)' : 'rotate(0deg)',
-                  animation: wiggleClass ? 'bounceSlow 0.2s infinite' : ''
-                }}
-              >
-                🎁
-              </div>
-              
-              <h2 className="retro-title" style={{ fontSize: '1.2rem', marginBottom: '20px', color: 'var(--neon-yellow)' }}>
-                {chestReward ? 'OPENED!' : `UNLOCKING ${openingChest.toUpperCase()} CHEST...`}
-              </h2>
-
-              {chestReward && (
-                <div style={{ textAlign: 'center', animation: 'bounceSlow 2s infinite' }}>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white', marginBottom: '14px' }}>
-                    {chestReward.type === 'coins' && `+🪙 ${chestReward.amount}`}
-                    {chestReward.type === 'diamonds' && `+💎 ${chestReward.amount}`}
-                    {chestReward.type === 'item' && `Unlocked ${chestReward.item?.name}!`}
-                  </div>
-                  {chestReward.item && (
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: '30px' }}>{chestReward.item.description}</p>
-                  )}
-                  <button className="neon-btn-cyan" onClick={() => setOpeningChest(null)}>
-                    CLAIM REWARD
-                  </button>
+              <div className="material-wood" style={{ padding: '40px', maxWidth: '440px', width: '100%', textAlign: 'center' }}>
+                <div 
+                  className="character-breath"
+                  style={{
+                    fontSize: '6rem',
+                    marginBottom: '20px',
+                    display: 'inline-block',
+                    animationDuration: wiggleClass ? '0.2s' : '2s'
+                  }}
+                >
+                  {openingChest === 'epic' ? '👑' : (openingChest === 'treasure' ? '🎁' : '📦')}
                 </div>
-              )}
+                
+                <h2 className="retro-title" style={{ fontSize: '1.2rem', marginBottom: '20px', color: 'var(--neon-yellow)' }}>
+                  {chestReward ? 'CHEST OPENED!' : `UNLOCKING ${openingChest.toUpperCase()}...`}
+                </h2>
+
+                {chestReward && (
+                  <div style={{ margin: '20px 0' }}>
+                    <div className="material-paper" style={{ padding: '20px', borderRadius: '8px', marginBottom: '24px', color: '#2b2112' }}>
+                      <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-retro)', color: '#7c654e', display: 'block', marginBottom: '6px' }}>REWARD UNLOCKED</span>
+                      <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#3b2410', fontFamily: 'var(--font-retro)' }}>
+                        {chestReward.type === 'coins' && `🪙 +${chestReward.amount}`}
+                        {chestReward.type === 'diamonds' && `💎 +${chestReward.amount}`}
+                        {chestReward.type === 'item' && `${chestReward.item?.name}`}
+                      </div>
+                      {chestReward.item && (
+                        <p style={{ color: '#4d3a24', fontSize: '0.8rem', marginTop: '6px', fontStyle: 'italic' }}>
+                          "{chestReward.item.description}"
+                        </p>
+                      )}
+                    </div>
+                    
+                    <button className="neon-btn-cyan" style={{ padding: '12px 36px' }} onClick={() => setOpeningChest(null)}>
+                      COLLECT LOOT
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* Chest listings */}
           <div className="grid-3" style={{ width: '100%' }}>
+            
             {/* Mystery Box */}
-            <div className="game-card" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div className="material-wood" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px' }}>
               <div>
-                <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>📦</div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '6px' }}>Mystery Box</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
+                <div style={{ fontSize: '3.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.4))' }}>📦</div>
+                <h3 className="retro-title" style={{ fontSize: '0.9rem', color: '#fff', textShadow: 'none' }}>Mystery Box</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.4', margin: '8px 0 20px' }}>
                   Contains coins or small diamond drops. Great value starting option.
                 </p>
               </div>
-              <button className="neon-btn" style={{ width: '100%' }} onClick={() => handleOpenChest('mystery')}>
-                BUY: 🪙 150
+              <button className="neon-btn" style={{ width: '100%', fontSize: '0.75rem' }} onClick={() => handleOpenChest('mystery')}>
+                OPEN: 🪙 150
               </button>
             </div>
 
             {/* Treasure Chest */}
-            <div className="game-card" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--neon-cyan)' }}>
+            <div className="material-wood" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px', borderColor: 'var(--neon-cyan)' }}>
               <div>
-                <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🎁</div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '6px' }}>Treasure Chest</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
+                <div style={{ fontSize: '3.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.4))' }}>🎁</div>
+                <h3 className="retro-title" style={{ fontSize: '0.9rem', color: '#fff', textShadow: 'none' }}>Treasure Chest</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.4', margin: '8px 0 20px' }}>
                   Unlocks a random locked weapon, character, or trail. Refunds coins if all owned.
                 </p>
               </div>
-              <button className="neon-btn-cyan" style={{ width: '100%' }} onClick={() => handleOpenChest('treasure')}>
-                BUY: 🪙 500
+              <button className="neon-btn-cyan" style={{ width: '100%', fontSize: '0.75rem' }} onClick={() => handleOpenChest('treasure')}>
+                OPEN: 🪙 500
               </button>
             </div>
 
             {/* Epic Chest */}
-            <div className="game-card" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--neon-magenta)' }}>
+            <div className="material-wood" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px', borderColor: 'var(--neon-magenta)' }}>
               <div>
-                <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>👑</div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '6px' }}>Epic Chest</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
+                <div style={{ fontSize: '3.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.4))' }}>👑</div>
+                <h3 className="retro-title" style={{ fontSize: '0.9rem', color: '#fff', textShadow: 'none' }}>Epic Chest</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.4', margin: '8px 0 20px' }}>
                   Guarantees a rare or legendary cosmetic + massive diamonds. Ultimate tier.
                 </p>
               </div>
-              <button className="neon-btn-magenta" style={{ width: '100%' }} onClick={() => handleOpenChest('epic')}>
-                BUY: 🪙 1500
+              <button className="neon-btn-magenta" style={{ width: '100%', fontSize: '0.75rem' }} onClick={() => handleOpenChest('epic')}>
+                OPEN: 🪙 1500
               </button>
             </div>
           </div>
@@ -302,19 +414,19 @@ export const Shop: React.FC<ShopProps> = ({
 
       {/* Category: SEASON PASS */}
       {activeTab === 'season_pass' && (
-        <div className="game-card">
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--panel-border)', paddingBottom: '20px', marginBottom: '30px' }}>
+        <div className="material-wood" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px dashed #422a1b', paddingBottom: '20px', marginBottom: '30px', gap: '16px' }}>
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--neon-yellow)' }}>SEASON 1: TIMBER VOYAGE</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>Level up your profile to unlock tiers. Claims are automatic!</p>
+              <h2 className="retro-title" style={{ fontSize: '1.15rem', color: 'var(--neon-yellow)' }}>SEASON 1: TIMBER VOYAGE</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '4px' }}>Level up your profile to unlock tiers. Claims are automatic!</p>
             </div>
             
             <button 
               className="neon-btn-magenta"
-              style={{ padding: '10px 20px' }}
+              style={{ padding: '10px 20px', fontSize: '0.75rem' }}
               onClick={handleBuyPremiumPass}
             >
-              UNLOCK PREMIUM TRACK: 💎 20
+              ACTIVATE PREMIUM: 💎 20
             </button>
           </div>
 
@@ -325,23 +437,26 @@ export const Shop: React.FC<ShopProps> = ({
               return (
                 <div 
                   key={tier}
+                  className="material-wood"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '16px',
-                    background: unlocked ? 'rgba(0,240,255,0.02)' : 'rgba(255,255,255,0.01)',
-                    border: unlocked ? '1px solid rgba(0,240,255,0.1)' : '1px solid var(--panel-border)',
+                    padding: '16px 20px',
+                    background: unlocked ? 'linear-gradient(135deg, #233423, #152215)' : 'linear-gradient(135deg, #231912, #18110b)',
+                    borderColor: unlocked ? 'var(--neon-green)' : '#3d2c20',
                     borderRadius: '8px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={{
                       fontFamily: 'var(--font-retro)',
-                      fontSize: '0.8rem',
-                      color: unlocked ? 'var(--neon-cyan)' : 'var(--text-secondary)',
-                      background: 'rgba(0,0,0,0.3)',
-                      padding: '10px',
+                      fontSize: '0.72rem',
+                      color: unlocked ? 'var(--neon-green)' : 'var(--text-secondary)',
+                      background: '#150d09',
+                      border: '2px solid #422a1b',
+                      padding: '8px',
                       borderRadius: '4px',
                       minWidth: '50px',
                       textAlign: 'center'
@@ -349,19 +464,19 @@ export const Shop: React.FC<ShopProps> = ({
                       T{tier}
                     </div>
                     <div>
-                      <h4 style={{ fontWeight: 'bold', color: unlocked ? 'white' : 'var(--text-secondary)' }}>
-                        Tier {tier} Reward
+                      <h4 style={{ fontWeight: 'bold', color: unlocked ? 'white' : 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        Tier {tier} Reward Contract
                       </h4>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        Requires Profile Level {tier}. Status: {unlocked ? 'Unlocked' : 'Locked'}
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        Requires Level {tier}. Status: {unlocked ? 'Unlocked & Claimed' : 'Locked'}
                       </p>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'right', fontSize: '0.8rem' }}>
-                      <span style={{ display: 'block', color: 'var(--neon-green)' }}>Free: 🪙 {tier * 100}</span>
-                      <span style={{ display: 'block', color: 'var(--neon-magenta)' }}>Premium: 💎 {tier}</span>
+                    <div style={{ textAlign: 'right', fontSize: '0.78rem', fontFamily: 'var(--font-retro)' }}>
+                      <span style={{ display: 'block', color: 'var(--neon-yellow)' }}>Free: 🪙 {tier * 100}</span>
+                      <span style={{ display: 'block', color: 'var(--neon-cyan)', marginTop: '4px' }}>Premium: 💎 {tier}</span>
                     </div>
                   </div>
                 </div>
@@ -373,4 +488,5 @@ export const Shop: React.FC<ShopProps> = ({
     </div>
   );
 };
+
 export default Shop;

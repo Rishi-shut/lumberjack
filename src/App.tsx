@@ -70,6 +70,81 @@ export const App: React.FC = () => {
   // Routing State
   const [currentPage, setCurrentPage] = useState<'home' | 'dashboard' | 'shop' | 'leaderboard' | 'missions' | 'settings' | 'admin'>('home');
   
+  // Scroll tracker for navigation hiding
+  const [showNav, setShowNav] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setShowNav(false);
+      } else {
+        setShowNav(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
+  // Cursor tracker
+  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+
+  useEffect(() => {
+    const updateMouse = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', updateMouse);
+    return () => window.removeEventListener('mousemove', updateMouse);
+  }, []);
+
+  const getActiveEnvClass = (page: string) => {
+    switch (page) {
+      case 'home': return 'env-forest';
+      case 'dashboard': return 'env-cabin';
+      case 'shop': return 'env-workshop';
+      case 'missions': return 'env-village';
+      case 'leaderboard': return 'env-castle';
+      case 'settings': return 'env-cabin';
+      case 'admin': return 'env-stone';
+      default: return 'env-forest';
+    }
+  };
+
+  // Loading Screen States & Effects
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingTip, setLoadingTip] = useState('');
+  const [loadingProgress, setLoadingProgress] = useState(0);
+
+  const tips = [
+    "Tip: Avoid branches. They are wood, you are flesh. Wood wins.",
+    "Fact: The Infinite Tree grows 10 meters every time you look away.",
+    "Tip: Vikings chop faster, but samurai look cooler doing it.",
+    "Fact: Samurai have trained for generations just to chop a pine tree.",
+    "Tip: Check the Shop for rare weapons! A golden axe increases style by 100%.",
+    "Tip: Claim your Daily Challenge reward. Warm gold is the best gold.",
+    "Tip: You can use A/D or Left/Right arrow keys to chop on either side."
+  ];
+
+  useEffect(() => {
+    setLoadingTip(tips[Math.floor(Math.random() * tips.length)]);
+    
+    const progressInterval = setInterval(() => {
+      setLoadingProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          setTimeout(() => setIsLoading(false), 300);
+          return 100;
+        }
+        return prev + Math.floor(Math.random() * 15) + 5;
+      });
+    }, 120);
+
+    return () => clearInterval(progressInterval);
+  }, []);
+
   // Game Play States
   const [activeWorld, setActiveWorld] = useState<string | null>(null);
   const [lastActiveWorld, setLastActiveWorld] = useState<string | null>(null);
@@ -292,15 +367,79 @@ export const App: React.FC = () => {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div style={{
+        height: '100vh',
+        backgroundColor: '#17110c',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        textAlign: 'center',
+        fontFamily: 'var(--font-sans)',
+        color: '#fbf5f0'
+      }}>
+        <div className="material-wood" style={{
+          padding: '40px',
+          maxWidth: '500px',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          boxShadow: '0 12px 24px rgba(0,0,0,0.6)'
+        }}>
+          {/* Animated lumberjack chopping */}
+          <div style={{ fontSize: '4rem', marginBottom: '20px', animation: 'breathAnim 1s infinite ease-in-out' }}>
+            🪓🌳
+          </div>
+          
+          <h2 className="retro-title" style={{ fontSize: '1.5rem', marginBottom: '8px', color: 'var(--neon-yellow)' }}>
+            LOADING ECOSYSTEM
+          </h2>
+          
+          {/* Progress bar */}
+          <div className="progress-bar-container" style={{ height: '12px', margin: '20px 0', width: '100%' }}>
+            <div 
+              className="progress-bar-fill" 
+              style={{ 
+                width: `${loadingProgress}%`, 
+                backgroundColor: 'var(--neon-cyan)',
+                transition: 'width 0.2s ease' 
+              }}
+            ></div>
+          </div>
+          
+          <div style={{ fontSize: '0.85rem', color: 'var(--neon-cyan)', fontFamily: 'var(--font-retro)', marginBottom: '24px' }}>
+            {Math.min(100, loadingProgress)}%
+          </div>
+
+          <div className="material-paper" style={{ padding: '16px', borderRadius: '8px', width: '100%' }}>
+            <p style={{ fontStyle: 'italic', fontSize: '0.9rem', margin: 0, color: '#2b2112' }}>
+              "{loadingTip}"
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const themeClass = user.level >= 20 ? 'theme-wood-gold' :
                      user.level >= 15 ? 'theme-wood-frost' :
                      user.level >= 10 ? 'theme-wood-redwood' :
                      user.level >= 5 ? 'theme-wood-birch' : 'theme-wood-oak';
 
   return (
-    <div className={`app-container ${themeClass}`}>
+    <div className={`app-container ${themeClass} env-container ${getActiveEnvClass(currentPage)}`}>
+      {/* Custom golden particle cursor */}
+      <div 
+        className="custom-particle-cursor" 
+        style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px` }}
+      />
       {/* Top Header Stats */}
-      <header className="top-bar-stats">
+      <header className={`floating-nav ${showNav ? '' : 'hidden'}`}>
+
         <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{
             fontSize: '1.4rem',
@@ -376,7 +515,7 @@ export const App: React.FC = () => {
       </nav>
 
       {/* Bottom Nav Bar (Mobile) */}
-      <nav className="navbar-mobile">
+      <nav className={`navbar-mobile ${showNav ? '' : 'hidden'}`}>
         <button className={`navbar-mobile-item ${currentPage === 'home' ? 'active' : ''}`} onClick={() => setCurrentPage('home')}>
           <HomeIcon /> Home
         </button>
