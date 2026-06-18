@@ -87,8 +87,8 @@ export const Settings: React.FC<SettingsProps> = ({
       <div className="grid-2" style={{ gap: '24px' }}>
         
         {/* LEFT PAGE: Audio Control Panel (Wood Console) */}
-        <div className="material-wood" style={{ padding: '24px 28px', background: 'linear-gradient(180deg, #322116, #1c130d)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '2px dashed #422a1b', paddingBottom: '12px' }}>
+        <div className="material-wood" style={{ padding: '24px 28px', background: 'var(--panel-bg)', boxShadow: '0 8px 24px rgba(0,0,0,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '12px' }}>
             <Sliders size={18} style={{ color: 'var(--neon-yellow)' }} />
             <h3 className="retro-title" style={{ fontSize: '0.85rem', color: 'var(--neon-yellow)', margin: 0 }}>
               CABIN AUDIO PANEL
@@ -97,7 +97,7 @@ export const Settings: React.FC<SettingsProps> = ({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
-            {/* Tactile Wood Switch for Mute */}
+            {/* Tactile Switch for Mute */}
             <div className="material-leather" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
               <span style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
                 {settings.muted ? <VolumeX size={18} style={{ color: 'var(--neon-red)' }} /> : <Volume2 size={18} style={{ color: 'var(--neon-green)' }} />}
@@ -112,7 +112,7 @@ export const Settings: React.FC<SettingsProps> = ({
               </button>
             </div>
 
-            {/* Carved Volume Sliders */}
+            {/* Volume Sliders */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.82rem', fontFamily: 'var(--font-retro)' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>MASTER MIX</span>
@@ -158,8 +158,8 @@ export const Settings: React.FC<SettingsProps> = ({
         </div>
 
         {/* RIGHT PAGE: Keyboard Rebinding (Leather Console) */}
-        <div className="material-leather" style={{ padding: '24px 28px', color: '#fbf5f0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '2px dashed #352110', paddingBottom: '12px' }}>
+        <div className="material-leather" style={{ padding: '24px 28px', color: 'var(--text-primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '12px' }}>
             <Key size={18} style={{ color: 'var(--neon-cyan)' }} />
             <h3 className="retro-title" style={{ fontSize: '0.85rem', color: 'var(--neon-cyan)', margin: 0 }}>
               DESKTOP CONTROLS DESK
@@ -174,11 +174,11 @@ export const Settings: React.FC<SettingsProps> = ({
             )}
 
             {/* Left Action key rebinder */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1c130d', border: '2px solid #3d2c20', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--bg-color)', border: '1px solid var(--panel-border)', borderRadius: '8px' }}>
               <div>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0 }}>CHOP LEFT ACTION</h4>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-                  Current: <kbd style={{ padding: '2px 6px', background: '#352110', border: '1px solid #1e130d', borderRadius: '4px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem' }}>{settings.keyLeft.toUpperCase()}</kbd>
+                  Current: <kbd style={{ padding: '2px 6px', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '4px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem', color: 'var(--text-primary)' }}>{settings.keyLeft.toUpperCase()}</kbd>
                 </p>
               </div>
               <button 
@@ -192,11 +192,11 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
 
             {/* Right Action key rebinder */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1c130d', border: '2px solid #3d2c20', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--bg-color)', border: '1px solid var(--panel-border)', borderRadius: '8px' }}>
               <div>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0 }}>CHOP RIGHT ACTION</h4>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-                  Current: <kbd style={{ padding: '2px 6px', background: '#352110', border: '1px solid #1e130d', borderRadius: '4px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem' }}>{settings.keyRight.toUpperCase()}</kbd>
+                  Current: <kbd style={{ padding: '2px 6px', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '4px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem', color: 'var(--text-primary)' }}>{settings.keyRight.toUpperCase()}</kbd>
                 </p>
               </div>
               <button 

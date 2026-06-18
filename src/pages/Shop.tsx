@@ -198,15 +198,15 @@ export const Shop: React.FC<ShopProps> = ({
                   flexDirection: 'column',
                   justifyContent: 'space-between',
                   padding: '20px',
-                  background: equipped ? 'linear-gradient(180deg, #32261f 0%, #201510 100%)' : 'linear-gradient(180deg, #2b1d14 0%, #1c130d 100%)',
-                  borderColor: equipped ? 'var(--neon-cyan)' : '#3d2c20',
-                  boxShadow: '0 6px 12px rgba(0,0,0,0.4)'
+                  background: equipped ? 'linear-gradient(180deg, var(--panel-bg) 0%, rgba(14, 165, 233, 0.08) 100%)' : 'var(--panel-bg)',
+                  borderColor: equipped ? 'var(--neon-cyan)' : 'var(--panel-border)',
+                  boxShadow: '0 6px 12px rgba(0,0,0,0.02)'
                 }}
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
                     <div>
-                      <h3 className="retro-title" style={{ fontSize: '0.88rem', margin: 0, textShadow: 'none', color: '#fff' }}>
+                      <h3 className="retro-title" style={{ fontSize: '0.88rem', margin: 0, textShadow: 'none', color: 'var(--text-primary)' }}>
                         {item.name}
                       </h3>
                       <span className={`rarity-tag rarity-${item.rarity}`} style={{ marginTop: '6px', display: 'inline-block', fontSize: '8px', padding: '2px 6px' }}>
@@ -223,15 +223,15 @@ export const Shop: React.FC<ShopProps> = ({
                   <div style={{
                     width: '100%',
                     height: '100px',
-                    background: '#150d09',
+                    background: 'var(--bg-color)',
                     borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '16px',
-                    border: '2px solid #3d2c20',
+                    border: '1px solid var(--panel-border)',
                     position: 'relative',
-                    boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.6)'
+                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                   }}>
                     {item.type === 'character' ? (
                       <span style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 3px rgba(0,0,0,0.5))' }} className="character-breath">
@@ -261,8 +261,8 @@ export const Shop: React.FC<ShopProps> = ({
                     )}
                   </div>
 
-                  {/* Wooden Shelf Shadow bar */}
-                  <div style={{ height: '8px', background: '#1b120c', borderTop: '2px solid #322116', margin: '0 -20px 14px', borderRadius: '4px' }} />
+                  {/* Modern Separator */}
+                  <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0 -20px 14px' }} />
 
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.4', marginBottom: '20px' }}>
                     {item.description}
@@ -277,8 +277,8 @@ export const Shop: React.FC<ShopProps> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '4px',
-                      background: '#150d09',
-                      border: '2px dashed #422a1b',
+                      background: 'rgba(0,0,0,0.03)',
+                      border: '1px dashed var(--panel-border)',
                       borderRadius: '6px',
                       padding: '4px 10px',
                       fontSize: '0.7rem',
@@ -341,15 +341,15 @@ export const Shop: React.FC<ShopProps> = ({
 
                 {chestReward && (
                   <div style={{ margin: '20px 0' }}>
-                    <div className="material-paper" style={{ padding: '20px', borderRadius: '8px', marginBottom: '24px', color: '#2b2112' }}>
-                      <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-retro)', color: '#7c654e', display: 'block', marginBottom: '6px' }}>REWARD UNLOCKED</span>
-                      <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#3b2410', fontFamily: 'var(--font-retro)' }}>
+                    <div className="material-paper" style={{ padding: '20px', borderRadius: '8px', marginBottom: '24px', color: 'var(--text-primary)' }}>
+                      <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-retro)', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>REWARD UNLOCKED</span>
+                      <div style={{ fontSize: '1.3rem', fontWeight: '900', color: 'var(--text-primary)', fontFamily: 'var(--font-retro)' }}>
                         {chestReward.type === 'coins' && `🪙 +${chestReward.amount}`}
                         {chestReward.type === 'diamonds' && `💎 +${chestReward.amount}`}
                         {chestReward.type === 'item' && `${chestReward.item?.name}`}
                       </div>
                       {chestReward.item && (
-                        <p style={{ color: '#4d3a24', fontSize: '0.8rem', marginTop: '6px', fontStyle: 'italic' }}>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '6px', fontStyle: 'italic' }}>
                           "{chestReward.item.description}"
                         </p>
                       )}
@@ -370,8 +370,8 @@ export const Shop: React.FC<ShopProps> = ({
             {/* Mystery Box */}
             <div className="material-wood" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px' }}>
               <div>
-                <div style={{ fontSize: '3.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.4))' }}>📦</div>
-                <h3 className="retro-title" style={{ fontSize: '0.9rem', color: '#fff', textShadow: 'none' }}>Mystery Box</h3>
+                <div style={{ fontSize: '3.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.1))' }}>📦</div>
+                <h3 className="retro-title" style={{ fontSize: '0.9rem', color: 'var(--text-primary)', textShadow: 'none' }}>Mystery Box</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.4', margin: '8px 0 20px' }}>
                   Contains coins or small diamond drops. Great value starting option.
                 </p>
@@ -384,8 +384,8 @@ export const Shop: React.FC<ShopProps> = ({
             {/* Treasure Chest */}
             <div className="material-wood" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px', borderColor: 'var(--neon-cyan)' }}>
               <div>
-                <div style={{ fontSize: '3.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.4))' }}>🎁</div>
-                <h3 className="retro-title" style={{ fontSize: '0.9rem', color: '#fff', textShadow: 'none' }}>Treasure Chest</h3>
+                <div style={{ fontSize: '3.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.1))' }}>🎁</div>
+                <h3 className="retro-title" style={{ fontSize: '0.9rem', color: 'var(--text-primary)', textShadow: 'none' }}>Treasure Chest</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.4', margin: '8px 0 20px' }}>
                   Unlocks a random locked weapon, character, or trail. Refunds coins if all owned.
                 </p>
@@ -398,8 +398,8 @@ export const Shop: React.FC<ShopProps> = ({
             {/* Epic Chest */}
             <div className="material-wood" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px', borderColor: 'var(--neon-magenta)' }}>
               <div>
-                <div style={{ fontSize: '3.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.4))' }}>👑</div>
-                <h3 className="retro-title" style={{ fontSize: '0.9rem', color: '#fff', textShadow: 'none' }}>Epic Chest</h3>
+                <div style={{ fontSize: '3.5rem', marginBottom: '16px', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,0.1))' }}>👑</div>
+                <h3 className="retro-title" style={{ fontSize: '0.9rem', color: 'var(--text-primary)', textShadow: 'none' }}>Epic Chest</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.4', margin: '8px 0 20px' }}>
                   Guarantees a rare or legendary cosmetic + massive diamonds. Ultimate tier.
                 </p>
@@ -414,8 +414,8 @@ export const Shop: React.FC<ShopProps> = ({
 
       {/* Category: SEASON PASS */}
       {activeTab === 'season_pass' && (
-        <div className="material-wood" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px dashed #422a1b', paddingBottom: '20px', marginBottom: '30px', gap: '16px' }}>
+        <div className="material-wood" style={{ padding: '24px', boxShadow: '0 8px 24px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '20px', marginBottom: '30px', gap: '16px' }}>
             <div>
               <h2 className="retro-title" style={{ fontSize: '1.15rem', color: 'var(--neon-yellow)' }}>SEASON 1: TIMBER VOYAGE</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '4px' }}>Level up your profile to unlock tiers. Claims are automatic!</p>
@@ -443,10 +443,10 @@ export const Shop: React.FC<ShopProps> = ({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '16px 20px',
-                    background: unlocked ? 'linear-gradient(135deg, #233423, #152215)' : 'linear-gradient(135deg, #231912, #18110b)',
-                    borderColor: unlocked ? 'var(--neon-green)' : '#3d2c20',
+                    background: unlocked ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(16, 185, 129, 0.12))' : 'var(--panel-bg)',
+                    borderColor: unlocked ? 'var(--neon-green)' : 'var(--panel-border)',
                     borderRadius: '8px',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -454,8 +454,8 @@ export const Shop: React.FC<ShopProps> = ({
                       fontFamily: 'var(--font-retro)',
                       fontSize: '0.72rem',
                       color: unlocked ? 'var(--neon-green)' : 'var(--text-secondary)',
-                      background: '#150d09',
-                      border: '2px solid #422a1b',
+                      background: 'rgba(0,0,0,0.03)',
+                      border: '1px solid var(--panel-border)',
                       padding: '8px',
                       borderRadius: '4px',
                       minWidth: '50px',
@@ -464,7 +464,7 @@ export const Shop: React.FC<ShopProps> = ({
                       T{tier}
                     </div>
                     <div>
-                      <h4 style={{ fontWeight: 'bold', color: unlocked ? 'white' : 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                      <h4 style={{ fontWeight: 'bold', color: unlocked ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '0.9rem' }}>
                         Tier {tier} Reward Contract
                       </h4>
                       <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>

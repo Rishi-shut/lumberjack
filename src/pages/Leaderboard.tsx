@@ -54,8 +54,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         style={{
           width: '210px',
           height: height,
-          background: 'linear-gradient(180deg, #322116, #20140d)',
-          borderWidth: '3px',
+          background: 'var(--panel-bg)',
+          borderWidth: '2px',
           borderColor: borderTheme,
           textAlign: 'center',
           display: 'flex',
@@ -63,7 +63,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
           justifyContent: 'space-between',
           padding: '16px',
           transform: scale,
-          boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
           position: 'relative'
         }}
       >
@@ -78,7 +78,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
             {entry.avatar === 'char_lumberjack' ? '🪓' : (entry.avatar === 'char_viking' ? '🛡️' : (entry.avatar === 'char_knight' ? '⚔️' : (entry.avatar === 'char_samurai' ? '🥷' : (entry.avatar === 'char_wizard' ? '🧙' : (entry.avatar === 'char_alien' ? '👽' : '🤖')))))}
           </div>
           
-          <h4 className="retro-title" style={{ fontSize: '0.72rem', margin: '0 0 2px', textShadow: 'none', color: isMe ? 'var(--neon-cyan)' : '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <h4 className="retro-title" style={{ fontSize: '0.72rem', margin: '0 0 2px', textShadow: 'none', color: isMe ? 'var(--neon-cyan)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {entry.username}
           </h4>
           
@@ -90,7 +90,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         </div>
 
         {/* Podium score footer */}
-        <div style={{ background: '#1c130d', borderRadius: '4px', padding: '6px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem', color: category === 'score' ? '#fff' : (category === 'coins' ? 'var(--neon-yellow)' : 'var(--neon-magenta)') }}>
+        <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: '4px', padding: '6px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem', color: category === 'score' ? 'var(--text-primary)' : (category === 'coins' ? 'var(--neon-yellow)' : 'var(--neon-magenta)') }}>
           {category === 'score' ? entry.score : (category === 'coins' ? `🪙 ${entry.coins}` : `${entry.maxCombo}x`)}
         </div>
       </div>
@@ -106,7 +106,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         style={{ 
           padding: '20px', 
           marginBottom: '32px',
-          background: 'linear-gradient(135deg, #2b1d14, #22160f)'
+          background: 'var(--panel-bg)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.02)'
         }}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -152,14 +153,14 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
           </div>
 
           {/* Timeframe Tag Selectors */}
-          <div style={{ display: 'flex', gap: '4px', background: '#1c130d', padding: '4px', borderRadius: '6px', border: '2px solid #422a1b' }}>
+          <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.03)', padding: '4px', borderRadius: '6px', border: '1px solid var(--panel-border)' }}>
             {(['daily', 'weekly', 'all'] as const).map(tf => (
               <button
                 key={tf}
                 style={{
-                  background: timeframe === tf ? '#422a1b' : 'transparent',
+                  background: timeframe === tf ? 'var(--neon-yellow)' : 'transparent',
                   border: 'none',
-                  color: timeframe === tf ? 'var(--neon-yellow)' : 'var(--text-secondary)',
+                  color: timeframe === tf ? '#000' : 'var(--text-secondary)',
                   padding: '6px 12px',
                   borderRadius: '4px',
                   cursor: 'pointer',
@@ -185,7 +186,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
               type="text" 
               placeholder="Filter names..." 
               className="form-input" 
-              style={{ paddingLeft: '38px', height: '38px', fontSize: '0.82rem', background: '#150d09', border: '2px solid #422a1b' }}
+              style={{ paddingLeft: '38px', height: '38px', fontSize: '0.82rem', background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -225,14 +226,14 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '12px 20px',
-                  color: '#2b2112',
-                  border: isMe ? '2px solid var(--neon-cyan)' : '1px solid #e9dcb9',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.15)',
-                  background: isMe ? '#fffceb' : '#fdf6e2'
+                  color: 'var(--text-primary)',
+                  border: isMe ? '2px solid var(--neon-cyan)' : '1px solid var(--panel-border)',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.02)',
+                  background: isMe ? 'rgba(14, 165, 233, 0.05)' : 'var(--panel-bg)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <span style={{ fontFamily: 'var(--font-retro)', fontSize: '0.72rem', color: '#7c654e', minWidth: '36px' }}>
+                  <span style={{ fontFamily: 'var(--font-retro)', fontSize: '0.72rem', color: 'var(--text-secondary)', minWidth: '36px' }}>
                     #{rankNum}
                   </span>
                   
@@ -241,7 +242,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                   </span>
 
                   <div>
-                    <span style={{ fontWeight: '800', color: isMe ? '#8c5922' : '#3b2410', fontSize: '0.88rem' }}>
+                    <span style={{ fontWeight: '800', color: isMe ? 'var(--neon-cyan)' : 'var(--text-primary)', fontSize: '0.88rem' }}>
                       {entry.username}
                     </span>
                     {isMe && (
@@ -249,7 +250,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                         YOU
                       </span>
                     )}
-                    <span style={{ fontSize: '0.65rem', color: '#7c654e', display: 'block' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', display: 'block' }}>
                       {entry.title}
                     </span>
                   </div>
@@ -260,7 +261,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                     {entry.country === 'US' ? '🇺🇸' : (entry.country === 'JP' ? '🇯🇵' : (entry.country === 'NO' ? '🇳🇴' : (entry.country === 'KR' ? '🇰🇷' : (entry.country === 'CA' ? '🇨🇦' : '🌐'))))}
                   </span>
                   
-                  <span style={{ fontFamily: 'var(--font-retro)', fontSize: '0.72rem', fontWeight: 'bold', color: category === 'score' ? '#3b2410' : (category === 'coins' ? '#8c5922' : '#9a2415'), minWidth: '80px', textAlign: 'right' }}>
+                  <span style={{ fontFamily: 'var(--font-retro)', fontSize: '0.72rem', fontWeight: 'bold', color: category === 'score' ? 'var(--text-primary)' : (category === 'coins' ? 'var(--neon-yellow)' : 'var(--neon-magenta)'), minWidth: '80px', textAlign: 'right' }}>
                     {category === 'score' ? entry.score : (category === 'coins' ? `🪙 ${entry.coins.toLocaleString()}` : `${entry.maxCombo}x`)}
                   </span>
                 </div>
@@ -269,7 +270,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
           })
         ) : (
           sortedList.length <= 3 && (
-            <div className="material-paper" style={{ padding: '30px', textAlign: 'center', color: '#7c654e' }}>
+            <div className="material-paper" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-secondary)' }}>
               No further logs available on the scroll.
             </div>
           )
@@ -286,13 +287,15 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
             display: 'flex', 
             justifyContent: 'space-between',
             alignItems: 'center',
-            color: '#fff',
-            boxShadow: '0 8px 16px rgba(0,0,0,0.5)'
+            color: 'var(--text-primary)',
+            background: 'var(--panel-bg)',
+            border: '1px dashed var(--panel-border)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
           }}
         >
           <div>
             <div style={{ fontSize: '0.62rem', color: 'var(--neon-yellow)', fontFamily: 'var(--font-retro)' }}>YOUR CURRENT STANDING</div>
-            <h4 className="retro-title" style={{ fontSize: '0.85rem', marginTop: '4px', color: '#fff', textShadow: 'none' }}>
+            <h4 className="retro-title" style={{ fontSize: '0.85rem', marginTop: '4px', color: 'var(--text-primary)', textShadow: 'none' }}>
               Rank #{playerRankNum} • {user.username}
             </h4>
           </div>

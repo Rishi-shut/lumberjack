@@ -56,9 +56,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             flexDirection: 'column', 
             alignItems: 'center',
             textAlign: 'center',
-            background: 'linear-gradient(180deg, #322116 0%, #20140d 100%)',
+            background: 'var(--panel-bg)',
             alignSelf: 'start',
-            boxShadow: '0 12px 24px rgba(0,0,0,0.5)'
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.03)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
@@ -75,7 +75,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </span>
           </div>
 
-          <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '4px', letterSpacing: '0.5px', color: '#fff' }}>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '4px', letterSpacing: '0.5px', color: 'var(--text-primary)' }}>
             {user.username}
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontFamily: 'var(--font-retro)', marginBottom: '28px' }}>
@@ -89,7 +89,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <circle 
                 cx="60" cy="60" r={radius} 
                 fill="transparent" 
-                stroke="#150e09" 
+                stroke="rgba(0,0,0,0.06)" 
                 strokeWidth="8" 
               />
               {/* Progress Circle Fill */}
@@ -123,7 +123,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </p>
 
           {/* Profile Cosmetics Customizer */}
-          <div style={{ width: '100%', borderTop: '2px dashed #422a1b', paddingTop: '24px' }}>
+          <div style={{ width: '100%', borderTop: '1px dashed var(--panel-border)', paddingTop: '24px' }}>
             <h4 className="retro-title" style={{ fontSize: '0.72rem', color: 'var(--neon-cyan)', marginBottom: '16px', textAlign: 'left' }}>
               ENGRAVE PROFILE DETAILS
             </h4>
@@ -191,23 +191,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
           className="material-paper" 
           style={{ 
             padding: '32px 28px',
-            color: '#2b2112',
-            boxShadow: 'inset 0 0 20px rgba(184,142,83,0.15), 0 12px 24px rgba(0,0,0,0.3)'
+            color: 'var(--text-primary)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.03)'
           }}
         >
           {/* Scroll Tabs */}
-          <div style={{ display: 'flex', gap: '16px', borderBottom: '2px solid #e9dcb9', marginBottom: '24px', paddingBottom: '4px' }}>
+          <div style={{ display: 'flex', gap: '16px', borderBottom: '2px solid var(--panel-border)', marginBottom: '24px', paddingBottom: '4px' }}>
             <button 
               style={{
                 background: 'none',
                 border: 'none',
-                color: activeSubTab === 'stats' ? '#8c5922' : '#8c7662',
+                color: activeSubTab === 'stats' ? 'var(--neon-cyan)' : 'var(--text-secondary)',
                 fontFamily: 'var(--font-display)',
                 fontSize: '0.95rem',
                 fontWeight: '900',
                 cursor: 'pointer',
                 borderBottom: '3px solid',
-                borderColor: activeSubTab === 'stats' ? '#8c5922' : 'transparent',
+                borderColor: activeSubTab === 'stats' ? 'var(--neon-cyan)' : 'transparent',
                 paddingBottom: '8px',
                 transition: 'all 0.15s ease'
               }}
@@ -220,13 +220,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
               style={{
                 background: 'none',
                 border: 'none',
-                color: activeSubTab === 'achievements' ? '#8c5922' : '#8c7662',
+                color: activeSubTab === 'achievements' ? 'var(--neon-cyan)' : 'var(--text-secondary)',
                 fontFamily: 'var(--font-display)',
                 fontSize: '0.95rem',
                 fontWeight: '900',
                 cursor: 'pointer',
                 borderBottom: '3px solid',
-                borderColor: activeSubTab === 'achievements' ? '#8c5922' : 'transparent',
+                borderColor: activeSubTab === 'achievements' ? 'var(--neon-cyan)' : 'transparent',
                 paddingBottom: '8px',
                 transition: 'all 0.15s ease'
               }}

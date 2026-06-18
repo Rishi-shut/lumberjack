@@ -374,7 +374,7 @@ export const App: React.FC = () => {
     return (
       <div style={{
         height: '100vh',
-        backgroundColor: '#17110c',
+        backgroundColor: 'var(--bg-color)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -382,7 +382,7 @@ export const App: React.FC = () => {
         padding: '24px',
         textAlign: 'center',
         fontFamily: 'var(--font-sans)',
-        color: '#fbf5f0'
+        color: 'var(--text-primary)'
       }}>
         <div className="material-wood" style={{
           padding: '40px',
@@ -456,8 +456,8 @@ export const App: React.FC = () => {
         <div className="backdrop-layer stars-layer"></div>
         <div className="backdrop-layer mountains-layer">
           <svg viewBox="0 0 1440 320" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-            <path d="M0,240 L120,170 L240,220 L360,130 L480,210 L600,120 L720,200 L840,110 L960,190 L1080,130 L1200,210 L1320,140 L1440,240 L1440,320 L0,320 Z" fill="#20150d" opacity="0.45"/>
-            <path d="M0,280 L180,210 L360,270 L540,190 L720,260 L900,180 L1080,250 L1260,200 L1440,280 L1440,320 L0,320 Z" fill="#160e0a"/>
+            <path d="M0,240 L120,170 L240,220 L360,130 L480,210 L600,120 L720,200 L840,110 L960,190 L1080,130 L1200,210 L1320,140 L1440,240 L1440,320 L0,320 Z" fill="#dbd0c0" opacity="0.45"/>
+            <path d="M0,280 L180,210 L360,270 L540,190 L720,260 L900,180 L1080,250 L1260,200 L1440,280 L1440,320 L0,320 Z" fill="#cbbfae"/>
           </svg>
         </div>
         <div className="backdrop-layer fog-layer"></div>
@@ -525,10 +525,10 @@ export const App: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Treasury details (Desktop only) */}
           <div className="desktop-only-nav" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div className="stat-chip" style={{ color: 'var(--neon-yellow)', padding: '4px 10px', fontSize: '0.8rem', border: '2px dashed #422a1b', background: '#1c130d' }}>
+            <div className="stat-chip" style={{ color: 'var(--neon-yellow)', padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--neon-yellow)', background: 'rgba(245, 158, 11, 0.08)', borderRadius: '6px' }}>
               <span>🪙 {user.coins.toLocaleString()}</span>
             </div>
-            <div className="stat-chip" style={{ color: 'var(--neon-cyan)', padding: '4px 10px', fontSize: '0.8rem', border: '2px dashed #422a1b', background: '#1c130d' }}>
+            <div className="stat-chip" style={{ color: 'var(--neon-cyan)', padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--neon-cyan)', background: 'rgba(14, 165, 233, 0.08)', borderRadius: '6px' }}>
               <span>💎 {user.diamonds}</span>
             </div>
           </div>
@@ -572,11 +572,11 @@ export const App: React.FC = () => {
             ))}
             
             {/* Mobile User Treasury Info */}
-            <div style={{ display: 'flex', gap: '8px', borderTop: '2px dashed #422a1b', paddingTop: '12px', marginTop: '4px' }}>
-              <div className="stat-chip" style={{ color: 'var(--neon-yellow)', flex: 1, justifyContent: 'center', background: '#1c130d' }}>
+            <div style={{ display: 'flex', gap: '8px', borderTop: '1px dashed var(--panel-border)', paddingTop: '12px', marginTop: '4px' }}>
+              <div className="stat-chip" style={{ color: 'var(--neon-yellow)', flex: 1, justifyContent: 'center', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid var(--neon-yellow)', borderRadius: '6px', padding: '6px 12px' }}>
                 <span>🪙 {user.coins.toLocaleString()}</span>
               </div>
-              <div className="stat-chip" style={{ color: 'var(--neon-cyan)', flex: 1, justifyContent: 'center', background: '#1c130d' }}>
+              <div className="stat-chip" style={{ color: 'var(--neon-cyan)', flex: 1, justifyContent: 'center', background: 'rgba(14, 165, 233, 0.08)', border: '1px solid var(--neon-cyan)', borderRadius: '6px', padding: '6px 12px' }}>
                 <span>💎 {user.diamonds}</span>
               </div>
             </div>
@@ -648,7 +648,7 @@ export const App: React.FC = () => {
           />
         )}
         {currentPage === '404' && (
-          <div className="material-wood" style={{ padding: '65px 24px', textAlign: 'center', maxWidth: '480px', margin: '40px auto', background: 'linear-gradient(180deg, #322116, #1e130d)', boxShadow: '0 12px 24px rgba(0,0,0,0.5)' }}>
+          <div className="material-wood" style={{ padding: '65px 24px', textAlign: 'center', maxWidth: '480px', margin: '40px auto', background: 'var(--panel-bg)', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
             <div style={{ fontSize: '5rem', marginBottom: '20px', animation: 'breathAnim 1.5s infinite ease-in-out' }}>
               🪓💥🪵
             </div>

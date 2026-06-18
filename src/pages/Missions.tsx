@@ -50,10 +50,10 @@ export const Missions: React.FC<MissionsProps> = ({
           position: 'relative',
           transform: rotation,
           opacity: mission.claimed ? 0.72 : 1,
-          color: '#2b2112',
+          color: 'var(--text-primary)',
           borderWidth: '1px',
-          borderColor: '#e9dcb9',
-          boxShadow: '0 6px 12px rgba(0,0,0,0.3)',
+          borderColor: 'var(--panel-border)',
+          boxShadow: '0 6px 12px rgba(0,0,0,0.02)',
           transition: 'transform 0.2s ease',
           marginBottom: '8px'
         }}
@@ -70,36 +70,36 @@ export const Missions: React.FC<MissionsProps> = ({
           backgroundColor: '#3a3a3a',
           backgroundImage: 'radial-gradient(circle at 4px 4px, #5c5c5c 0%, #1a1a1a 80%)',
           border: '2px solid #1c1c1c',
-          boxShadow: '0 3px 4px rgba(0,0,0,0.5)',
+          boxShadow: '0 3px 4px rgba(0,0,0,0.1)',
           zIndex: 10
         }} />
 
         <div style={{ flex: 1, minWidth: '280px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <h4 className="retro-title" style={{ fontSize: '0.8rem', color: '#3b2410', textShadow: 'none', margin: 0 }}>
+            <h4 className="retro-title" style={{ fontSize: '0.8rem', color: 'var(--text-primary)', textShadow: 'none', margin: 0 }}>
               {mission.title}
             </h4>
             {mission.claimed ? (
-              <span style={{ fontSize: '0.62rem', color: '#7c654e', fontFamily: 'var(--font-retro)' }}>[CLAIMED]</span>
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>[CLAIMED]</span>
             ) : isCompleted ? (
-              <span style={{ fontSize: '0.62rem', color: '#2e7d32', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>[COMPLETE]</span>
+              <span style={{ fontSize: '0.62rem', color: 'var(--neon-green)', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>[COMPLETE]</span>
             ) : null}
           </div>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#5c4b3c', marginBottom: '6px', fontFamily: 'var(--font-sans)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '6px', fontFamily: 'var(--font-sans)' }}>
             <span>Progress: {mission.current} / {mission.target}</span>
-            <span style={{ fontWeight: 'bold', color: '#8c5922' }}>
+            <span style={{ fontWeight: 'bold', color: 'var(--neon-yellow)' }}>
               Reward: {mission.rewardCoins > 0 ? `🪙 ${mission.rewardCoins}` : ''} {mission.rewardDiamonds > 0 ? `💎 ${mission.rewardDiamonds}` : ''}
             </span>
           </div>
 
-          {/* Carved wood progress slot */}
-          <div className="progress-bar-container" style={{ height: '8px', background: '#e9dcb9', border: '1px solid #ccc1ab' }}>
+          {/* Elegant progress slot */}
+          <div className="progress-bar-container" style={{ height: '8px', background: 'var(--bg-color)', border: '1px solid var(--panel-border)' }}>
             <div 
               className="progress-bar-fill" 
               style={{ 
                 width: `${progressPct}%`,
-                backgroundColor: mission.claimed ? '#8c7662' : (isCompleted ? '#388e3c' : '#2563eb')
+                backgroundColor: mission.claimed ? 'var(--text-secondary)' : (isCompleted ? 'var(--neon-green)' : 'var(--neon-cyan)')
               }}
             ></div>
           </div>
@@ -109,7 +109,7 @@ export const Missions: React.FC<MissionsProps> = ({
           {mission.claimed ? (
             <button 
               className="neon-btn" 
-              style={{ pointerEvents: 'none', borderColor: '#ccc1ab', color: '#7c654e', textShadow: 'none', opacity: 0.5, fontSize: '0.7rem' }} 
+              style={{ pointerEvents: 'none', borderColor: 'var(--panel-border)', color: 'var(--text-secondary)', textShadow: 'none', opacity: 0.5, fontSize: '0.7rem' }} 
               disabled
             >
               CLAIMED
@@ -144,9 +144,9 @@ export const Missions: React.FC<MissionsProps> = ({
         className="material-wood"
         style={{
           padding: '36px 24px',
-          background: 'radial-gradient(circle, #7d5032 0%, #54341e 100%)',
-          borderWidth: '6px',
-          boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8), 0 12px 24px rgba(0,0,0,0.6)',
+          background: 'var(--panel-bg)',
+          borderWidth: '1px',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.03)',
           minHeight: '500px',
           position: 'relative'
         }}
@@ -163,7 +163,7 @@ export const Missions: React.FC<MissionsProps> = ({
 
         {/* Daily Challenges */}
         <div style={{ marginBottom: '40px' }}>
-          <h3 className="retro-title" style={{ fontSize: '0.78rem', textAlign: 'left', marginBottom: '16px', color: 'var(--neon-cyan)', borderBottom: '2px dashed rgba(255,255,255,0.15)', paddingBottom: '6px' }}>
+          <h3 className="retro-title" style={{ fontSize: '0.78rem', textAlign: 'left', marginBottom: '16px', color: 'var(--neon-cyan)', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '6px' }}>
             ⚡ DAILY CONVENTIONS
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -173,7 +173,7 @@ export const Missions: React.FC<MissionsProps> = ({
 
         {/* Weekly Challenges */}
         <div>
-          <h3 className="retro-title" style={{ fontSize: '0.78rem', textAlign: 'left', marginBottom: '16px', color: 'var(--neon-magenta)', borderBottom: '2px dashed rgba(255,255,255,0.15)', paddingBottom: '6px' }}>
+          <h3 className="retro-title" style={{ fontSize: '0.78rem', textAlign: 'left', marginBottom: '16px', color: 'var(--neon-magenta)', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '6px' }}>
             📜 WEEKLY CONTRACTS
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

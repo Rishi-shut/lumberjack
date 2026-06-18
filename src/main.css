@@ -2,87 +2,87 @@
 /* AAA Indie Game Warm Organic Aesthetic */
 
 :root {
-  --bg-color: #17110c;
-  --panel-bg: #261b14;
-  --panel-border: #3d2c20;
-  --text-primary: #fbf5f0;
-  --text-secondary: #c2ada0;
+  --bg-color: #f8f9fa;      /* Clean Alabaster Light White */
+  --panel-bg: #ffffff;      /* Pure White Panel */
+  --panel-border: #e2e8f0;  /* Sleek Platinum/Slate Border */
+  --text-primary: #1e293b;  /* Premium Slate Charcoal */
+  --text-secondary: #64748b;/* Modern Cool Gray */
   
-  --neon-green: #679f38;   /* Forest Green */
-  --neon-cyan: #d28c38;    /* Warm Amber */
-  --neon-magenta: #a73a15; /* Rust Red */
-  --neon-yellow: #e5a93b;  /* Warm Gold */
-  --neon-red: #a82e1c;     /* Autumn Crimson */
+  --neon-green: #10b981;   /* Vibrant Emerald Green */
+  --neon-cyan: #0ea5e9;    /* Clean Sky Cyan */
+  --neon-magenta: #ec4899; /* Radiant Rose Magenta */
+  --neon-yellow: #f59e0b;  /* Pure Premium Amber Gold */
+  --neon-red: #ef4444;     /* Sleek Crimson Red */
   
   --font-sans: 'Outfit', sans-serif;
   --font-retro: 'Press Start 2P', monospace;
   --font-display: 'MedievalSharp', cursive, serif;
 }
 
-/* Dynamic Level-Based Nature Wood Themes */
+/* Dynamic Level-Based Nature Themes (Elegant Light Overhauls) */
 .theme-wood-oak {
-  --bg-color: #1c140e;
-  --panel-bg: #2b1d14;
-  --panel-border: #422a1b;
-  --text-primary: #fbf6f0;
-  --text-secondary: #c4ab99;
-  --neon-green: #7ca85c;
-  --neon-cyan: #e2a050;
-  --neon-magenta: #e06030;
-  --neon-yellow: #f8c050;
-  --neon-red: #cc3c24;
+  --bg-color: #fcfbfa;
+  --panel-bg: #ffffff;
+  --panel-border: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --neon-green: #10b981;
+  --neon-cyan: #0ea5e9;
+  --neon-magenta: #ec4899;
+  --neon-yellow: #f59e0b;
+  --neon-red: #ef4444;
 }
 
 .theme-wood-birch {
-  --bg-color: #121810;
-  --panel-bg: #202b1c;
-  --panel-border: #35462e;
-  --text-primary: #f2faf0;
-  --text-secondary: #a3c099;
-  --neon-green: #97d468;
-  --neon-cyan: #66e2c3;
-  --neon-magenta: #d968d4;
-  --neon-yellow: #e4e25a;
-  --neon-red: #e04f4f;
+  --bg-color: #f1f7f6;
+  --panel-bg: #ffffff;
+  --panel-border: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --neon-green: #059669;
+  --neon-cyan: #0284c7;
+  --neon-magenta: #db2777;
+  --neon-yellow: #d97706;
+  --neon-red: #dc2626;
 }
 
 .theme-wood-redwood {
-  --bg-color: #1a0c0a;
-  --panel-bg: #2d1410;
-  --panel-border: #4a2119;
-  --text-primary: #fbebea;
-  --text-secondary: #caa19a;
-  --neon-green: #e8590c;
-  --neon-cyan: #fcc419;
-  --neon-magenta: #e03131;
-  --neon-yellow: #ffd43b;
-  --neon-red: #c92a2a;
+  --bg-color: #fffaf9;
+  --panel-bg: #ffffff;
+  --panel-border: #fee2e2;
+  --text-primary: #450a0a;
+  --text-secondary: #7f1d1d;
+  --neon-green: #dc2626;
+  --neon-cyan: #ea580c;
+  --neon-magenta: #db2777;
+  --neon-yellow: #d97706;
+  --neon-red: #991b1b;
 }
 
 .theme-wood-frost {
-  --bg-color: #0e1624;
-  --panel-bg: #192338;
-  --panel-border: #293959;
-  --text-primary: #edf5fe;
-  --text-secondary: #9db5db;
-  --neon-green: #3bc9db;
-  --neon-cyan: #74c0fc;
-  --neon-magenta: #a78bfa;
-  --neon-yellow: #e5dbff;
-  --neon-red: #ff8787;
+  --bg-color: #f0f9ff;
+  --panel-bg: #ffffff;
+  --panel-border: #bae6fd;
+  --text-primary: #0369a1;
+  --text-secondary: #0c4a6e;
+  --neon-green: #0891b2;
+  --neon-cyan: #0284c7;
+  --neon-magenta: #c084fc;
+  --neon-yellow: #f59e0b;
+  --neon-red: #dc2626;
 }
 
 .theme-wood-gold {
-  --bg-color: #140d04;
-  --panel-bg: #291b0a;
-  --panel-border: #422d14;
-  --text-primary: #fffceb;
-  --text-secondary: #e0be9b;
-  --neon-green: #10b981;
-  --neon-cyan: #fbbf24;
-  --neon-magenta: #f59e0b;
-  --neon-yellow: #fef08a;
-  --neon-red: #ef4444;
+  --bg-color: #fdfaf2;
+  --panel-bg: #ffffff;
+  --panel-border: #fef08a;
+  --text-primary: #78350f;
+  --text-secondary: #92400e;
+  --neon-green: #059669;
+  --neon-cyan: #ea580c;
+  --neon-magenta: #be185d;
+  --neon-yellow: #d97706;
+  --neon-red: #b91c1c;
 }
 
 * {
@@ -127,68 +127,62 @@ body {
 
 /* Subtle background scenery */
 .env-forest {
-  background: linear-gradient(180deg, #1b241c 0%, #17110c 100%);
+  background: linear-gradient(180deg, #f1f5f9 0%, var(--bg-color) 100%);
 }
 .env-cabin {
-  background: linear-gradient(180deg, #1d1814 0%, #17110c 100%);
+  background: linear-gradient(180deg, #f8fafc 0%, var(--bg-color) 100%);
 }
 .env-workshop {
-  background: linear-gradient(180deg, #221c17 0%, #17110c 100%);
+  background: linear-gradient(180deg, #f1f5f9 0%, var(--bg-color) 100%);
 }
 .env-village {
-  background: linear-gradient(180deg, #1f221a 0%, #17110c 100%);
+  background: linear-gradient(180deg, #f8fafc 0%, var(--bg-color) 100%);
 }
 .env-castle {
-  background: linear-gradient(180deg, #1c2126 0%, #17110c 100%);
+  background: linear-gradient(180deg, #f1f5f9 0%, var(--bg-color) 100%);
 }
 .env-stone {
-  background: linear-gradient(180deg, #1a1b1e 0%, #17110c 100%);
+  background: linear-gradient(180deg, #f8fafc 0%, var(--bg-color) 100%);
 }
 
 /* Material Styling Classes */
 .material-wood {
-  background: #2b1d14;
-  border: 4px solid #422a1b;
-  border-top-color: #5c3c28;
-  border-left-color: #5c3c28;
-  border-bottom-color: #1e130d;
-  border-right-color: #1e130d;
-  border-radius: 8px;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.05);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+  color: var(--text-primary);
+  transition: all 0.25s ease;
 }
 
 .material-stone {
-  background: #272a30;
-  border: 4px solid #383c44;
-  border-top-color: #4f5561;
-  border-left-color: #4f5561;
-  border-bottom-color: #1d1f24;
-  border-right-color: #1d1f24;
-  border-radius: 8px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.7);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
 }
 
 .material-canvas {
-  background: #e6dfd1;
-  border: 2px solid #ccc1ab;
-  border-radius: 6px;
-  color: #423525;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.05), 0 4px 6px rgba(0,0,0,0.15);
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
 }
 
 .material-paper {
-  background: #fdf6e2;
-  border: 1px solid #e9dcb9;
-  border-radius: 4px;
-  color: #2b2112;
-  box-shadow: inset 0 0 15px rgba(200,165,115,0.25), 0 4px 8px rgba(0,0,0,0.2);
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  color: var(--text-primary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
 .material-leather {
-  background: #5c3b1e;
-  border: 2px dashed #352110;
-  border-radius: 4px;
-  box-shadow: inset 0 0 8px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+  background: #f1f5f9;
+  border: 1px dashed var(--panel-border);
+  border-radius: 8px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
 
 /* Animations */
@@ -250,19 +244,19 @@ body {
   left: 16px;
   right: 16px;
   height: 64px;
-  background: rgba(43, 29, 20, 0.95);
-  border: 3px solid #422a1b;
-  border-top-color: #5c3c28;
-  border-left-color: #5c3c28;
-  border-bottom-color: #1e130d;
-  border-right-color: #1e130d;
+  background: rgba(250, 247, 240, 0.92);
+  border: 2px solid var(--panel-border);
+  border-top-color: rgba(255, 255, 255, 0.98);
+  border-left-color: rgba(255, 255, 255, 0.98);
+  border-bottom-color: rgba(60, 51, 41, 0.08);
+  border-right-color: rgba(60, 51, 41, 0.08);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
   z-index: 999;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+  box-shadow: 0 6px 20px rgba(60, 51, 41, 0.06);
   backdrop-filter: blur(8px);
   transition: transform 0.3s ease;
 }
@@ -721,14 +715,14 @@ body {
   top: 70px;
   right: 0;
   left: 0;
-  background: rgba(43, 29, 20, 0.98);
-  border: 3px solid #422a1b;
-  border-top-color: #5c3c28;
-  border-left-color: #5c3c28;
-  border-bottom-color: #1e130d;
-  border-right-color: #1e130d;
+  background: rgba(250, 247, 240, 0.98);
+  border: 2px solid var(--panel-border);
+  border-top-color: rgba(255, 255, 255, 0.98);
+  border-left-color: rgba(255, 255, 255, 0.98);
+  border-bottom-color: rgba(60, 51, 41, 0.08);
+  border-right-color: rgba(60, 51, 41, 0.08);
   border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.7);
+  box-shadow: 0 8px 24px rgba(60, 51, 41, 0.08);
   padding: 16px;
   display: flex;
   flex-direction: column;
