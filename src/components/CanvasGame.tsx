@@ -285,6 +285,142 @@ const SPRITES: Record<string, { idle: string[]; attack: string[] }> = {
       ".....KDD...DDK..",
       ".....KKK...KKK.."
     ]
+  },
+  char_pyro: {
+    idle: [
+      "....KKKKK.......",
+      "...KOOOOOK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSNNNSK.....",
+      "...KRRRRRRRK....",
+      "..KRRRRRRRRRK...",
+      "..KRRRRRRRRRK...",
+      "..KOOOOOOOOOK...",
+      "...KOO...OOK....",
+      "...KKK...KKK...."
+    ],
+    attack: [
+      "....KKKKK.......",
+      "...KOOOOOK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSNNNSK.....",
+      "....KOOOOOOK....",
+      ".....KOOOOOOK...",
+      ".....KOOOOOOOK..",
+      ".....KRRRRRRRK..",
+      ".....KRR...RRK..",
+      ".....KKK...KKK.."
+    ]
+  },
+  char_druid: {
+    idle: [
+      "....KKKKK.......",
+      "...KGGGGGK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSNNNSK.....",
+      "...KGGGGGGGK....",
+      "..KGGGGGGGGGK...",
+      "..KGGGGGGGGGK...",
+      "..KNNNNNNNNNK...",
+      "...KNN...NNK....",
+      "...KKK...KKK...."
+    ],
+    attack: [
+      "....KKKKK.......",
+      "...KGGGGGK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSNNNSK.....",
+      "....KGGGGGGK....",
+      ".....KGGGGGGK...",
+      ".....KGGGGGGGK..",
+      ".....KNNNNNNNK..",
+      ".....KNN...NNK..",
+      ".....KKK...KKK.."
+    ]
+  },
+  char_valkyrie: {
+    idle: [
+      "....KKKKK.......",
+      "...KWWWWWK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSYYYSK.....",
+      "...KWWWWWWWK....",
+      "..KWWWWWWWWWK...",
+      "..KWWWWWWWWWK...",
+      "..KYYYYYYYYYK...",
+      "...KYY...YYK....",
+      "...KKK...KKK...."
+    ],
+    attack: [
+      "....KKKKK.......",
+      "...KWWWWWK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSYYYSK.....",
+      "....KWWWWWWK....",
+      ".....KWWWWWWK...",
+      ".....KWWWWWWWK..",
+      ".....KYYYYYYYK..",
+      ".....KYY...YYK..",
+      ".....KKK...KKK.."
+    ]
+  },
+  char_pharaoh: {
+    idle: [
+      "....KKKKK.......",
+      "...KYYYYYK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSBBBSK.....",
+      "...KYYYYYYYK....",
+      "..KYYBBYYBBYK...",
+      "..KYYBBYYBBYK...",
+      "..KBBBBBBBBBK...",
+      "...KBB...BBK....",
+      "...KKK...KKK...."
+    ],
+    attack: [
+      "....KKKKK.......",
+      "...KYYYYYK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSBBBSK.....",
+      "....KYYYYYYK....",
+      ".....KYYBBYYK...",
+      ".....KYYBBYYYK..",
+      ".....KBBBBBBBK..",
+      ".....KBB...BBK..",
+      ".....KKK...KKK.."
+    ]
   }
 };
 
@@ -296,6 +432,10 @@ const WEAPONS: Record<string, { color: string; width: number; height: number; sh
   weap_chainsaw: { color: '#FF8C00', width: 10, height: 42, shape: 'chainsaw' },
   weap_laser: { color: '#00FFFF', width: 4, height: 45, shape: 'laser' },
   weap_blade: { color: '#FF00FF', width: 4, height: 48, shape: 'laser' },
+  weap_broadaxe: { color: '#334155', width: 9, height: 38, shape: 'axe' },
+  weap_scythe: { color: '#475569', width: 7, height: 42, shape: 'chainsaw' },
+  weap_candy_cane: { color: '#ef4444', width: 8, height: 34, shape: 'hammer' },
+  weap_energy_halberd: { color: '#a855f7', width: 5, height: 46, shape: 'laser' },
 };
 
 interface Particle {
@@ -450,6 +590,28 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
           textColor: '#ff3300',
           blockType: 'volcano',
           weather: 'lava'
+        };
+      case 'world_autumn':
+        return {
+          bgColor: '#fdf6e2',
+          gridColor: '#fae8ff',
+          treeColor: '#854d0e',
+          branchColor: '#b45309',
+          accentColor: '#d97706',
+          textColor: '#b45309',
+          blockType: 'autumn',
+          weather: 'autumn_leaves'
+        };
+      case 'world_desert':
+        return {
+          bgColor: '#fef08a',
+          gridColor: '#fef9c3',
+          treeColor: '#ca8a04',
+          branchColor: '#854d0e',
+          accentColor: '#eab308',
+          textColor: '#a16207',
+          blockType: 'desert',
+          weather: 'sandstorm'
         };
       default: // Forest
         return {
@@ -623,7 +785,11 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     const trailColor = trailId === 'trail_fire' ? '#FF4500' :
                        trailId === 'trail_spark' ? '#00FFFF' :
                        trailId === 'trail_rainbow' ? 'hsl(' + (Date.now() % 360) + ', 100%, 50%)' :
-                       trailId === 'trail_dust' ? '#8B5A2B' : '#ffffff';
+                       trailId === 'trail_dust' ? '#8B5A2B' :
+                       trailId === 'trail_leaves' ? '#10b981' :
+                       trailId === 'trail_void' ? '#8b5cf6' :
+                       trailId === 'trail_sakura' ? '#ec4899' :
+                       trailId === 'trail_gold' ? '#f59e0b' : '#ffffff';
 
     for (let i = 0; i < 8; i++) {
       state.particles.push({
@@ -1053,6 +1219,32 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
           life: 0,
           maxLife: 200
         });
+      } else if (config.weather === 'autumn_leaves') {
+        state.weatherParticles.push({
+          x: Math.random() * canvas.width,
+          y: -10,
+          vx: -1 + Math.random() * 2,
+          vy: 1 + Math.random() * 1.5,
+          color: Math.random() < 0.33 ? '#ea580c' : (Math.random() < 0.66 ? '#ef4444' : '#f59e0b'),
+          size: 3 + Math.random() * 4,
+          alpha: 0.7,
+          life: 0,
+          maxLife: 250,
+          rotation: Math.random() * Math.PI,
+          vRotation: 0.02 - Math.random() * 0.04
+        });
+      } else if (config.weather === 'sandstorm') {
+        state.weatherParticles.push({
+          x: canvas.width + 10,
+          y: Math.random() * canvas.height,
+          vx: -3 - Math.random() * 3,
+          vy: 0.2 + Math.random() * 0.6,
+          color: Math.random() < 0.5 ? '#fef08a' : '#f59e0b',
+          size: 1 + Math.random() * 2,
+          alpha: 0.4 + Math.random() * 0.3,
+          life: 0,
+          maxLife: 150
+        });
       } else {
         // forest floating leaves
         state.weatherParticles.push({
@@ -1084,6 +1276,11 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       if (config.weather === 'lava') {
         // Embers float up, reset if out
         if (p.y < -10 || p.x < -10 || p.x > canvas.width + 10) {
+          state.weatherParticles.splice(i, 1);
+        }
+      } else if (config.weather === 'sandstorm') {
+        // Sandstorm particles blow left
+        if (p.x < -10 || p.y > canvas.height + 10 || p.y < -10) {
           state.weatherParticles.splice(i, 1);
         }
       } else {
@@ -1618,6 +1815,68 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(marshX - 9, marshY - 11); ctx.lineTo(marshX + 10, marshY - 11); ctx.stroke();
     }
+    else if (config.blockType === 'autumn') {
+      // Draw distant autumn mountains - Low Poly 3D (terracotta, red-orange, gold/amber)
+      drawLowPolyMountain(ctx, -120, canvas.width * 0.3, canvas.width * 0.7, baseY - 220, baseY, '#854d0e', '#7c2d12');
+      drawLowPolyMountain(ctx, canvas.width * 0.32, canvas.width * 0.75, canvas.width + 120, baseY - 260, baseY, '#b45309', '#7c2d12');
+
+      // Midground Low Poly Autumn Mountains
+      drawLowPolyMountain(ctx, -50, canvas.width * 0.15, canvas.width * 0.5, baseY - 150, baseY, '#d97706', '#9a3412');
+      drawLowPolyMountain(ctx, canvas.width * 0.2, canvas.width * 0.52, canvas.width * 0.85, baseY - 180, baseY, '#ea580c', '#9a3412');
+      drawLowPolyMountain(ctx, canvas.width * 0.55, canvas.width * 0.88, canvas.width + 80, baseY - 140, baseY, '#f97316', '#c2410c');
+
+      // Cute sleeping fox in autumn leaves
+      const foxX = 70;
+      const foxY = canvas.height - 100;
+      ctx.fillStyle = '#ea580c'; // fox body
+      ctx.beginPath();
+      ctx.arc(foxX, foxY, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath(); // fox tail
+      ctx.ellipse(foxX - 12, foxY + 4, 10, 5, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff'; // tail tip
+      ctx.beginPath();
+      ctx.arc(foxX - 20, foxY + 6, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ea580c'; // fox head
+      ctx.beginPath();
+      ctx.arc(foxX + 10, foxY - 5, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath(); // fox ears
+      ctx.moveTo(foxX + 6, foxY - 11); ctx.lineTo(foxX + 8, foxY - 18); ctx.lineTo(foxX + 12, foxY - 11);
+      ctx.moveTo(foxX + 10, foxY - 11); ctx.lineTo(foxX + 14, foxY - 18); ctx.lineTo(foxX + 16, foxY - 11);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff'; // fox cheeks
+      ctx.beginPath();
+      ctx.arc(foxX + 8, foxY - 3, 3, 0, Math.PI * 2);
+      ctx.arc(foxX + 12, foxY - 3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000000'; // closed eyes & nose
+      ctx.fillRect(foxX + 14, foxY - 5, 2, 1.5); // nose
+    }
+    else if (config.blockType === 'desert') {
+      // Draw distant desert dunes - Low Poly 3D (warm gold/yellow/orange sand shades)
+      drawLowPolyMountain(ctx, -100, canvas.width * 0.4, canvas.width * 0.8, baseY - 180, baseY, '#ca8a04', '#a16207');
+      drawLowPolyMountain(ctx, canvas.width * 0.35, canvas.width * 0.75, canvas.width + 120, baseY - 210, baseY, '#d97706', '#9a3412');
+
+      // Midground Low Poly Dunes
+      drawLowPolyMountain(ctx, -40, canvas.width * 0.2, canvas.width * 0.55, baseY - 130, baseY, '#eab308', '#ca8a04');
+      drawLowPolyMountain(ctx, canvas.width * 0.5, canvas.width * 0.85, canvas.width + 60, baseY - 140, baseY, '#facc15', '#d97706');
+
+      // Cute camel walking
+      const camelX = (Date.now() * 0.02) % (canvas.width + 100) - 50;
+      const camelY = canvas.height - 110;
+      ctx.fillStyle = '#d97706'; // camel color
+      ctx.fillRect(camelX - 12, camelY - 8, 24, 12); // body
+      ctx.fillRect(camelX - 4, camelY - 16, 8, 8); // hump
+      ctx.fillRect(camelX + 8, camelY - 18, 5, 14); // neck
+      ctx.fillRect(camelX + 10, camelY - 22, 7, 5); // head
+      ctx.fillRect(camelX - 10, camelY + 4, 3, 10); // legs
+      ctx.fillRect(camelX - 4, camelY + 4, 3, 10);
+      ctx.fillRect(camelX + 4, camelY + 4, 3, 10);
+      ctx.fillRect(camelX + 9, camelY + 4, 3, 10);
+    }
   };
 
   const drawWeather = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
@@ -1628,7 +1887,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.globalAlpha = p.alpha;
       ctx.fillStyle = p.color;
 
-      if (config.weather === 'leaves' && p.rotation !== undefined) {
+      if ((config.weather === 'leaves' || config.weather === 'autumn_leaves') && p.rotation !== undefined) {
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rotation);
         // Draw leaf diamond
@@ -1879,6 +2138,61 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.lineWidth = 3;
       ctx.strokeRect(x, y, w, h);
     }
+    else if (config.blockType === 'autumn') {
+      // Warm orange-brown maple wood cylinder
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, '#7c2d12');
+      grad.addColorStop(0.2, '#9a3412');
+      grad.addColorStop(0.4, '#c2410c');
+      grad.addColorStop(0.55, '#ea580c'); // bright highlight stripe
+      grad.addColorStop(0.7, '#c2410c');
+      grad.addColorStop(0.85, '#9a3412');
+      grad.addColorStop(1, '#431407');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Wood bark rings curving in perspective (3D effect)
+      ctx.strokeStyle = 'rgba(251, 146, 60, 0.15)'; // light orange bark rings
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(x + w/2, y + h/3, w/2 - 4, 5, 0, 0, Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(x + w/2, y + (h*2)/3, w/2 - 4, 5, 0, 0, Math.PI);
+      ctx.stroke();
+
+      // Main structural outline
+      ctx.strokeStyle = '#2d0600';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
+    }
+    else if (config.blockType === 'desert') {
+      // Pale yellow/sand palm cylinder
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, '#a16207');
+      grad.addColorStop(0.18, '#ca8a04');
+      grad.addColorStop(0.4, '#eab308');
+      grad.addColorStop(0.55, '#fef08a'); // sand reflection stripe
+      grad.addColorStop(0.7, '#eab308');
+      grad.addColorStop(0.85, '#ca8a04');
+      grad.addColorStop(1, '#713f12');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Palm trunk segments (ring outlines)
+      ctx.strokeStyle = 'rgba(113, 63, 18, 0.25)';
+      ctx.lineWidth = 2.5;
+      for (let gy = y + 8; gy < y + h; gy += 12) {
+        ctx.beginPath();
+        ctx.ellipse(x + w/2, gy, w/2 - 4, 4, 0, 0, Math.PI);
+        ctx.stroke();
+      }
+
+      // Main structural outline
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
+    }
   };
 
   const drawObstacle = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, side: 'left' | 'right') => {
@@ -2013,7 +2327,72 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       }
       ctx.fill();
       ctx.stroke();
-    } 
+    }
+    else if (config.blockType === 'autumn') {
+      // Reddish-orange maple branch with gold/red leaf clusters
+      ctx.fillStyle = '#9a3412';
+      ctx.fillRect(x, y + 4, w, h - 8);
+      ctx.fillStyle = '#7c2d12';
+      ctx.fillRect(x, y + 6, w, 2);
+      ctx.fillRect(x, y + h - 10, w, 2);
+      ctx.strokeStyle = '#431407';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y + 4, w, h - 8);
+
+      // Autumn Maple leaf clusters
+      ctx.fillStyle = '#ea580c'; // main orange
+      ctx.strokeStyle = '#431407';
+      ctx.lineWidth = 2;
+      const leafX = side === 'left' ? x - 5 : x + w + 5;
+
+      ctx.beginPath(); ctx.arc(leafX, y + h/2 - 12, 18, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(leafX + (side==='left' ? -10 : 10), y + h/2 + 6, 16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ef4444'; // red leaf highlight
+      ctx.beginPath(); ctx.arc(leafX, y + h/2, 20, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    else if (config.blockType === 'desert') {
+      // Dry yellow palm branch / frond
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(x, y + 4, w, h - 8);
+      ctx.fillStyle = '#a16207';
+      ctx.fillRect(x, y + 6, w, 2);
+      ctx.fillRect(x, y + h - 10, w, 2);
+      ctx.strokeStyle = '#713f12';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y + 4, w, h - 8);
+
+      // Palm leaf fronds hanging/pointing out
+      ctx.fillStyle = '#854d0e';
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 2;
+      const leafX = side === 'left' ? x - 8 : x + w + 8;
+      
+      // Draw 3 pointed triangular palm leaf shapes
+      ctx.beginPath();
+      if (side === 'left') {
+        ctx.moveTo(leafX, y + h/2 - 15);
+        ctx.lineTo(leafX - 25, y + h/2 - 8);
+        ctx.lineTo(leafX - 5, y + h/2 - 2);
+        ctx.moveTo(leafX, y + h/2 - 2);
+        ctx.lineTo(leafX - 28, y + h/2 + 5);
+        ctx.lineTo(leafX - 5, y + h/2 + 10);
+        ctx.moveTo(leafX, y + h/2 + 8);
+        ctx.lineTo(leafX - 22, y + h/2 + 16);
+        ctx.lineTo(leafX - 2, y + h/2 + 18);
+      } else {
+        ctx.moveTo(leafX, y + h/2 - 15);
+        ctx.lineTo(leafX + 25, y + h/2 - 8);
+        ctx.lineTo(leafX + 5, y + h/2 - 2);
+        ctx.moveTo(leafX, y + h/2 - 2);
+        ctx.lineTo(leafX + 28, y + h/2 + 5);
+        ctx.lineTo(leafX + 5, y + h/2 + 10);
+        ctx.moveTo(leafX, y + h/2 + 8);
+        ctx.lineTo(leafX + 22, y + h/2 + 16);
+        ctx.lineTo(leafX + 2, y + h/2 + 18);
+      }
+      ctx.fill();
+      ctx.stroke();
+    }
     else {
       // Fallback
       ctx.fillStyle = config.branchColor;
@@ -2182,6 +2561,26 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       } else if (trailId === 'trail_dust') {
         strokeStyle = '#a05a2c';
         ctx.lineWidth = 16;
+      } else if (trailId === 'trail_leaves') {
+        strokeStyle = '#10b981';
+        ctx.shadowColor = '#059669';
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = 16;
+      } else if (trailId === 'trail_void') {
+        strokeStyle = '#7c3aed';
+        ctx.shadowColor = '#6d28d9';
+        ctx.shadowBlur = 20;
+        ctx.lineWidth = 14;
+      } else if (trailId === 'trail_sakura') {
+        strokeStyle = '#f472b6';
+        ctx.shadowColor = '#db2777';
+        ctx.shadowBlur = 12;
+        ctx.lineWidth = 14;
+      } else if (trailId === 'trail_gold') {
+        strokeStyle = '#f59e0b';
+        ctx.shadowColor = '#d97706';
+        ctx.shadowBlur = 18;
+        ctx.lineWidth = 15;
       }
       
       ctx.strokeStyle = strokeStyle;

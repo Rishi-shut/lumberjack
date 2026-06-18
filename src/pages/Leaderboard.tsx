@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Globe, Award, Trophy, Shield } from 'lucide-react';
-import { db, LeaderboardEntry, UserProfile } from '../utils/LocalStorageDB';
+import { db, LeaderboardEntry, UserProfile, getCharacterEmoji } from '../utils/LocalStorageDB';
 
 interface LeaderboardProps {
   user: UserProfile;
@@ -75,7 +75,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         <div style={{ marginTop: '8px' }}>
           {/* Avatar breathing */}
           <div className="character-breath" style={{ fontSize: '2.5rem', marginBottom: '4px' }}>
-            {entry.avatar === 'char_lumberjack' ? '🪓' : (entry.avatar === 'char_viking' ? '🛡️' : (entry.avatar === 'char_knight' ? '⚔️' : (entry.avatar === 'char_samurai' ? '🥷' : (entry.avatar === 'char_wizard' ? '🧙' : (entry.avatar === 'char_alien' ? '👽' : '🤖')))))}
+            {getCharacterEmoji(entry.avatar)}
           </div>
           
           <h4 className="retro-title" style={{ fontSize: '0.72rem', margin: '0 0 2px', textShadow: 'none', color: isMe ? 'var(--neon-cyan)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -238,7 +238,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                   </span>
                   
                   <span style={{ fontSize: '1.25rem' }}>
-                    {entry.avatar === 'char_lumberjack' ? '🪓' : (entry.avatar === 'char_viking' ? '🛡️' : (entry.avatar === 'char_knight' ? '⚔️' : (entry.avatar === 'char_samurai' ? '🥷' : (entry.avatar === 'char_wizard' ? '🧙' : (entry.avatar === 'char_alien' ? '👽' : '🤖')))))}
+                    {getCharacterEmoji(entry.avatar)}
                   </span>
 
                   <div>

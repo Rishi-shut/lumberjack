@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ShoppingBag, Star, RefreshCw, Key, Award, Shield } from 'lucide-react';
-import { db, ShopItem, UserProfile } from '../utils/LocalStorageDB';
+import { db, ShopItem, UserProfile, getCharacterEmoji } from '../utils/LocalStorageDB';
 import { sound } from '../utils/AudioEngine';
 
 interface ShopProps {
@@ -112,13 +112,13 @@ export const Shop: React.FC<ShopProps> = ({
         style={{
           padding: '24px 28px',
           marginBottom: '32px',
-          background: 'linear-gradient(180deg, #3d281a 0%, #20140d 100%)',
+          background: 'linear-gradient(180deg, var(--panel-bg) 0%, var(--bg-color) 100%)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '16px',
-          boxShadow: '0 8px 16px rgba(0,0,0,0.5)'
+          boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -147,7 +147,7 @@ export const Shop: React.FC<ShopProps> = ({
       </div>
 
       {/* Shop Category Tabs */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderBottom: '3px solid #2b1d14', paddingBottom: '10px', marginBottom: '32px' }}>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderBottom: '3px solid var(--panel-border)', paddingBottom: '10px', marginBottom: '32px' }}>
         {(['character', 'weapon', 'trail', 'title', 'chests', 'season_pass'] as const).map(tab => {
           const isActive = activeTab === tab;
           const label = tab === 'character' ? 'Heroes' :
@@ -181,12 +181,16 @@ export const Shop: React.FC<ShopProps> = ({
           {filteredItems.map(item => {
             const equipped = isEquipped(item);
             
-            let boxColor = '#1e140f';
+            let boxColor = 'var(--bg-color)';
             if (item.type === 'weapon') {
-              if (item.id === 'weap_axe_golden') boxColor = '#d4af37';
-              else if (item.id === 'weap_axe_fire') boxColor = '#a73a15';
-              else if (item.id === 'weap_laser') boxColor = '#3a8eb5';
-              else if (item.id === 'weap_blade') boxColor = '#8a2b5c';
+              if (item.id === 'weap_axe_golden') boxColor = '#fef08a';
+              else if (item.id === 'weap_axe_fire') boxColor = '#fca5a5';
+              else if (item.id === 'weap_laser') boxColor = '#bae6fd';
+              else if (item.id === 'weap_blade') boxColor = '#fbcfe8';
+              else if (item.id === 'weap_broadaxe') boxColor = '#cbd5e1';
+              else if (item.id === 'weap_scythe') boxColor = '#e2e8f0';
+              else if (item.id === 'weap_candy_cane') boxColor = '#fecdd3';
+              else if (item.id === 'weap_energy_halberd') boxColor = '#ddd6fe';
             }
 
             return (
@@ -234,8 +238,8 @@ export const Shop: React.FC<ShopProps> = ({
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                   }}>
                     {item.type === 'character' ? (
-                      <span style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 3px rgba(0,0,0,0.5))' }} className="character-breath">
-                        {item.id === 'char_lumberjack' ? '🪓' : (item.id === 'char_viking' ? '🛡️' : (item.id === 'char_knight' ? '⚔️' : (item.id === 'char_samurai' ? '🥷' : (item.id === 'char_wizard' ? '🧙' : (item.id === 'char_alien' ? '👽' : '🤖')))))}
+                      <span style={{ fontSize: '2.5rem' }} className="character-breath">
+                        {getCharacterEmoji(item.id)}
                       </span>
                     ) : item.type === 'weapon' ? (
                       <div style={{ 

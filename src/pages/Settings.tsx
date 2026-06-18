@@ -218,30 +218,30 @@ export const Settings: React.FC<SettingsProps> = ({
         style={{ 
           marginTop: '32px', 
           padding: '24px 28px',
-          color: '#2b2112',
-          boxShadow: 'inset 0 0 15px rgba(184,142,83,0.15), 0 8px 16px rgba(0,0,0,0.3)'
+          color: 'var(--text-primary)',
+          boxShadow: 'none'
         }}
       >
-        <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '2px solid #e9dcb9', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: '#8c5922', textShadow: 'none' }}>
-          <Cloud size={18} style={{ color: '#8c5922' }} /> CLOUD SYNCHRONIZATION LEDGER
+        <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--neon-yellow)', textShadow: 'none' }}>
+          <Cloud size={18} style={{ color: 'var(--neon-yellow)' }} /> CLOUD SYNCHRONIZATION LEDGER
         </h3>
 
         {user.isGuest ? (
           <form onSubmit={handleLinkAccount} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', marginBottom: '20px' }}>
             <div style={{ flex: 1, minWidth: '240px' }}>
-              <label style={{ fontSize: '0.78rem', color: '#5c4b3c', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Synchronize Email</label>
+              <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Synchronize Email</label>
               <input 
                 type="email" required placeholder="name@domain.com" className="form-input" 
-                style={{ background: '#f5ecd6', border: '2px solid #e9dcb9', color: '#3b2410', fontSize: '0.85rem' }}
+                style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                 value={emailInput} onChange={(e) => setEmailInput(e.target.value)}
               />
             </div>
             
             <div style={{ flex: 1, minWidth: '240px' }}>
-              <label style={{ fontSize: '0.78rem', color: '#5c4b3c', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Challenger Username</label>
+              <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Challenger Username</label>
               <input 
                 type="text" required placeholder="Lumbermaster" className="form-input" 
-                style={{ background: '#f5ecd6', border: '2px solid #e9dcb9', color: '#3b2410', fontSize: '0.85rem' }}
+                style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                 value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)}
               />
             </div>
@@ -251,19 +251,19 @@ export const Settings: React.FC<SettingsProps> = ({
             </button>
           </form>
         ) : (
-          <div style={{ padding: '16px', background: '#ebf5eb', border: '2px solid #c2e0c2', borderRadius: '#2b2112', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid var(--neon-green)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div>
-              <span style={{ fontSize: '0.62rem', color: '#388e3c', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>SYNCHRONIZED CONTRACT</span>
-              <h4 style={{ fontWeight: '900', fontSize: '1.05rem', marginTop: '4px', color: '#3b2410' }}>Linked Hero: {user.username}</h4>
-              <p style={{ fontSize: '0.78rem', color: '#5c4b3c', margin: 0 }}>Backup dispatch email: {user.email}</p>
+              <span style={{ fontSize: '0.62rem', color: 'var(--neon-green)', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>SYNCHRONIZED CONTRACT</span>
+              <h4 style={{ fontWeight: '900', fontSize: '1.05rem', marginTop: '4px', color: 'var(--text-primary)' }}>Linked Hero: {user.username}</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>Backup dispatch email: {user.email}</p>
             </div>
             <span style={{ fontSize: '2.5rem' }}>☁️</span>
           </div>
         )}
 
         {/* Sync telemetry backup */}
-        <div style={{ padding: '18px', background: '#f5ecd6', borderRadius: '8px', border: '2px solid #e9dcb9' }}>
-          <h4 style={{ fontSize: '0.85rem', fontWeight: '850', color: '#3b2410', marginBottom: '12px' }}>Simulate Cloud Backup Operations</h4>
+        <div style={{ padding: '18px', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+          <h4 style={{ fontSize: '0.85rem', fontWeight: '850', color: 'var(--text-primary)', marginBottom: '12px' }}>Simulate Cloud Backup Operations</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
             <button 
               className="neon-btn-yellow"

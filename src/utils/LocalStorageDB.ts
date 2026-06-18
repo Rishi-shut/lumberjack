@@ -77,6 +77,42 @@ export interface ShopItem {
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
+export const getCharacterEmoji = (charId: string): string => {
+  switch (charId) {
+    case 'char_lumberjack': return '🪓';
+    case 'char_viking': return '🛡️';
+    case 'char_knight': return '⚔️';
+    case 'char_samurai': return '🥷';
+    case 'char_wizard': return '🧙';
+    case 'char_ninja': return '👤'; // Cyber Ninja
+    case 'char_alien': return '👽';
+    case 'char_robot': return '🤖';
+    case 'char_pyro': return '🔥';
+    case 'char_druid': return '🌿';
+    case 'char_valkyrie': return '⚡';
+    case 'char_pharaoh': return '👑';
+    default: return '👤';
+  }
+};
+
+export const getCharacterLabel = (charId: string): string => {
+  switch (charId) {
+    case 'char_lumberjack': return '🪓 Lumberjack';
+    case 'char_viking': return '🛡️ Viking';
+    case 'char_knight': return '⚔️ Knight';
+    case 'char_samurai': return '🥷 Samurai';
+    case 'char_wizard': return '🧙 Wizard';
+    case 'char_ninja': return '👤 Cyber Ninja';
+    case 'char_alien': return '👽 Alien';
+    case 'char_robot': return '🤖 Android';
+    case 'char_pyro': return '🔥 Pyro Ranger';
+    case 'char_druid': return '🌿 Druid';
+    case 'char_valkyrie': return '⚡ Valkyrie';
+    case 'char_pharaoh': return '👑 Pharaoh';
+    default: return '👤 Challenger';
+  }
+};
+
 const DEFAULT_SHOP_ITEMS: ShopItem[] = [
   // Characters
   { id: 'char_lumberjack', name: 'Lumberjack', description: 'Just a regular guy who loves wood.', type: 'character', cost: 0, currency: 'coins', unlocked: true, rarity: 'common' },
@@ -85,6 +121,10 @@ const DEFAULT_SHOP_ITEMS: ShopItem[] = [
   { id: 'char_samurai', name: 'Kenshin', description: 'Slices blocks with katana precision.', type: 'character', cost: 2000, currency: 'coins', unlocked: false, rarity: 'rare' },
   { id: 'char_wizard', name: 'Gandalf', description: 'Chops trees with fireballs and magic.', type: 'character', cost: 3500, currency: 'coins', unlocked: false, rarity: 'epic' },
   { id: 'char_ninja', name: 'Cyber Ninja', description: 'Synthesized movements. Light-speed cuts.', type: 'character', cost: 5000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'char_pyro', name: 'Pyro Ranger', description: 'Fires up his swing with heated gauntlets.', type: 'character', cost: 6000, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'char_druid', name: 'Archdruid Elidon', description: 'Commands nature itself to fell the trees.', type: 'character', cost: 8000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'char_valkyrie', name: 'Brunhilde', description: 'Descends from Valhalla to chop wood.', type: 'character', cost: 30, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
+  { id: 'char_pharaoh', name: 'Egypt Pharaoh', description: 'Awakened from eternal slumber to chop pyramids.', type: 'character', cost: 60, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
   { id: 'char_alien', name: 'Zorgon', description: 'An alien lumberjack from Sector 9.', type: 'character', cost: 15, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
   { id: 'char_robot', name: 'Mecha Chop', description: 'Iron limbs fueled by steam power.', type: 'character', cost: 40, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
 
@@ -94,15 +134,23 @@ const DEFAULT_SHOP_ITEMS: ShopItem[] = [
   { id: 'weap_hammer', name: 'Mjolnir Jr.', description: 'Crush blocks instead of cutting them.', type: 'weapon', cost: 2000, currency: 'coins', unlocked: false, rarity: 'rare' },
   { id: 'weap_axe_fire', name: 'Magma Cleaver', description: 'Heated edge that cauterizes trunks.', type: 'weapon', cost: 3000, currency: 'coins', unlocked: false, rarity: 'epic' },
   { id: 'weap_chainsaw', name: 'Lumbermatic-3000', description: 'Vroom vroom! Automatic wood grinding.', type: 'weapon', cost: 4500, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'weap_broadaxe', name: 'Obsidian Great-Axe', description: 'Forged in lava pools, heavy and razor-sharp.', type: 'weapon', cost: 5000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'weap_scythe', name: 'Reaper Scythe', description: 'Harvests logs like souls.', type: 'weapon', cost: 7000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'weap_candy_cane', name: 'Candy Cane Chopper', description: 'Sweet but lethal holiday hammer.', type: 'weapon', cost: 15, currency: 'diamonds', unlocked: false, rarity: 'rare' },
   { id: 'weap_laser', name: 'Plasma Cutter', description: 'Energy beam that slices effortlessly.', type: 'weapon', cost: 20, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
+  { id: 'weap_energy_halberd', name: 'Quantum Halberd', description: 'Glows with subatomic energy particles.', type: 'weapon', cost: 35, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
   { id: 'weap_blade', name: 'Cyber Saber', description: 'An elegant weapon from a neon age.', type: 'weapon', cost: 50, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
 
   // Trails
   { id: 'trail_none', name: 'No Trail', description: 'Simple chop motion.', type: 'trail', cost: 0, currency: 'coins', unlocked: true, rarity: 'common' },
   { id: 'trail_dust', name: 'Wood Chips', description: 'A shower of splinters and leaves.', type: 'trail', cost: 400, currency: 'coins', unlocked: false, rarity: 'common' },
   { id: 'trail_spark', name: 'Electric Spark', description: 'Neon lightning trails.', type: 'trail', cost: 1200, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'trail_leaves', name: 'Falling Leaves', description: 'Leaves a trail of swirling forest foliage.', type: 'trail', cost: 3000, currency: 'coins', unlocked: false, rarity: 'rare' },
   { id: 'trail_fire', name: 'Fire Flame', description: 'Leaves a smoking flame behind.', type: 'trail', cost: 2500, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'trail_void', name: 'Void Portal', description: 'Leaves trails of dark cosmic particles.', type: 'trail', cost: 5000, currency: 'coins', unlocked: false, rarity: 'epic' },
   { id: 'trail_rainbow', name: 'Rainbow Ribbon', description: 'A vibrant spectrum of colors.', type: 'trail', cost: 15, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
+  { id: 'trail_sakura', name: 'Cherry Blossom', description: 'Fell trees with elegant pink petals.', type: 'trail', cost: 20, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
+  { id: 'trail_gold', name: 'Golden Glitter', description: 'Shimmering path of pure gold dust.', type: 'trail', cost: 40, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
 
   // Titles
   { id: 'title_none', name: 'Chop Cadet', description: 'A title for beginners.', type: 'title', cost: 0, currency: 'coins', unlocked: true, rarity: 'common' },
@@ -117,6 +165,8 @@ const DEFAULT_SHOP_ITEMS: ShopItem[] = [
   { id: 'world_ice', name: 'Glacial Spires', description: 'Chop slippery pillars of pure ice.', type: 'world', cost: 1500, currency: 'coins', unlocked: false, rarity: 'rare' },
   { id: 'world_cyber', name: 'Vector Core', description: 'Chop down central server cores in cyberspace.', type: 'world', cost: 3000, currency: 'coins', unlocked: false, rarity: 'epic' },
   { id: 'world_volcano', name: 'Magma Core', description: 'Chop volcanic magma crystals beside lava.', type: 'world', cost: 5000, currency: 'coins', unlocked: false, rarity: 'legendary' },
+  { id: 'world_autumn', name: 'Autumn Canopy', description: 'Chop golden maple trunks amidst falling maple leaves.', type: 'world', cost: 6000, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'world_desert', name: 'Sand Dune Oasis', description: 'Chop dry palm trunks near desert pyramids.', type: 'world', cost: 8000, currency: 'coins', unlocked: false, rarity: 'legendary' },
 ];
 
 const DEFAULT_ACHIEVEMENTS: Achievement[] = [
@@ -240,7 +290,25 @@ class LocalStorageDB {
   }
 
   public getShop(): ShopItem[] {
-    return JSON.parse(localStorage.getItem(this.key('shop'))!);
+    const raw = localStorage.getItem(this.key('shop'));
+    if (!raw) return DEFAULT_SHOP_ITEMS;
+    try {
+      const stored = JSON.parse(raw) as ShopItem[];
+      let changed = false;
+      const merged = [...stored];
+      DEFAULT_SHOP_ITEMS.forEach(defItem => {
+        if (!merged.some(item => item.id === defItem.id)) {
+          merged.push(defItem);
+          changed = true;
+        }
+      });
+      if (changed) {
+        localStorage.setItem(this.key('shop'), JSON.stringify(merged));
+      }
+      return merged;
+    } catch (e) {
+      return DEFAULT_SHOP_ITEMS;
+    }
   }
 
   public getAchievements(): Achievement[] {

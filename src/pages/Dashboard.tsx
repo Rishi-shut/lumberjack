@@ -248,61 +248,61 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   marginBottom: '24px' 
                 }}
               >
-                <div style={{ background: '#f5ecd6', border: '2px solid #e9dcb9', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                  <Trophy size={22} style={{ color: '#8c5922', marginBottom: '6px' }} />
-                  <div style={{ fontSize: '0.65rem', color: '#7c654e', textTransform: 'uppercase', fontFamily: 'var(--font-retro)' }}>High Score</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#3b2410', fontFamily: 'var(--font-retro)', marginTop: '4px' }}>
+                <div style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
+                  <Trophy size={22} style={{ color: 'var(--neon-yellow)', marginBottom: '6px' }} />
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontFamily: 'var(--font-retro)' }}>High Score</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-primary)', fontFamily: 'var(--font-retro)', marginTop: '4px' }}>
                     {user.highScore}
                   </div>
                 </div>
 
-                <div style={{ background: '#f5ecd6', border: '2px solid #e9dcb9', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                  <Zap size={22} style={{ color: '#9a2415', marginBottom: '6px' }} />
-                  <div style={{ fontSize: '0.65rem', color: '#7c654e', textTransform: 'uppercase', fontFamily: 'var(--font-retro)' }}>Max Combo</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#3b2410', fontFamily: 'var(--font-retro)', marginTop: '4px' }}>
+                <div style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
+                  <Zap size={22} style={{ color: 'var(--neon-red)', marginBottom: '6px' }} />
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontFamily: 'var(--font-retro)' }}>Max Combo</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-primary)', fontFamily: 'var(--font-retro)', marginTop: '4px' }}>
                     {user.maxCombo}x
                   </div>
                 </div>
 
-                <div style={{ background: '#f5ecd6', border: '2px solid #e9dcb9', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                  <Award size={22} style={{ color: '#5c8c5c', marginBottom: '6px' }} />
-                  <div style={{ fontSize: '0.65rem', color: '#7c654e', textTransform: 'uppercase', fontFamily: 'var(--font-retro)' }}>Total Chops</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#3b2410', marginTop: '4px' }}>
+                <div style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
+                  <Award size={22} style={{ color: 'var(--neon-green)', marginBottom: '6px' }} />
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontFamily: 'var(--font-retro)' }}>Total Chops</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '4px' }}>
                     {user.stats.totalChops.toLocaleString()}
                   </div>
                 </div>
 
-                <div style={{ background: '#f5ecd6', border: '2px solid #e9dcb9', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                  <Clock size={22} style={{ color: '#2563eb', marginBottom: '6px' }} />
-                  <div style={{ fontSize: '0.65rem', color: '#7c654e', textTransform: 'uppercase', fontFamily: 'var(--font-retro)' }}>Time Logged</div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: '900', color: '#3b2410', marginTop: '6px' }}>
+                <div style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
+                  <Clock size={22} style={{ color: 'var(--neon-cyan)', marginBottom: '6px' }} />
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontFamily: 'var(--font-retro)' }}>Time Logged</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: '900', color: 'var(--text-primary)', marginTop: '6px' }}>
                     {formatTime(user.stats.timePlayed)}
                   </div>
                 </div>
               </div>
 
               {/* Statistics Table */}
-              <div style={{ background: '#f5ecd6', border: '2px solid #e9dcb9', borderRadius: '8px', padding: '20px' }}>
-                <h3 className="retro-title" style={{ fontSize: '0.78rem', marginBottom: '16px', color: '#8c5922', textShadow: 'none' }}>
+              <div style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', borderRadius: '8px', padding: '20px' }}>
+                <h3 className="retro-title" style={{ fontSize: '0.78rem', marginBottom: '16px', color: 'var(--neon-yellow)', textShadow: 'none' }}>
                   DETAILED LEDGER
                 </h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e9dcb9', paddingBottom: '8px', fontSize: '0.85rem' }}>
-                    <span style={{ color: '#7c654e' }}>Contracts/Games Run</span>
-                    <span style={{ fontWeight: '800', color: '#3b2410' }}>{user.stats.gamesPlayed}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '8px', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Contracts/Games Run</span>
+                    <span style={{ fontWeight: '800', color: 'var(--text-primary)' }}>{user.stats.gamesPlayed}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e9dcb9', paddingBottom: '8px', fontSize: '0.85rem' }}>
-                    <span style={{ color: '#7c654e' }}>Treasury Chests Opened</span>
-                    <span style={{ fontWeight: '800', color: '#3b2410' }}>{user.stats.totalChestsOpened}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '8px', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Treasury Chests Opened</span>
+                    <span style={{ fontWeight: '800', color: 'var(--text-primary)' }}>{user.stats.totalChestsOpened}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e9dcb9', paddingBottom: '8px', fontSize: '0.85rem' }}>
-                    <span style={{ color: '#7c654e' }}>Total Gold Minted</span>
-                    <span style={{ fontWeight: '800', color: '#8c5922' }}>🪙 {user.stats.totalCoinsEarned.toLocaleString()}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '8px', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Total Gold Minted</span>
+                    <span style={{ fontWeight: '800', color: 'var(--neon-yellow)' }}>🪙 {user.stats.totalCoinsEarned.toLocaleString()}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px', fontSize: '0.85rem' }}>
-                    <span style={{ color: '#7c654e' }}>Total Gems Gathered</span>
-                    <span style={{ fontWeight: '800', color: '#2563eb' }}>💎 {user.stats.totalDiamondsEarned}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>Total Gems Gathered</span>
+                    <span style={{ fontWeight: '800', color: 'var(--neon-cyan)' }}>💎 {user.stats.totalDiamondsEarned}</span>
                   </div>
                 </div>
               </div>
@@ -318,9 +318,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   style={{
                     padding: '16px',
                     borderRadius: '8px',
-                    background: ach.unlocked ? '#ebf5eb' : '#f5ecd6',
-                    border: '2px solid',
-                    borderColor: ach.unlocked ? '#c2e0c2' : '#e9dcb9',
+                    background: ach.unlocked ? 'rgba(16, 185, 129, 0.05)' : 'var(--panel-bg)',
+                    border: '1px solid',
+                    borderColor: ach.unlocked ? 'var(--neon-green)' : 'var(--panel-border)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '10px'
@@ -328,8 +328,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 >
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div style={{
-                      color: ach.unlocked ? '#388e3c' : '#7c654e',
-                      background: ach.unlocked ? '#c2e0c2' : '#e9dcb9',
+                      color: ach.unlocked ? 'var(--neon-green)' : 'var(--text-secondary)',
+                      background: ach.unlocked ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 0, 0, 0.03)',
                       padding: '8px',
                       borderRadius: '50%',
                       display: 'flex',
@@ -341,16 +341,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <h4 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#3b2410', margin: 0 }}>
+                        <h4 style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
                           {ach.title}
                         </h4>
                         {ach.unlocked && (
-                          <span style={{ fontSize: '0.62rem', color: '#388e3c', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>
+                          <span style={{ fontSize: '0.62rem', color: 'var(--neon-green)', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>
                             UNLOCKED
                           </span>
                         )}
                       </div>
-                      <p style={{ color: '#4d3a24', fontSize: '0.78rem', margin: '2px 0 0' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', margin: '2px 0 0' }}>
                         {ach.description}
                       </p>
                     </div>
@@ -358,19 +358,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                   {/* Progress & Reward bar */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#7c654e' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
                       <span>Progress: {ach.current} / {ach.target}</span>
                       <span style={{ fontWeight: 'bold' }}>
                         Reward: {ach.rewardCoins > 0 ? `🪙 ${ach.rewardCoins}` : ''} {ach.rewardDiamonds > 0 ? `💎 ${ach.rewardDiamonds}` : ''}
                       </span>
                     </div>
                     
-                    <div className="progress-bar-container" style={{ height: '6px', background: '#e9dcb9', border: '1px solid #ccc1ab' }}>
+                    <div className="progress-bar-container" style={{ height: '6px', background: 'rgba(0, 0, 0, 0.03)', border: '1px solid var(--panel-border)' }}>
                       <div 
                         className="progress-bar-fill" 
                         style={{ 
                           width: `${Math.min(100, (ach.current / ach.target) * 100)}%`,
-                          backgroundColor: ach.unlocked ? '#388e3c' : '#8c7662' 
+                          backgroundColor: ach.unlocked ? 'var(--neon-green)' : 'var(--neon-cyan)' 
                         }}
                       ></div>
                     </div>

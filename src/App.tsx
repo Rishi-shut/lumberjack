@@ -92,16 +92,9 @@ export const App: React.FC = () => {
   // Mobile dropdown state
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  // Cursor tracker
-  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  // Active nature sector selection state to dynamically sync dashboard theme
+  const [selectedWorldId, setSelectedWorldId] = useState<string>('world_forest');
 
-  useEffect(() => {
-    const updateMouse = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', updateMouse);
-    return () => window.removeEventListener('mousemove', updateMouse);
-  }, []);
 
   const getActiveEnvClass = (page: string) => {
     switch (page) {
@@ -428,10 +421,13 @@ export const App: React.FC = () => {
     );
   }
 
-  const themeClass = user.level >= 20 ? 'theme-wood-gold' :
-                     user.level >= 15 ? 'theme-wood-frost' :
-                     user.level >= 10 ? 'theme-wood-redwood' :
-                     user.level >= 5 ? 'theme-wood-birch' : 'theme-wood-oak';
+  const activeWorldId = activeWorld || selectedWorldId;
+  const themeClass = activeWorldId === 'world_cyber' ? 'theme-wood-gold' :
+                     activeWorldId === 'world_ice' ? 'theme-wood-frost' :
+                     activeWorldId === 'world_volcano' ? 'theme-wood-redwood' :
+                     activeWorldId === 'world_city' ? 'theme-wood-birch' :
+                     activeWorldId === 'world_autumn' ? 'theme-wood-gold' :
+                     activeWorldId === 'world_desert' ? 'theme-wood-redwood' : 'theme-wood-oak';
 
   const navItems = [
     { id: 'home', label: 'PLAY', icon: <HomeIcon size={16} /> },
@@ -444,11 +440,7 @@ export const App: React.FC = () => {
 
   return (
     <div className={`app-container ${themeClass} env-container ${getActiveEnvClass(currentPage)}`}>
-      {/* Custom golden particle cursor */}
-      <div 
-        className="custom-particle-cursor" 
-        style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px` }}
-      />
+
 
       {/* Premium Dynamic Parallax Backdrop */}
       <div className="premium-backdrop">
@@ -598,6 +590,8 @@ export const App: React.FC = () => {
             onDifficultyChange={setDifficulty}
             showAlert={showAlert}
             showConfirm={showConfirm}
+            selectedWorldId={selectedWorldId}
+            setSelectedWorldId={setSelectedWorldId}
           />
         )}
         {currentPage === 'dashboard' && (

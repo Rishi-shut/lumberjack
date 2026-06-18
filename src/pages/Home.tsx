@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Shield, Globe, Award, Sparkles, ChevronRight, Moon, Wind, Sun } from 'lucide-react';
-import { db, ShopItem } from '../utils/LocalStorageDB';
+import { db, ShopItem, getCharacterEmoji, getCharacterLabel } from '../utils/LocalStorageDB';
 
 // Custom Interactive Cinematic HTML5 Video Player
+const fallbackSlides = [
+  { emoji: '🌲', title: 'CHOP THE INFINITE TREE', desc: 'Dodge falling branches, master the left-right rhythm, and test your reaction speed.' },
+  { emoji: '⚡', title: 'EQUIP LEGENDARY AXES', desc: 'Unlock premium characters, broadaxes, and glowing particle action trails.' },
+  { emoji: '🏆', title: 'GLOBAL LEADERBOARDS', desc: 'Submit high scores, complete bulletin daily contracts, and compete with lumberjacks worldwide.' },
+  { emoji: '🎨', title: 'ELEGANT NATURE SECTORS', desc: 'Migrate across Pine Forest, Glacial Spires, Vector Core, and Sand Dune Oasis.' }
+];
+
 const CinematicVideoPlayer: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -11,6 +18,25 @@ const CinematicVideoPlayer: React.FC<{ src: string; onClose: () => void }> = ({ 
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
   const [cinemaMode, setCinemaMode] = useState(true);
+  const [videoError, setVideoError] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  React.useEffect(() => {
+    if (videoError) {
+      setDuration(12);
+      let timer: number;
+      if (isPlaying) {
+        timer = window.setInterval(() => {
+          setCurrentTime(prev => {
+            const next = (prev + 0.1) % 12;
+            setSlideIndex(Math.floor((next / 12) * fallbackSlides.length));
+            return next;
+          });
+        }, 100);
+      }
+      return () => clearInterval(timer);
+    }
+  }, [videoError, isPlaying]);
 
   React.useEffect(() => {
     const video = videoRef.current;
@@ -19,8 +45,16 @@ const CinematicVideoPlayer: React.FC<{ src: string; onClose: () => void }> = ({ 
     // Auto-play video
     video.play().catch(() => setIsPlaying(false));
 
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
-    const handleDurationChange = () => setDuration(video.duration);
+    const handleTimeUpdate = () => {
+      if (!videoError) {
+        setCurrentTime(video.currentTime);
+      }
+    };
+    const handleDurationChange = () => {
+      if (!videoError) {
+        setDuration(video.duration);
+      }
+    };
     
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('durationchange', handleDurationChange);
@@ -28,9 +62,13 @@ const CinematicVideoPlayer: React.FC<{ src: string; onClose: () => void }> = ({ 
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('durationchange', handleDurationChange);
     };
-  }, []);
+  }, [videoError]);
 
   const togglePlay = () => {
+    if (videoError) {
+      setIsPlaying(!isPlaying);
+      return;
+    }
     const video = videoRef.current;
     if (!video) return;
     if (isPlaying) {
@@ -43,33 +81,38 @@ const CinematicVideoPlayer: React.FC<{ src: string; onClose: () => void }> = ({ 
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const video = videoRef.current;
-    if (!video) return;
     const seekTime = Number(e.target.value);
-    video.currentTime = seekTime;
     setCurrentTime(seekTime);
+    if (videoError) {
+      setSlideIndex(Math.floor((seekTime / 12) * fallbackSlides.length));
+    } else {
+      const video = videoRef.current;
+      if (video) video.currentTime = seekTime;
+    }
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const video = videoRef.current;
-    if (!video) return;
     const vol = Number(e.target.value);
-    video.volume = vol;
     setVolume(vol);
     setIsMuted(vol === 0);
+    const video = videoRef.current;
+    if (video && !videoError) {
+      video.volume = vol;
+    }
   };
 
   const toggleMute = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = !isMuted;
     setIsMuted(!isMuted);
+    const video = videoRef.current;
+    if (video && !videoError) {
+      video.muted = !isMuted;
+    }
   };
 
   const handleFullscreen = () => {
+    if (videoError) return;
     const video = videoRef.current;
-    if (!video) return;
-    if (video.requestFullscreen) {
+    if (video && video.requestFullscreen) {
       video.requestFullscreen();
     }
   };
@@ -129,14 +172,69 @@ const CinematicVideoPlayer: React.FC<{ src: string; onClose: () => void }> = ({ 
         </button>
 
         {/* Video Player */}
-        <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', cursor: 'pointer' }} onClick={togglePlay}>
-          <video
-            ref={videoRef}
-            src={src}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            loop
-            playsInline
-          />
+        <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', cursor: 'pointer', overflow: 'hidden' }} onClick={togglePlay}>
+          {videoError ? (
+            <div style={{
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(135deg, #1e1b18 0%, #0c0a09 100%)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
+              textAlign: 'center',
+              color: '#fff',
+              position: 'relative'
+            }}>
+              <div style={{
+                fontSize: '4.5rem',
+                animation: 'bounceSlow 1.8s infinite ease-in-out',
+                marginBottom: '14px'
+              }}>
+                {fallbackSlides[slideIndex].emoji}
+              </div>
+              <h3 className="retro-title" style={{
+                fontSize: '0.95rem',
+                color: 'var(--neon-yellow)',
+                marginBottom: '8px',
+                letterSpacing: '1px'
+              }}>
+                {fallbackSlides[slideIndex].title}
+              </h3>
+              <p style={{
+                fontSize: '0.82rem',
+                color: '#cbd5e1',
+                maxWidth: '480px',
+                lineHeight: '1.5',
+                margin: '0 auto'
+              }}>
+                {fallbackSlides[slideIndex].desc}
+              </p>
+              <div style={{
+                position: 'absolute',
+                top: '12px',
+                left: '12px',
+                fontSize: '0.62rem',
+                fontFamily: 'var(--font-retro)',
+                color: 'rgba(255,255,255,0.35)',
+                background: 'rgba(255,255,255,0.06)',
+                padding: '4px 8px',
+                borderRadius: '4px'
+              }}>
+                PREVIEW MODE (OFFLINE REEL)
+              </div>
+            </div>
+          ) : (
+            <video
+              ref={videoRef}
+              src={src}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              loop
+              playsInline
+              onError={() => setVideoError(true)}
+            />
+          )}
           
           {/* Big Center Play Pause animation overlay */}
           {!isPlaying && (
@@ -273,6 +371,8 @@ interface HomeProps {
   onDifficultyChange: (diff: string) => void;
   showAlert: (title: string, message: string) => void;
   showConfirm: (title: string, message: string, onConfirm: () => void) => void;
+  selectedWorldId: string;
+  setSelectedWorldId: (id: string) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -284,12 +384,13 @@ export const Home: React.FC<HomeProps> = ({
   difficulty,
   onDifficultyChange,
   showAlert,
-  showConfirm
+  showConfirm,
+  selectedWorldId,
+  setSelectedWorldId
 }) => {
   const shopItems = db.getShop();
   const worlds = shopItems.filter(item => item.type === 'world');
 
-  const [selectedWorldId, setSelectedWorldId] = useState<string>('world_forest');
   const [showTrailer, setShowTrailer] = useState(false);
 
   const selectedWorld = worlds.find(w => w.id === selectedWorldId) || worlds[0];
@@ -336,14 +437,7 @@ export const Home: React.FC<HomeProps> = ({
     { id: 'impossible', name: 'Impossible', multiplier: '5.0x', timer: '5s', desc: 'Lightspeed decay & max density!' },
   ];
 
-  const featuredCharacters = [
-    { id: 'char_lumberjack', name: 'Lumberjack', icon: '🪓', rarity: 'common', description: 'The original oak feller. Simple, reliable.' },
-    { id: 'char_viking', name: 'Viking', icon: '🛡️', rarity: 'rare', description: 'Chops for Valhalla! Extra raw strength.' },
-    { id: 'char_knight', name: 'Knight', icon: '⚔️', rarity: 'rare', description: 'Chopping in heavy armor. Sturdy and chivalrous.' },
-    { id: 'char_samurai', name: 'Samurai', icon: '🥷', rarity: 'epic', description: 'Chops with lightning speed and focus.' },
-    { id: 'char_wizard', name: 'Wizard', icon: '🧙', rarity: 'epic', description: 'Uses fireballs to disintegrate logs.' },
-    { id: 'char_alien', name: 'Alien', icon: '👽', rarity: 'legendary', description: 'Equipped with laser beams and space wisdom.' },
-  ];
+
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 12px' }}>
@@ -467,7 +561,7 @@ export const Home: React.FC<HomeProps> = ({
               bottom: '0px'
             }}
           >
-            {equippedChar === 'char_lumberjack' ? '🪓' : (equippedChar === 'char_viking' ? '🛡️' : (equippedChar === 'char_knight' ? '⚔️' : (equippedChar === 'char_samurai' ? '🥷' : (equippedChar === 'char_wizard' ? '🧙' : (equippedChar === 'char_alien' ? '👽' : '🤖')))))}
+            {getCharacterEmoji(equippedChar)}
           </div>
         </div>
 
@@ -647,26 +741,24 @@ export const Home: React.FC<HomeProps> = ({
               <button
                 key={diff.id}
                 style={{
-                  background: isActive ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.15)',
-                  border: '3px solid',
-                  borderColor: isActive ? themeColor : '#3d2c20',
-                  borderTopColor: isActive ? themeColor : '#4a3628',
-                  borderBottomColor: isActive ? themeColor : '#2b1e15',
+                  background: isActive ? 'rgba(0, 0, 0, 0.04)' : 'rgba(0, 0, 0, 0.01)',
+                  border: '1px solid',
+                  borderColor: isActive ? themeColor : 'var(--panel-border)',
                   borderRadius: '8px',
                   padding: '14px',
                   textAlign: 'left',
                   cursor: 'pointer',
-                  color: isActive ? 'white' : 'var(--text-secondary)',
+                  color: 'var(--text-primary)',
                   transition: 'all 0.15s ease',
                   transform: isActive ? 'scale(1.02) translateY(-1px)' : 'none',
-                  boxShadow: isActive ? '0 4px 8px rgba(0,0,0,0.3)' : 'none'
+                  boxShadow: isActive ? '0 4px 8px rgba(0,0,0,0.04)' : 'none'
                 }}
                 onClick={() => {
                   onDifficultyChange(diff.id);
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: '800', fontSize: '0.9rem', color: isActive ? 'white' : 'var(--text-secondary)', fontFamily: 'var(--font-display)' }}>
+                  <span style={{ fontWeight: '800', fontSize: '0.9rem', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', fontFamily: 'var(--font-display)' }}>
                     {diff.name}
                   </span>
                   <span style={{ fontSize: '0.72rem', color: themeColor, fontWeight: '900', fontFamily: 'var(--font-retro)' }}>
@@ -690,12 +782,19 @@ export const Home: React.FC<HomeProps> = ({
       </div>
 
       {/* World Selection Grid */}
-      <div id="world-selection" style={{ scrollMarginTop: '100px' }}>
+      <div id="world-selection" style={{ scrollMarginTop: '100px', marginBottom: '40px' }}>
         <h2 className="retro-title" style={{ fontSize: '1rem', textAlign: 'left', marginBottom: '20px', color: 'var(--neon-yellow)' }}>
           SELECT NATURE SECTOR
         </h2>
         
-        <div className="grid-3" style={{ marginBottom: '30px' }}>
+        <div 
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', 
+            gap: '20px', 
+            marginBottom: '35px' 
+          }}
+        >
           {worlds.map(world => {
             let bgGradient = 'linear-gradient(135deg, var(--panel-bg), var(--bg-color))';
             let accent = 'var(--panel-border)';
@@ -732,6 +831,18 @@ export const Home: React.FC<HomeProps> = ({
               weatherIcon = '🌋';
               weatherText = 'Magma Rain';
             }
+            if (world.id === 'world_autumn') {
+              bgGradient = 'linear-gradient(135deg, #fffbeb, #fef3c7)';
+              accent = 'var(--neon-yellow)';
+              weatherIcon = '🍂';
+              weatherText = 'Maple Swirl';
+            }
+            if (world.id === 'world_desert') {
+              bgGradient = 'linear-gradient(135deg, #fefcbf, #fef08a)';
+              accent = 'var(--neon-yellow)';
+              weatherIcon = '🏜️';
+              weatherText = 'Heat Shimmer';
+            }
 
             const isSelected = selectedWorldId === world.id;
 
@@ -751,27 +862,27 @@ export const Home: React.FC<HomeProps> = ({
                   padding: '20px',
                   transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                   cursor: 'pointer',
-                  boxShadow: isSelected ? '0 0 20px rgba(229,169,59,0.5), 0 6px 12px rgba(0,0,0,0.6)' : '0 6px 12px rgba(0,0,0,0.45)'
+                  boxShadow: isSelected ? '0 0 20px rgba(229,169,59,0.25), 0 6px 12px rgba(0,0,0,0.1)' : '0 6px 12px rgba(0,0,0,0.05)'
                 }}
                 onClick={() => handleWorldSelect(world)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
                   if (world.unlocked) {
                     e.currentTarget.style.boxShadow = isSelected 
-                      ? '0 0 25px rgba(229,169,59,0.8), 0 10px 20px rgba(0,0,0,0.6)' 
-                      : `0 10px 20px rgba(0,0,0,0.6), 0 0 10px ${accent}33`;
+                      ? '0 0 25px rgba(229,169,59,0.35), 0 10px 20px rgba(0,0,0,0.1)' 
+                      : `0 10px 20px rgba(0,0,0,0.08), 0 0 10px ${accent}22`;
                   }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = isSelected 
-                    ? '0 0 20px rgba(229,169,59,0.5), 0 6px 12px rgba(0,0,0,0.45)' 
-                    : '0 6px 12px rgba(0,0,0,0.45)';
+                    ? '0 0 20px rgba(229,169,59,0.25), 0 6px 12px rgba(0,0,0,0.1)' 
+                    : '0 6px 12px rgba(0,0,0,0.05)';
                 }}
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-                    <h3 className="retro-title" style={{ fontSize: '0.95rem', margin: 0, textShadow: 'none', color: '#fff' }}>
+                    <h3 className="retro-title" style={{ fontSize: '0.9rem', margin: 0, textShadow: 'none', color: 'var(--text-primary)' }}>
                       {world.name}
                     </h3>
                     {isSelected ? (
@@ -797,12 +908,12 @@ export const Home: React.FC<HomeProps> = ({
                     <span>{weatherText}</span>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #422a1b', paddingTop: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed var(--panel-border)', paddingTop: '10px' }}>
                     <span className={`rarity-tag rarity-${world.rarity}`} style={{ fontSize: '8px', padding: '2px 6px' }}>
                       {world.rarity}
                     </span>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                      {world.id === 'world_cyber' ? '🔌 Laser Beams' : (world.id === 'world_ice' ? '🏔️ Slippery Slopes' : '🪵 Standard Logs')}
+                      {world.id === 'world_cyber' ? '🔌 Laser Beams' : (world.id === 'world_ice' ? '🏔️ Slippery Ice' : (world.id === 'world_autumn' ? '🍁 Maple Trunks' : (world.id === 'world_desert' ? '🌴 Palm Trunks' : '🪵 Standard Logs')))}
                     </span>
                   </div>
                 </div>
@@ -873,7 +984,7 @@ export const Home: React.FC<HomeProps> = ({
             <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>CHALLENGER:</span>
               <span style={{ fontSize: '1.05rem', color: 'var(--text-primary)', fontWeight: '800' }}>
-                {equippedChar === 'char_lumberjack' ? '🪓 Lumberjack' : (equippedChar === 'char_viking' ? '🛡️ Viking' : (equippedChar === 'char_knight' ? '⚔️ Knight' : (equippedChar === 'char_samurai' ? '🥷 Samurai' : (equippedChar === 'char_wizard' ? '🧙 Wizard' : (equippedChar === 'char_alien' ? '👽 Alien' : '🤖 Android')))))}
+                {getCharacterLabel(equippedChar)}
               </span>
             </div>
           </div>
@@ -898,72 +1009,7 @@ export const Home: React.FC<HomeProps> = ({
         </div>
       </div>
 
-      {/* Featured Characters Carousel Section */}
-      <div style={{ marginBottom: '50px' }}>
-        <h2 className="retro-title" style={{ fontSize: '1rem', textAlign: 'left', marginBottom: '20px', color: 'var(--neon-cyan)' }}>
-          FEATURED CHALLENGERS
-        </h2>
 
-        <div 
-          style={{ 
-            display: 'flex', 
-            gap: '16px', 
-            overflowX: 'auto', 
-            padding: '4px 4px 16px',
-            scrollbarWidth: 'thin',
-          }}
-        >
-          {featuredCharacters.map(char => {
-            const isEquipped = equippedChar === char.id;
-            return (
-              <div
-                key={char.id}
-                className="material-wood"
-                style={{
-                  minWidth: '220px',
-                  flex: '0 0 auto',
-                  padding: '20px',
-                  background: 'linear-gradient(180deg, var(--panel-bg), var(--bg-color))',
-                  textAlign: 'center',
-                  borderWidth: '3px',
-                  borderColor: isEquipped ? 'var(--neon-yellow)' : 'var(--panel-border)',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.06)'
-                }}
-              >
-                <div 
-                  className="character-breath"
-                  style={{ 
-                    fontSize: '3rem', 
-                    marginBottom: '12px', 
-                    display: 'inline-block',
-                    animationDelay: char.id === 'char_lumberjack' ? '0s' : '0.3s'
-                  }}
-                >
-                  {char.icon}
-                </div>
-                
-                <h4 className="retro-title" style={{ fontSize: '0.8rem', margin: '0 0 6px', textShadow: 'none', color: '#fff' }}>
-                  {char.name}
-                </h4>
-                
-                <span className={`rarity-tag rarity-${char.rarity}`} style={{ fontSize: '8px', padding: '2px 6px', display: 'inline-block', marginBottom: '10px' }}>
-                  {char.rarity}
-                </span>
-
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', lineHeight: '1.4', margin: 0 }}>
-                  {char.description}
-                </p>
-                
-                {isEquipped && (
-                  <div style={{ fontSize: '0.62rem', fontFamily: 'var(--font-retro)', color: 'var(--neon-yellow)', marginTop: '12px' }}>
-                    ★ ACTIVE
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Info Sections: Updates & Highlights */}
       <div className="grid-2" style={{ marginBottom: '60px' }}>
@@ -1080,7 +1126,7 @@ export const Home: React.FC<HomeProps> = ({
           🌲🌲🌲🌲🌲🌲🌲🌲🌲🌲🌲
         </div>
         
-        <h3 className="retro-title" style={{ fontSize: '0.9rem', color: '#8c7662', marginBottom: '8px' }}>
+        <h3 className="retro-title" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
           INFINITE CHOP
         </h3>
         
@@ -1088,7 +1134,7 @@ export const Home: React.FC<HomeProps> = ({
           A premium retro woodcutting ecosystem. Handcrafted by design enthusiasts.
         </p>
         
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '0.78rem', color: '#8c7662', marginBottom: '28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '28px' }}>
           <a href="#" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}>Studio Hub</a>
           <span style={{ opacity: 0.3 }}>|</span>
           <a href="#" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}>Press Deck</a>
@@ -1096,7 +1142,7 @@ export const Home: React.FC<HomeProps> = ({
           <a href="#" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}>Privacy Policy</a>
         </div>
         
-        <div style={{ fontSize: '0.62rem', color: '#5a493a', fontFamily: 'var(--font-retro)' }}>
+        <div style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>
           BUILD v1.4.2-STABLE | DB MODE: LOCAL-FIRST
         </div>
       </footer>
@@ -1104,7 +1150,7 @@ export const Home: React.FC<HomeProps> = ({
       {/* Cinematic Trailer Modal */}
       {showTrailer && (
         <CinematicVideoPlayer 
-          src="https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large.mp4" 
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" 
           onClose={() => setShowTrailer(false)} 
         />
       )}
