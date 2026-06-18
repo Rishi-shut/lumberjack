@@ -8,6 +8,8 @@ interface HomeProps {
   userDiamonds: number;
   onPurchaseComplete: () => void;
   equippedChar: string;
+  difficulty: string;
+  onDifficultyChange: (diff: string) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -15,7 +17,9 @@ export const Home: React.FC<HomeProps> = ({
   userCoins,
   userDiamonds,
   onPurchaseComplete,
-  equippedChar
+  equippedChar,
+  difficulty,
+  onDifficultyChange
 }) => {
   const shopItems = db.getShop();
   const worlds = shopItems.filter(item => item.type === 'world');
@@ -38,6 +42,15 @@ export const Home: React.FC<HomeProps> = ({
     }
   };
 
+  const difficulties = [
+    { id: 'easy', name: 'Easy', multiplier: '0.5x', timer: '45s', desc: 'Slower decay & sparse branches.' },
+    { id: 'medium', name: 'Medium', multiplier: '1.0x', timer: '30s', desc: 'Standard Timberman difficulty.' },
+    { id: 'hard', name: 'Hard', multiplier: '1.5x', timer: '20s', desc: 'Fast decay & dense branches.' },
+    { id: 'extreme', name: 'Extreme', multiplier: '2.0x', timer: '15s', desc: 'Rapid decay & narrow safety buffers.' },
+    { id: 'nightmare', name: 'Nightmare', multiplier: '3.0x', timer: '10s', desc: 'Zero clean segment buffering!' },
+    { id: 'impossible', name: 'Impossible', multiplier: '5.0x', timer: '5s', desc: 'Lightspeed decay & max density!' },
+  ];
+
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* Hero Section */}
@@ -47,7 +60,7 @@ export const Home: React.FC<HomeProps> = ({
         background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.08) 0%, transparent 100%)',
         borderRadius: '24px',
         border: '1px solid rgba(255,255,255,0.03)',
-        marginBottom: '40px',
+        marginBottom: '30px',
         position: 'relative'
       }}>
         <div style={{
@@ -81,6 +94,51 @@ export const Home: React.FC<HomeProps> = ({
           <Play size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
           INSTANT PLAY
         </button>
+      </div>
+
+      {/* Difficulty Selector Panel */}
+      <div className="game-card" style={{ marginBottom: '40px', borderLeft: '4px solid var(--neon-cyan)' }}>
+        <h3 className="retro-title" style={{ fontSize: '0.85rem', textAlign: 'left', marginBottom: '14px', color: 'var(--neon-cyan)' }}>
+          SELECT DIFFICULTY (CURRENT: {difficulty.toUpperCase()})
+        </h3>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+          {difficulties.map(diff => {
+            const isActive = difficulty === diff.id;
+            let themeColor = 'var(--neon-green)';
+            if (diff.id === 'hard') themeColor = 'var(--neon-cyan)';
+            if (diff.id === 'extreme') themeColor = 'var(--neon-yellow)';
+            if (diff.id === 'nightmare' || diff.id === 'impossible') themeColor = 'var(--neon-magenta)';
+
+            return (
+              <button
+                key={diff.id}
+                style={{
+                  background: isActive ? 'rgba(255,255,255,0.05)' : 'transparent',
+                  border: isActive ? `2px solid ${themeColor}` : '2px solid var(--panel-border)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  color: isActive ? 'white' : 'var(--text-secondary)',
+                  transition: 'all 0.2s ease',
+                  boxShadow: isActive ? `0 0 10px ${themeColor}33` : 'none'
+                }}
+                onClick={() => onDifficultyChange(diff.id)}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: isActive ? 'white' : 'var(--text-secondary)' }}>{diff.name}</span>
+                  <span style={{ fontSize: '0.7rem', color: themeColor, fontWeight: 'bold' }}>{diff.multiplier}</span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Timer: {diff.timer}</div>
+              </button>
+            );
+          })}
+        </div>
+        
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', italic: 'true' }}>
+          💡 <em>{difficulties.find(d => d.id === difficulty)?.desc}</em> Gaining XP and coins scales with the multiplier.
+        </p>
       </div>
 
       {/* World Selection Grid */}
