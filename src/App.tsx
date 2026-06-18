@@ -14,6 +14,51 @@ import Missions from './pages/Missions';
 
 import './main.css';
 
+// Animated XP Bar component for post-game details
+const XpProgressBar: React.FC<{
+  oldLevel: number;
+  oldXp: number;
+  oldXpNeeded: number;
+  newLevel: number;
+  newXp: number;
+  newXpNeeded: number;
+  xpEarned: number;
+}> = ({ oldLevel, oldXp, oldXpNeeded, newLevel, newXp, newXpNeeded, xpEarned }) => {
+  const [level, setLevel] = useState(oldLevel);
+  const [xp, setXp] = useState(oldXp);
+  const [xpNeeded, setXpNeeded] = useState(oldXpNeeded);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLevel(newLevel);
+      setXp(newXp);
+      setXpNeeded(newXpNeeded);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [newLevel, newXp, newXpNeeded]);
+
+  const pct = (xp / xpNeeded) * 100;
+
+  return (
+    <div style={{ margin: '15px 0', textAlign: 'left' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
+        <span style={{ fontWeight: '600' }}>Level {level} Progression</span>
+        <span style={{ color: 'var(--neon-cyan)', fontWeight: 'bold' }}>+{xpEarned} XP ({xp}/{xpNeeded})</span>
+      </div>
+      <div className="progress-bar-container" style={{ height: '8px' }}>
+        <div 
+          className="progress-bar-fill" 
+          style={{ 
+            width: `${pct}%`, 
+            backgroundColor: 'var(--neon-cyan)',
+            transition: 'width 1.2s cubic-bezier(0.1, 0.8, 0.3, 1)' 
+          }}
+        ></div>
+      </div>
+    </div>
+  );
+};
+
 export const App: React.FC = () => {
   // Database States
   const [user, setUser] = useState<UserProfile>(db.getUser());
@@ -27,6 +72,7 @@ export const App: React.FC = () => {
   
   // Game Play States
   const [activeWorld, setActiveWorld] = useState<string | null>(null);
+  const [difficulty, setDifficulty] = useState<string>('medium');
   const [gameStartTime, setGameStartTime] = useState<number>(0);
   const [showSummary, setShowSummary] = useState(false);
   const [gameSummary, setGameSummary] = useState<{
@@ -39,6 +85,12 @@ export const App: React.FC = () => {
     newHighScore: boolean;
     banned?: boolean;
     reason?: string;
+    oldLevel: number;
+    oldXp: number;
+    oldXpNeeded: number;
+    newLevel: number;
+    newXp: number;
+    newXpNeeded: number;
   } | null>(null);
 
   // Sync state from LocalStorage DB helper
@@ -63,12 +115,27 @@ export const App: React.FC = () => {
     const timeSpent = (Date.now() - gameStartTime) / 1000;
     const worldName = shopItems.find(w => w.id === activeWorld)?.name || 'Pine Forest';
 
+    // Apply difficulty rewards multiplier
+    const mult = difficulty === 'easy' ? 0.5 :
+                 difficulty === 'hard' ? 1.5 :
+                 difficulty === 'extreme' ? 2.0 :
+                 difficulty === 'nightmare' ? 3.0 :
+                 difficulty === 'impossible' ? 5.0 : 1.0;
+
+    const finalCoins = Math.floor(coinsCollected * mult);
+    const finalDiamonds = Math.floor(diamondsCollected * mult);
+    const xpEarned = Math.floor((score + Math.floor(timeSpent * 2)) * mult);
+
+    const oldLevel = user.level;
+    const oldXp = user.xp;
+    const oldXpNeeded = user.xpNeeded;
+
     // Submit session with basic anti-cheat check
     const res = db.submitGameSession(
       score,
       maxCombo,
-      coinsCollected,
-      diamondsCollected,
+      finalCoins,
+      finalDiamonds,
       worldName,
       timeSpent
     );
@@ -77,13 +144,19 @@ export const App: React.FC = () => {
     setGameSummary({
       score,
       maxCombo,
-      coins: coinsCollected,
-      diamonds: diamondsCollected,
-      xpEarned: score + Math.floor(timeSpent * 2),
+      coins: finalCoins,
+      diamonds: finalDiamonds,
+      xpEarned: xpEarned,
       levelsGained: res.levelsGained || 0,
       newHighScore: res.newHighScore || false,
       banned: res.banned,
-      reason: res.reason
+      reason: res.reason,
+      oldLevel,
+      oldXp,
+      oldXpNeeded,
+      newLevel: res.currentLevel || oldLevel,
+      newXp: res.currentXp || oldXp,
+      newXpNeeded: res.xpNeeded || oldXpNeeded
     });
 
     // Exit game loop and show summary modal
@@ -173,6 +246,7 @@ export const App: React.FC = () => {
           characterId={user.equippedCharacter}
           weaponId={user.equippedWeapon}
           trailId={user.equippedTrail}
+          difficulty={difficulty}
           onGameOver={handleGameOver}
           onScoreUpdate={() => {}}
         />
@@ -180,8 +254,13 @@ export const App: React.FC = () => {
     );
   }
 
+  const themeClass = user.level >= 20 ? 'theme-wood-gold' :
+                     user.level >= 15 ? 'theme-wood-frost' :
+                     user.level >= 10 ? 'theme-wood-redwood' :
+                     user.level >= 5 ? 'theme-wood-birch' : 'theme-wood-oak';
+
   return (
-    <div className="app-container">
+    <div className={`app-container ${themeClass}`}>
       {/* Top Header Stats */}
       <header className="top-bar-stats">
         <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -286,6 +365,8 @@ export const App: React.FC = () => {
             userDiamonds={user.diamonds}
             onPurchaseComplete={refreshState}
             equippedChar={user.equippedCharacter}
+            difficulty={difficulty}
+            onDifficultyChange={setDifficulty}
           />
         )}
         {currentPage === 'dashboard' && (
@@ -380,6 +461,17 @@ export const App: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {/* Animated XP progression bar */}
+            <XpProgressBar
+              oldLevel={gameSummary.oldLevel}
+              oldXp={gameSummary.oldXp}
+              oldXpNeeded={gameSummary.oldXpNeeded}
+              newLevel={gameSummary.newLevel}
+              newXp={gameSummary.newXp}
+              newXpNeeded={gameSummary.newXpNeeded}
+              xpEarned={gameSummary.xpEarned}
+            />
 
             {gameSummary.levelsGained > 0 && (
               <div style={{ padding: '8px', background: 'rgba(57,255,20,0.05)', border: '1px solid var(--neon-green)', borderRadius: '6px', color: 'var(--neon-green)', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '20px' }}>
