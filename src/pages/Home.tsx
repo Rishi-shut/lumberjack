@@ -129,6 +129,11 @@ export const Home: React.FC<HomeProps> = ({
           pointerEvents: 'none'
         }}>🍂</div>
 
+        {/* Flying Birds */}
+        <div className="bird-anim" style={{ position: 'absolute', top: '30px', left: 0, fontSize: '1.2rem', zIndex: 1, pointerEvents: 'none', opacity: 0.4 }}>
+          🦅
+        </div>
+
         {/* Character beside Infinite Tree Illustration */}
         <div style={{
           display: 'flex',
@@ -209,27 +214,44 @@ export const Home: React.FC<HomeProps> = ({
         </p>
 
         {/*Tactile CTAs */}
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center', zIndex: 1 }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', zIndex: 1 }}>
           <button 
             className="neon-btn-yellow" 
-            style={{ fontSize: '0.95rem', padding: '14px 36px' }}
+            style={{ fontSize: '0.95rem', padding: '14px 30px' }}
             onClick={() => onPlayWorld('world_forest')}
           >
             <Play size={16} style={{ display: 'inline', marginRight: '6px', fill: 'currentColor' }} />
             PLAY NOW
           </button>
+
+          <button 
+            className="neon-btn-cyan" 
+            style={{ fontSize: '0.95rem', padding: '14px 24px' }}
+            onClick={() => showAlert('Trailer Boot', 'Simulating game trailer boot... The lumberjack swings, logs fly, birds scatter! Playing at 60 FPS in your browser.')}
+          >
+            WATCH TRAILER
+          </button>
+
+          <button 
+            className="neon-btn" 
+            style={{ fontSize: '0.95rem', padding: '14px 24px' }}
+            onClick={() => showAlert('Rankings Desk', 'Visit the Rankings journal tab in the navigation menu above to see the live top woodcutters!')}
+          >
+            LEADERBOARD
+          </button>
           
           <button 
             className="neon-btn" 
-            style={{ fontSize: '0.95rem', padding: '14px 30px' }}
+            style={{ fontSize: '0.95rem', padding: '14px 24px' }}
             onClick={() => {
               const element = document.getElementById('world-selection');
               if (element) element.scrollIntoView({ behavior: 'smooth' });
             }}
           >
-            CHOOSE WORLD
+            CHOOSE ENVIRONMENT
           </button>
         </div>
+
 
         {/* Dangling Scroll Arrow */}
         <div style={{

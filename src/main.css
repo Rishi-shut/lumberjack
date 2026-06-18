@@ -230,13 +230,16 @@ body {
 
 .main-content {
   flex: 1;
-  padding: 88px 24px 40px; /* spacing for floating nav */
+  padding: 96px 16px 40px; /* spacing for floating nav */
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 @media (min-width: 768px) {
   .main-content {
-    padding-left: 280px; /* sidebar space */
-    padding-right: 40px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
 
@@ -246,7 +249,7 @@ body {
   top: 16px;
   left: 16px;
   right: 16px;
-  height: 60px;
+  height: 64px;
   background: rgba(43, 29, 20, 0.95);
   border: 3px solid #422a1b;
   border-top-color: #5c3c28;
@@ -270,26 +273,17 @@ body {
 
 .sidebar-desktop {
   display: none;
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 250px;
-  background: #221710;
-  border-right: 3px solid #332117;
-  padding: 30px 20px;
-  flex-direction: column;
-  z-index: 998;
 }
 
 @media (min-width: 768px) {
-  .sidebar-desktop {
-    display: flex;
-  }
   .floating-nav {
-    left: 270px;
+    left: 24px;
+    right: 24px;
+    max-width: 1152px;
+    margin: 0 auto;
   }
 }
+
 
 .sidebar-logo {
   font-family: var(--font-display);
@@ -720,5 +714,87 @@ body {
     grid-template-columns: 1fr 1.3fr;
   }
 }
+
+/* Navigation Dropdown scroll */
+.nav-dropdown {
+  position: absolute;
+  top: 70px;
+  right: 0;
+  left: 0;
+  background: rgba(43, 29, 20, 0.98);
+  border: 3px solid #422a1b;
+  border-top-color: #5c3c28;
+  border-left-color: #5c3c28;
+  border-bottom-color: #1e130d;
+  border-right-color: #1e130d;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.7);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  backdrop-filter: blur(12px);
+  animation: modalPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.nav-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.nav-dropdown-item:hover, .nav-dropdown-item.active {
+  background: rgba(255,255,255,0.03);
+  color: var(--neon-yellow);
+}
+
+/* Flying Birds Animation */
+@keyframes birdFly {
+  0% { transform: translate(-10vw, 20px) scaleX(1); }
+  49% { transform: translate(110vw, 0px) scaleX(1); }
+  50% { transform: translate(110vw, 0px) scaleX(-1); }
+  99% { transform: translate(-10vw, 20px) scaleX(-1); }
+  100% { transform: translate(-10vw, 20px) scaleX(1); }
+}
+
+.bird-anim {
+  animation: birdFly 35s linear infinite;
+  display: inline-block;
+  pointer-events: none;
+}
+
+/* Visibility rules for unified top floating nav menu */
+.desktop-only-nav {
+  display: none !important;
+}
+
+.mobile-only-nav-trigger {
+  display: block !important;
+}
+
+@media (min-width: 992px) {
+  .desktop-only-nav {
+    display: flex !important;
+  }
+  
+  .mobile-only-nav-trigger {
+    display: none !important;
+  }
+}
+
+
 
 

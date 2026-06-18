@@ -89,6 +89,9 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
+  // Mobile dropdown state
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
   // Cursor tracker
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
 
@@ -430,6 +433,16 @@ export const App: React.FC = () => {
                      user.level >= 10 ? 'theme-wood-redwood' :
                      user.level >= 5 ? 'theme-wood-birch' : 'theme-wood-oak';
 
+  const navItems = [
+    { id: 'home', label: 'PLAY', icon: <HomeIcon size={16} /> },
+    { id: 'dashboard', label: 'JOURNAL', icon: <User size={16} /> },
+    { id: 'shop', label: 'MERCHANT', icon: <ShoppingCart size={16} /> },
+    { id: 'missions', label: 'BULLETIN', icon: <CheckSquare size={16} /> },
+    { id: 'leaderboard', label: 'RANKINGS', icon: <Trophy size={16} /> },
+    { id: 'settings', label: 'SETTINGS', icon: <SettingsIcon size={16} /> },
+    { id: 'admin', label: 'ADMIN', icon: <ShieldAlert size={16} /> }
+  ];
+
   return (
     <div className={`app-container ${themeClass} env-container ${getActiveEnvClass(currentPage)}`}>
       {/* Custom golden particle cursor */}
@@ -437,101 +450,119 @@ export const App: React.FC = () => {
         className="custom-particle-cursor" 
         style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px` }}
       />
-      {/* Top Header Stats */}
+      {/* Unified Top Floating Navbar */}
       <header className={`floating-nav ${showNav ? '' : 'hidden'}`}>
+        
+        {/* Left Side: Game Logo */}
+        <div 
+          onClick={() => { sound.playCoin(); setCurrentPage('home'); setShowMobileMenu(false); }}
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 900,
+            color: 'var(--neon-yellow)',
+            cursor: 'pointer',
+            textShadow: '2px 2px 0px rgba(0,0,0,0.8)',
+            fontSize: '1.2rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            userSelect: 'none'
+          }}
+        >
+          <span>🪓</span>
+          <span style={{ letterSpacing: '1px' }}>INFINITE CHOP</span>
+        </div>
 
-        <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{
-            fontSize: '1.4rem',
-            lineHeight: 1
-          }}>
-            {user.equippedCharacter === 'char_lumberjack' ? '🪓' : (user.equippedCharacter === 'char_viking' ? '🛡️' : (user.equippedCharacter === 'char_knight' ? '⚔️' : (user.equippedCharacter === 'char_samurai' ? '🥷' : (user.equippedCharacter === 'char_wizard' ? '🧙' : (user.equippedCharacter === 'char_alien' ? '👽' : '🤖')))))}
-          </span>
-          <div>
-            <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>{user.username}</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>LVL {user.level}</div>
+        {/* Center: Desktop Navigation Links */}
+        <nav className="desktop-only-nav" style={{ display: 'flex', gap: '4px' }}>
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => { sound.playCoin(); setCurrentPage(item.id as any); }}
+              className={`sidebar-item-btn ${currentPage === item.id ? 'active' : ''}`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 800,
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: 'none',
+                borderRadius: '6px',
+                width: 'auto'
+              }}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Right Side: Treasury & Hamburger (Mobile) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Treasury details (Desktop only) */}
+          <div className="desktop-only-nav" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className="stat-chip" style={{ color: 'var(--neon-yellow)', padding: '4px 10px', fontSize: '0.8rem', border: '2px dashed #422a1b', background: '#1c130d' }}>
+              <span>🪙 {user.coins.toLocaleString()}</span>
+            </div>
+            <div className="stat-chip" style={{ color: 'var(--neon-cyan)', padding: '4px 10px', fontSize: '0.8rem', border: '2px dashed #422a1b', background: '#1c130d' }}>
+              <span>💎 {user.diamonds}</span>
+            </div>
           </div>
+
+          {/* Hamburger Menu Trigger (Mobile only) */}
+          <button 
+            className="mobile-only-nav-trigger"
+            onClick={() => { sound.playCoin(); setShowMobileMenu(prev => !prev); }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-primary)',
+              fontSize: '1.4rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px 10px'
+            }}
+          >
+            {showMobileMenu ? '✕' : '☰'}
+          </button>
         </div>
 
-        <div className="stat-chip" style={{ color: 'var(--neon-yellow)' }}>
-          <Coins />
-          <span>{user.coins.toLocaleString()}</span>
-        </div>
-
-        <div className="stat-chip" style={{ color: 'var(--neon-cyan)' }}>
-          <Sparkles />
-          <span>{user.diamonds}</span>
-        </div>
+        {/* Mobile Dropdown Menu scroll */}
+        {showMobileMenu && (
+          <div className="nav-dropdown">
+            {navItems.map(item => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  sound.playCoin();
+                  setCurrentPage(item.id as any);
+                  setShowMobileMenu(false);
+                }}
+                className={`nav-dropdown-item ${currentPage === item.id ? 'active' : ''}`}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+            ))}
+            
+            {/* Mobile User Treasury Info */}
+            <div style={{ display: 'flex', gap: '8px', borderTop: '2px dashed #422a1b', paddingTop: '12px', marginTop: '4px' }}>
+              <div className="stat-chip" style={{ color: 'var(--neon-yellow)', flex: 1, justifyContent: 'center', background: '#1c130d' }}>
+                <span>🪙 {user.coins.toLocaleString()}</span>
+              </div>
+              <div className="stat-chip" style={{ color: 'var(--neon-cyan)', flex: 1, justifyContent: 'center', background: '#1c130d' }}>
+                <span>💎 {user.diamonds}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Sidebar Navigation (Desktop) */}
-      <nav className="sidebar-desktop">
-        <div className="sidebar-logo">
-          INFINITE CHOP
-        </div>
-        <ul className="sidebar-menu">
-          <li>
-            <button className={`sidebar-item-btn ${currentPage === 'home' ? 'active' : ''}`} onClick={() => setCurrentPage('home')}>
-              <HomeIcon size={18} /> Home Play
-            </button>
-          </li>
-          <li>
-            <button className={`sidebar-item-btn ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentPage('dashboard')}>
-              <User size={18} /> Dashboard
-            </button>
-          </li>
-          <li>
-            <button className={`sidebar-item-btn ${currentPage === 'shop' ? 'active' : ''}`} onClick={() => setCurrentPage('shop')}>
-              <ShoppingCart size={18} /> Storefront
-            </button>
-          </li>
-          <li>
-            <button className={`sidebar-item-btn ${currentPage === 'missions' ? 'active' : ''}`} onClick={() => setCurrentPage('missions')}>
-              <CheckSquare size={18} /> Missions
-            </button>
-          </li>
-          <li>
-            <button className={`sidebar-item-btn ${currentPage === 'leaderboard' ? 'active' : ''}`} onClick={() => setCurrentPage('leaderboard')}>
-              <Trophy size={18} /> Rankings
-            </button>
-          </li>
-          <li>
-            <button className={`sidebar-item-btn ${currentPage === 'settings' ? 'active' : ''}`} onClick={() => setCurrentPage('settings')}>
-              <SettingsIcon size={18} /> Settings
-            </button>
-          </li>
-          <li>
-            <button className={`sidebar-item-btn ${currentPage === 'admin' ? 'active' : ''}`} onClick={() => setCurrentPage('admin')}>
-              <ShieldAlert size={18} /> Admin Control
-            </button>
-          </li>
-        </ul>
-
-        {/* Footer info in sidebar */}
-        <div style={{ marginTop: 'auto', padding: '10px', fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--panel-border)' }}>
-          <div style={{ fontWeight: '600' }}>Local-First Sync</div>
-          <div>Database: <strong>LocalStorage</strong></div>
-        </div>
-      </nav>
-
-      {/* Bottom Nav Bar (Mobile) */}
-      <nav className={`navbar-mobile ${showNav ? '' : 'hidden'}`}>
-        <button className={`navbar-mobile-item ${currentPage === 'home' ? 'active' : ''}`} onClick={() => setCurrentPage('home')}>
-          <HomeIcon /> Home
-        </button>
-        <button className={`navbar-mobile-item ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentPage('dashboard')}>
-          <User /> Profile
-        </button>
-        <button className={`navbar-mobile-item ${currentPage === 'shop' ? 'active' : ''}`} onClick={() => setCurrentPage('shop')}>
-          <ShoppingCart /> Store
-        </button>
-        <button className={`navbar-mobile-item ${currentPage === 'missions' ? 'active' : ''}`} onClick={() => setCurrentPage('missions')}>
-          <CheckSquare /> Missions
-        </button>
-        <button className={`navbar-mobile-item ${currentPage === 'settings' ? 'active' : ''}`} onClick={() => setCurrentPage('settings')}>
-          <SettingsIcon /> Settings
-        </button>
-      </nav>
 
       {/* Main Pages Content Router */}
       <main className="main-content">
