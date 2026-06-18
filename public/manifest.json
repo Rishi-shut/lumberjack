@@ -1,0 +1,16 @@
+{
+  "short_name": "InfiniteChop",
+  "name": "Infinite Chop - Arcade Gaming Platform",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#0c0f16",
+  "theme_color": "#39ff14",
+  "display": "standalone",
+  "orientation": "portrait"
+}
