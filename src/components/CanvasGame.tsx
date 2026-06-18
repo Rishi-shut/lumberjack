@@ -1169,24 +1169,48 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     }
   };
 
+  const drawLowPolyMountain = (
+    ctx: CanvasRenderingContext2D,
+    leftX: number,
+    peakX: number,
+    rightX: number,
+    peakY: number,
+    baseY: number,
+    lightColor: string,
+    darkColor: string
+  ) => {
+    // Left side (lit)
+    ctx.fillStyle = lightColor;
+    ctx.beginPath();
+    ctx.moveTo(leftX, baseY);
+    ctx.lineTo(peakX, peakY);
+    ctx.lineTo(peakX, baseY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right side (shadow)
+    ctx.fillStyle = darkColor;
+    ctx.beginPath();
+    ctx.moveTo(peakX, baseY);
+    ctx.lineTo(peakX, peakY);
+    ctx.lineTo(rightX, baseY);
+    ctx.closePath();
+    ctx.fill();
+  };
+
   const drawParallaxLayers = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     const state = stateRef.current;
+    const baseY = canvas.height;
     
     if (config.blockType === 'forest') {
-      // Draw distant mountains
-      ctx.fillStyle = '#223322';
-      ctx.beginPath();
-      ctx.moveTo(-100, canvas.height);
-      ctx.lineTo(canvas.width * 0.3, canvas.height - 200);
-      ctx.lineTo(canvas.width * 0.7, canvas.height);
-      ctx.fill();
+      // Draw distant mountains - Low Poly 3D
+      drawLowPolyMountain(ctx, -120, canvas.width * 0.3, canvas.width * 0.7, baseY - 220, baseY, '#2a3a2a', '#1a241a');
+      drawLowPolyMountain(ctx, canvas.width * 0.32, canvas.width * 0.75, canvas.width + 120, baseY - 260, baseY, '#223222', '#142014');
 
-      ctx.fillStyle = '#1e2e1e';
-      ctx.beginPath();
-      ctx.moveTo(canvas.width * 0.4, canvas.height);
-      ctx.lineTo(canvas.width * 0.8, canvas.height - 250);
-      ctx.lineTo(canvas.width + 100, canvas.height);
-      ctx.fill();
+      // Midground Low Poly Mountains
+      drawLowPolyMountain(ctx, -50, canvas.width * 0.15, canvas.width * 0.5, baseY - 150, baseY, '#385238', '#253625');
+      drawLowPolyMountain(ctx, canvas.width * 0.2, canvas.width * 0.52, canvas.width * 0.85, baseY - 180, baseY, '#304730', '#1d2c1d');
+      drawLowPolyMountain(ctx, canvas.width * 0.55, canvas.width * 0.88, canvas.width + 80, baseY - 140, baseY, '#3c563c', '#283b28');
 
       // Bizarre Squirrel on tree trunk
       ctx.fillStyle = '#8B5A2B';
@@ -1229,21 +1253,97 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.fillRect(state.bgUfoX + 3, sheepY + 8, 2, 3);
     } 
     else if (config.blockType === 'city') {
-      // Draw dark skyline
-      ctx.fillStyle = '#111625';
-      const buildingWidth = 80;
-      const spacing = 120;
-      for (let x = -50; x < canvas.width + 100; x += spacing) {
-        const h = 200 + Math.sin(x) * 80;
-        ctx.fillRect(x, canvas.height - h, buildingWidth, h);
+      // Draw 3D buildings skyline
+      const buildingWidth = 90;
+      const spacing = 130;
+      let idx = 0;
+      for (let x = -60; x < canvas.width + 100; x += spacing) {
+        idx++;
+        const h = 220 + Math.sin(idx * 1.5) * 80;
+        const frontW = buildingWidth * 0.75;
+        const sideW = buildingWidth * 0.25;
         
-        // draw tiny yellow windows
-        ctx.fillStyle = 'rgba(255,235,100,0.1)';
-        for (let wy = canvas.height - h + 20; wy < canvas.height - 20; wy += 30) {
-          ctx.fillRect(x + 15, wy, 10, 15);
-          ctx.fillRect(x + buildingWidth - 25, wy, 10, 15);
+        // 1. Front face (lit)
+        ctx.fillStyle = '#1e2538';
+        ctx.fillRect(x, canvas.height - h, frontW, h);
+        
+        // 2. Side face (shadowed, 3D skew)
+        ctx.fillStyle = '#121622';
+        ctx.beginPath();
+        ctx.moveTo(x + frontW, canvas.height - h);
+        ctx.lineTo(x + frontW + sideW, canvas.height - h - 10);
+        ctx.lineTo(x + frontW + sideW, canvas.height);
+        ctx.lineTo(x + frontW, canvas.height);
+        ctx.closePath();
+        ctx.fill();
+        
+        // 3. Roof (top facet, 3D skew)
+        ctx.fillStyle = '#2c354d';
+        ctx.beginPath();
+        ctx.moveTo(x, canvas.height - h);
+        ctx.lineTo(x + frontW, canvas.height - h);
+        ctx.lineTo(x + frontW + sideW, canvas.height - h - 10);
+        ctx.lineTo(x + sideW, canvas.height - h - 10);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw tiny yellow windows in perspective (front face only)
+        ctx.fillStyle = 'rgba(255,235,100,0.18)';
+        for (let wy = canvas.height - h + 25; wy < canvas.height - 25; wy += 35) {
+          ctx.fillRect(x + 10, wy, 8, 12);
+          ctx.fillRect(x + frontW - 18, wy, 8, 12);
         }
-        ctx.fillStyle = '#111625';
+      }
+
+      // Draw highway traffic at the very bottom
+      const roadY = canvas.height - 35;
+      ctx.fillStyle = '#0a0d14';
+      ctx.fillRect(0, roadY, canvas.width, 35);
+      
+      // Dashed lane divider
+      ctx.strokeStyle = '#2d3748';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(0, roadY + 17);
+      ctx.lineTo(canvas.width, roadY + 17);
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset
+      
+      // Moving traffic headlights (white, moving left)
+      ctx.fillStyle = 'rgba(255, 255, 230, 0.9)';
+      const hOffset = (Date.now() * 0.08) % 120;
+      for (let hx = canvas.width + hOffset; hx > -50; hx -= 120) {
+        ctx.beginPath();
+        ctx.arc(hx, roadY + 8, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Headlight glow cone
+        const glow = ctx.createRadialGradient(hx, roadY + 8, 1, hx - 10, roadY + 8, 15);
+        glow.addColorStop(0, 'rgba(255, 255, 230, 0.35)');
+        glow.addColorStop(1, 'rgba(255, 255, 230, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(hx, roadY + 8, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 230, 0.9)';
+      }
+      
+      // Moving traffic taillights (red, moving right)
+      ctx.fillStyle = 'rgba(255, 60, 60, 0.9)';
+      const tOffset = (Date.now() * 0.06) % 120;
+      for (let tx = -50 + tOffset; tx < canvas.width + 50; tx += 120) {
+        ctx.beginPath();
+        ctx.arc(tx, roadY + 26, 2, 0, Math.PI * 2);
+        ctx.fill();
+        // Taillight glow
+        const glow = ctx.createRadialGradient(tx, roadY + 26, 1, tx, roadY + 26, 8);
+        glow.addColorStop(0, 'rgba(255, 60, 60, 0.4)');
+        glow.addColorStop(1, 'rgba(255, 60, 60, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(tx, roadY + 26, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 60, 60, 0.9)';
       }
 
       // Flying superhero
@@ -1295,20 +1395,42 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.fillRect(billX + 45 + state.bgCatEyeOffset/2, billY + 26, 2, 4);
     } 
     else if (config.blockType === 'ice') {
-      // Background icebergs
-      ctx.fillStyle = '#bde0fe';
-      ctx.beginPath();
-      ctx.moveTo(-50, canvas.height);
-      ctx.lineTo(canvas.width * 0.25, canvas.height - 180);
-      ctx.lineTo(canvas.width * 0.6, canvas.height);
-      ctx.fill();
+      // Draw Aurora Borealis (Realistic shifting waves)
+      ctx.save();
+      const time = Date.now() * 0.0008;
+      for (let j = 0; j < 2; j++) {
+        ctx.beginPath();
+        const startY = 90 + j * 30 + Math.sin(time + j) * 12;
+        ctx.moveTo(0, startY);
+        const cp1x = canvas.width * 0.28;
+        const cp1y = startY - 35 + Math.cos(time + j) * 15;
+        const cp2x = canvas.width * 0.72;
+        const cp2y = startY + 35 - Math.sin(time + j) * 15;
+        const endX = canvas.width;
+        const endY = startY + Math.sin(time + j + 1.2) * 8;
+        
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+        ctx.lineTo(canvas.width, endY + 70);
+        ctx.bezierCurveTo(cp2x, cp2y + 70, cp1x, cp1y + 70, 0, startY + 70);
+        ctx.closePath();
+        
+        const auroraGrd = ctx.createLinearGradient(0, startY - 10, 0, startY + 70);
+        auroraGrd.addColorStop(0, 'rgba(0, 255, 190, 0)');
+        auroraGrd.addColorStop(0.3, j === 0 ? 'rgba(0, 240, 255, 0.28)' : 'rgba(120, 80, 255, 0.24)');
+        auroraGrd.addColorStop(0.75, 'rgba(0, 255, 170, 0.12)');
+        auroraGrd.addColorStop(1, 'rgba(0, 255, 170, 0)');
+        
+        ctx.fillStyle = auroraGrd;
+        ctx.fill();
+      }
+      ctx.restore();
 
-      ctx.fillStyle = '#e0f2fe';
-      ctx.beginPath();
-      ctx.moveTo(canvas.width * 0.45, canvas.height);
-      ctx.lineTo(canvas.width * 0.75, canvas.height - 220);
-      ctx.lineTo(canvas.width + 50, canvas.height);
-      ctx.fill();
+      // Background Icebergs - Low Poly 3D
+      drawLowPolyMountain(ctx, -60, canvas.width * 0.25, canvas.width * 0.65, baseY - 190, baseY, '#e0f2fe', '#93c5fd');
+      drawLowPolyMountain(ctx, canvas.width * 0.42, canvas.width * 0.78, canvas.width + 80, baseY - 230, baseY, '#f0f9ff', '#cbd5e1');
+      
+      // Midground Icebergs
+      drawLowPolyMountain(ctx, canvas.width * 0.12, canvas.width * 0.48, canvas.width * 0.88, baseY - 150, baseY, '#bde0fe', '#78b2e6');
 
       // yeti dancing
       const yetiX = 60;
@@ -1363,6 +1485,30 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.fillRect(pengX + 8, canvas.height - 114, 4, 2.5);
     }
     else if (config.blockType === 'cyber') {
+      // 3D Wireframe / Grid skyscrapers in background
+      const cyberWidth = 80;
+      const spacing = 140;
+      let bIdx = 0;
+      for (let cx = -40; cx < canvas.width + 100; cx += spacing) {
+        bIdx++;
+        const ch = 190 + Math.cos(bIdx * 2) * 60;
+        
+        // Front face grid outline
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.18)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(cx, canvas.height - ch, cyberWidth * 0.75, ch);
+        
+        // Side face 3D skew
+        ctx.strokeStyle = 'rgba(233, 69, 96, 0.15)';
+        ctx.beginPath();
+        ctx.moveTo(cx + cyberWidth * 0.75, canvas.height - ch);
+        ctx.lineTo(cx + cyberWidth, canvas.height - ch - 12);
+        ctx.lineTo(cx + cyberWidth, canvas.height);
+        ctx.lineTo(cx + cyberWidth * 0.75, canvas.height);
+        ctx.closePath();
+        ctx.stroke();
+      }
+
       // PAC-MAN chasing Red Ghost
       const pacY = 160;
       ctx.fillStyle = '#ef4444'; // Red Ghost
@@ -1397,12 +1543,27 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.fillText('NOT FOUND', canvas.width - 170, 116);
     }
     else if (config.blockType === 'volcano') {
-      // Volcano mountains with lava glows
-      ctx.fillStyle = '#140800';
+      // Volcano mountains - Low Poly 3D
+      drawLowPolyMountain(ctx, -80, canvas.width * 0.4, canvas.width * 0.85, baseY - 200, baseY, '#22120d', '#140a06');
+      drawLowPolyMountain(ctx, canvas.width * 0.35, canvas.width * 0.8, canvas.width + 120, baseY - 240, baseY, '#1c0f0a', '#100805');
+
+      // Glowing magma cracks on the volcano faces
+      ctx.fillStyle = 'rgba(255, 69, 0, 0.8)';
       ctx.beginPath();
-      ctx.moveTo(-50, canvas.height);
-      ctx.lineTo(canvas.width * 0.4, canvas.height - 180);
-      ctx.lineTo(canvas.width * 0.9, canvas.height);
+      ctx.moveTo(canvas.width * 0.4, baseY - 200);
+      ctx.lineTo(canvas.width * 0.45, baseY - 80);
+      ctx.lineTo(canvas.width * 0.48, baseY - 80);
+      ctx.lineTo(canvas.width * 0.4, baseY - 200);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255, 140, 0, 0.75)';
+      ctx.beginPath();
+      ctx.moveTo(canvas.width * 0.8, baseY - 240);
+      ctx.lineTo(canvas.width * 0.83, baseY - 120);
+      ctx.lineTo(canvas.width * 0.85, baseY - 120);
+      ctx.lineTo(canvas.width * 0.8, baseY - 240);
+      ctx.closePath();
       ctx.fill();
 
       // glowing magma rivers in background
@@ -1553,48 +1714,170 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
   };
 
   const drawBlockSegment = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => {
-    ctx.fillStyle = config.treeColor;
-    ctx.fillRect(x, y, w, h);
-
-    // Draw borders/details per block
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(x, y, w, h);
-
     if (config.blockType === 'forest') {
-      // Wood grains
-      ctx.fillStyle = 'rgba(0,0,0,0.12)';
-      ctx.fillRect(x + 10, y, 6, h);
-      ctx.fillRect(x + w - 16, y, 6, h);
-      ctx.fillRect(x + w / 2 - 3, y, 6, h);
-    } else if (config.blockType === 'city') {
-      // Skyscraper grids
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      ctx.fillRect(x + 15, y + 15, 20, 20);
-      ctx.fillRect(x + w - 35, y + 15, 20, 20);
-      ctx.fillRect(x + 15, y + h - 35, 20, 20);
-      ctx.fillRect(x + w - 35, y + h - 35, 20, 20);
-    } else if (config.blockType === 'ice') {
-      // Frost sparkles
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      // 3D cylindrical wood shading
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, '#2e1c14');
+      grad.addColorStop(0.15, '#3b241a');
+      grad.addColorStop(0.4, '#5c4033');
+      grad.addColorStop(0.52, '#7a5a4a'); // highlight stripe
+      grad.addColorStop(0.68, '#5c4033');
+      grad.addColorStop(0.88, '#3b241a');
+      grad.addColorStop(1, '#1e120d');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Wood bark rings curving in perspective (3D effect)
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(x + 10, y + 10);
-      ctx.lineTo(x + w - 10, y + 10);
-      ctx.lineTo(x + 10, y + h - 10);
+      ctx.ellipse(x + w/2, y + h/3, w/2 - 4, 5, 0, 0, Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(x + w/2, y + (h*2)/3, w/2 - 4, 5, 0, 0, Math.PI);
+      ctx.stroke();
+
+      // Main structural outline
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
+    } 
+    else if (config.blockType === 'city') {
+      // 3D structural steel beam with metallic highlight
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, '#262d3a');
+      grad.addColorStop(0.25, '#3c4759');
+      grad.addColorStop(0.5, '#7686a0'); // metal shine
+      grad.addColorStop(0.75, '#4f5d75');
+      grad.addColorStop(1, '#1d232e');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Rivets / Bolts in 3D panels
+      ctx.fillStyle = '#171b24';
+      ctx.beginPath();
+      ctx.arc(x + 12, y + 15, 3, 0, Math.PI*2);
+      ctx.arc(x + w - 12, y + 15, 3, 0, Math.PI*2);
+      ctx.arc(x + 12, y + h - 15, 3, 0, Math.PI*2);
+      ctx.arc(x + w - 12, y + h - 15, 3, 0, Math.PI*2);
       ctx.fill();
-    } else if (config.blockType === 'cyber') {
-      // Cyber neon stripe
-      ctx.fillStyle = 'rgba(255,0,255,0.4)';
-      ctx.fillRect(x + w / 2 - 5, y, 10, h);
-      // horizontal wire indicators
-      ctx.fillStyle = config.accentColor;
-      ctx.fillRect(x + 10, y + 20, w - 20, 3);
-      ctx.fillRect(x + 10, y + h - 20, w - 20, 3);
-    } else if (config.blockType === 'volcano') {
-      // Volcanic magma veins
-      ctx.fillStyle = '#ff4500';
-      ctx.fillRect(x + 20, y + 10, 8, h - 20);
-      ctx.fillRect(x + w - 28, y + 15, 8, h - 30);
+      ctx.fillStyle = '#7686a0';
+      ctx.beginPath();
+      ctx.arc(x + 11, y + 14, 1.2, 0, Math.PI*2);
+      ctx.arc(x + w - 13, y + 14, 1.2, 0, Math.PI*2);
+      ctx.arc(x + 11, y + h - 16, 1.2, 0, Math.PI*2);
+      ctx.arc(x + w - 13, y + h - 16, 1.2, 0, Math.PI*2);
+      ctx.fill();
+
+      // Steel plate seams
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(x, y + 2, w, 4);
+      ctx.fillRect(x, y + h - 6, w, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(x, y + 6, w, 2);
+
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
+    } 
+    else if (config.blockType === 'ice') {
+      // 3D Ice block with refracted crystal facets
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, '#51cfdf');
+      grad.addColorStop(0.3, '#99e9f2');
+      grad.addColorStop(0.7, '#c5f6fa'); // reflection core
+      grad.addColorStop(1, '#3bc9db');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Light reflection facet
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w * 0.3, y);
+      ctx.lineTo(x + w * 0.15, y + h);
+      ctx.lineTo(x, y + h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Refracted crystal shard lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.4, y);
+      ctx.lineTo(x + w * 0.2, y + h * 0.7);
+      ctx.lineTo(x + w * 0.65, y + h);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#0b7285'; // ice block borders
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
+    } 
+    else if (config.blockType === 'cyber') {
+      // Holographic cyber grid block
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, '#0a0b0d');
+      grad.addColorStop(0.5, '#1e2430'); // glowing core
+      grad.addColorStop(1, '#07080a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Scrolling neon perspective rings
+      ctx.strokeStyle = 'rgba(210, 140, 56, 0.45)'; // cyber accent
+      ctx.lineWidth = 1.5;
+      for (let gy = y + 10; gy < y + h; gy += 20) {
+        ctx.beginPath();
+        ctx.ellipse(x + w/2, gy, w/2 - 4, 3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Neon center pulse line
+      const pulse = Math.sin(Date.now() / 150) * 0.25 + 0.75;
+      ctx.strokeStyle = `rgba(210, 140, 56, ${pulse})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + w/2, y);
+      ctx.lineTo(x + w/2, y + h);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#d28c38';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(x, y, w, h);
+    } 
+    else if (config.blockType === 'volcano') {
+      // 3D Volcanic basalt columnar columns
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, '#160e0e');
+      grad.addColorStop(0.3, '#2a1a1a');
+      grad.addColorStop(0.7, '#382222');
+      grad.addColorStop(1, '#110b0b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+
+      // Basalt cracks (Giant's causeway structure)
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.35, y);
+      ctx.lineTo(x + w * 0.4, y + h);
+      ctx.moveTo(x + w * 0.72, y);
+      ctx.lineTo(x + w * 0.68, y + h);
+      ctx.stroke();
+
+      // Pulsing lava veins in the basalt seams
+      const pulse = Math.sin(Date.now() / 180) * 0.3 + 0.7;
+      ctx.strokeStyle = `rgba(255, 69, 0, ${pulse})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.35, y);
+      ctx.lineTo(x + w * 0.4, y + h);
+      ctx.moveTo(x + w * 0.72, y);
+      ctx.lineTo(x + w * 0.68, y + h);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
     }
   };
 

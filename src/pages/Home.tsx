@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Play, Shield, Globe, Award, Sparkles, ChevronRight, Moon, Wind, Sun } from 'lucide-react';
 import { db, ShopItem } from '../utils/LocalStorageDB';
 
@@ -28,9 +28,19 @@ export const Home: React.FC<HomeProps> = ({
   const shopItems = db.getShop();
   const worlds = shopItems.filter(item => item.type === 'world');
 
+  const [selectedWorldId, setSelectedWorldId] = useState<string>('world_forest');
+
+  const selectedWorld = worlds.find(w => w.id === selectedWorldId) || worlds[0];
+
   const handleWorldSelect = (world: ShopItem) => {
     if (world.unlocked) {
-      onPlayWorld(world.id);
+      setSelectedWorldId(world.id);
+      setTimeout(() => {
+        const deck = document.getElementById('departure-deck');
+        if (deck) {
+          deck.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
     } else {
       showConfirm(
         'Unlock World',
@@ -40,6 +50,13 @@ export const Home: React.FC<HomeProps> = ({
           if (res.success) {
             showAlert('World Unlocked', `${world.name} unlocked!`);
             onPurchaseComplete();
+            setSelectedWorldId(world.id);
+            setTimeout(() => {
+              const deck = document.getElementById('departure-deck');
+              if (deck) {
+                deck.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }, 150);
           } else {
             showAlert('Unlock Failed', `Unlock failed: ${res.reason}`);
           }
@@ -218,7 +235,7 @@ export const Home: React.FC<HomeProps> = ({
           <button 
             className="neon-btn-yellow" 
             style={{ fontSize: '0.95rem', padding: '14px 30px' }}
-            onClick={() => onPlayWorld('world_forest')}
+            onClick={() => onPlayWorld(selectedWorldId)}
           >
             <Play size={16} style={{ display: 'inline', marginRight: '6px', fill: 'currentColor' }} />
             PLAY NOW
@@ -335,7 +352,13 @@ export const Home: React.FC<HomeProps> = ({
             <button 
               className="neon-btn-yellow" 
               style={{ padding: '8px 20px', fontSize: '0.75rem', borderWidth: '2px' }}
-              onClick={() => onPlayWorld('world_ice')}
+              onClick={() => {
+                setSelectedWorldId('world_ice');
+                setTimeout(() => {
+                  const deck = document.getElementById('departure-deck');
+                  if (deck) deck.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+              }}
             >
               ACCEPT CONTRACT
             </button>
@@ -419,7 +442,7 @@ export const Home: React.FC<HomeProps> = ({
           SELECT NATURE SECTOR
         </h2>
         
-        <div className="grid-3" style={{ marginBottom: '50px' }}>
+        <div className="grid-3" style={{ marginBottom: '30px' }}>
           {worlds.map(world => {
             let bgGradient = 'linear-gradient(135deg, #251e18, #18130f)';
             let accent = '#422a1b';
@@ -457,6 +480,8 @@ export const Home: React.FC<HomeProps> = ({
               weatherText = 'Magma Rain';
             }
 
+            const isSelected = selectedWorldId === world.id;
+
             return (
               <div 
                 key={world.id}
@@ -464,7 +489,7 @@ export const Home: React.FC<HomeProps> = ({
                 style={{
                   background: bgGradient,
                   borderWidth: '3px',
-                  borderColor: world.unlocked ? accent : '#3d2c20',
+                  borderColor: isSelected ? 'var(--neon-yellow)' : (world.unlocked ? accent : '#3d2c20'),
                   opacity: world.unlocked ? 1 : 0.82,
                   display: 'flex',
                   flexDirection: 'column',
@@ -473,16 +498,22 @@ export const Home: React.FC<HomeProps> = ({
                   padding: '20px',
                   transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                   cursor: 'pointer',
-                  boxShadow: '0 6px 12px rgba(0,0,0,0.45)'
+                  boxShadow: isSelected ? '0 0 20px rgba(229,169,59,0.5), 0 6px 12px rgba(0,0,0,0.6)' : '0 6px 12px rgba(0,0,0,0.45)'
                 }}
                 onClick={() => handleWorldSelect(world)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
-                  if (world.unlocked) e.currentTarget.style.boxShadow = `0 10px 20px rgba(0,0,0,0.6), 0 0 10px ${accent}33`;
+                  if (world.unlocked) {
+                    e.currentTarget.style.boxShadow = isSelected 
+                      ? '0 0 25px rgba(229,169,59,0.8), 0 10px 20px rgba(0,0,0,0.6)' 
+                      : `0 10px 20px rgba(0,0,0,0.6), 0 0 10px ${accent}33`;
+                  }
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.45)';
+                  e.currentTarget.style.boxShadow = isSelected 
+                    ? '0 0 20px rgba(229,169,59,0.5), 0 6px 12px rgba(0,0,0,0.45)' 
+                    : '0 6px 12px rgba(0,0,0,0.45)';
                 }}
               >
                 <div>
@@ -490,7 +521,11 @@ export const Home: React.FC<HomeProps> = ({
                     <h3 className="retro-title" style={{ fontSize: '0.95rem', margin: 0, textShadow: 'none', color: '#fff' }}>
                       {world.name}
                     </h3>
-                    {world.unlocked ? (
+                    {isSelected ? (
+                      <span className="rarity-tag rarity-legendary" style={{ fontSize: '8px', padding: '2px 6px', animation: 'pulseNeon 1.5s infinite' }}>
+                        SELECTED
+                      </span>
+                    ) : world.unlocked ? (
                       <span style={{ color: 'var(--neon-green)', fontSize: '0.65rem', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>READY</span>
                     ) : (
                       <span style={{ color: 'var(--neon-yellow)', fontSize: '0.68rem', fontFamily: 'var(--font-retro)', display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -521,6 +556,92 @@ export const Home: React.FC<HomeProps> = ({
               </div>
             );
           })}
+        </div>
+
+        {/* MISSION DEPARTURE DECK (Control Console) */}
+        <div 
+          id="departure-deck"
+          className="material-wood"
+          style={{
+            padding: '24px',
+            marginBottom: '50px',
+            background: 'linear-gradient(135deg, #2b1d14, #1c130d)',
+            border: '4px solid var(--neon-yellow)',
+            boxShadow: '0 0 20px rgba(229,169,59,0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            scrollMarginTop: '120px'
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ fontSize: '0.7rem', fontFamily: 'var(--font-retro)', color: 'var(--neon-yellow)', letterSpacing: '2px' }}>
+              READY TO DEPART
+            </span>
+            <h3 className="retro-title" style={{ fontSize: '1.25rem', margin: '4px 0 0', textShadow: '2px 2px 0px rgba(0,0,0,0.8)' }}>
+              MISSION DEPARTURE DECK
+            </h3>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '16px',
+            width: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+            background: 'rgba(0,0,0,0.25)',
+            padding: '16px',
+            borderRadius: '8px',
+            border: '2px dashed #422a1b'
+          }}>
+            {/* Selected World Info */}
+            <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>SECTOR:</span>
+              <span style={{ fontSize: '1.05rem', color: '#fff', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {selectedWorldId === 'world_forest' ? '🌲' : (selectedWorldId === 'world_city' ? '🏙️' : (selectedWorldId === 'world_ice' ? '🏔️' : (selectedWorldId === 'world_cyber' ? '🔌' : '🌋')))} {selectedWorld?.name || 'Forest'}
+              </span>
+            </div>
+
+            {/* Difficulty Info */}
+            <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>DIFFICULTY:</span>
+              <span style={{ 
+                fontSize: '1.05rem', 
+                fontWeight: '800', 
+                color: difficulty === 'easy' ? 'var(--neon-green)' : (difficulty === 'medium' ? 'var(--neon-cyan)' : (difficulty === 'hard' ? 'var(--neon-yellow)' : 'var(--neon-red)')),
+              }}>
+                {difficulty.toUpperCase()} ({difficulties.find(d => d.id === difficulty)?.multiplier})
+              </span>
+            </div>
+
+            {/* Character Info */}
+            <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>CHALLENGER:</span>
+              <span style={{ fontSize: '1.05rem', color: '#fff', fontWeight: '800' }}>
+                {equippedChar === 'char_lumberjack' ? '🪓 Lumberjack' : (equippedChar === 'char_viking' ? '🛡️ Viking' : (equippedChar === 'char_knight' ? '⚔️ Knight' : (equippedChar === 'char_samurai' ? '🥷 Samurai' : (equippedChar === 'char_wizard' ? '🧙 Wizard' : (equippedChar === 'char_alien' ? '👽 Alien' : '🤖 Android')))))}
+              </span>
+            </div>
+          </div>
+
+          {/* Start Game Button */}
+          <button
+            className="neon-btn-yellow"
+            style={{
+              fontSize: '1.2rem',
+              padding: '14px 36px',
+              animation: 'bounceSlow 2s infinite',
+            }}
+            onClick={() => {
+              if (selectedWorld) {
+                onPlayWorld(selectedWorld.id);
+              }
+            }}
+          >
+            <Play size={18} style={{ display: 'inline', marginRight: '8px', fill: 'currentColor' }} />
+            START CHOPPING
+          </button>
         </div>
       </div>
 

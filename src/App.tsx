@@ -450,6 +450,28 @@ export const App: React.FC = () => {
         className="custom-particle-cursor" 
         style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px` }}
       />
+
+      {/* Premium Dynamic Parallax Backdrop */}
+      <div className="premium-backdrop">
+        <div className="backdrop-layer sky-bg"></div>
+        <div className="backdrop-layer stars-layer"></div>
+        <div className="backdrop-layer mountains-layer">
+          <svg viewBox="0 0 1440 320" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
+            <path d="M0,240 L120,170 L240,220 L360,130 L480,210 L600,120 L720,200 L840,110 L960,190 L1080,130 L1200,210 L1320,140 L1440,240 L1440,320 L0,320 Z" fill="#20150d" opacity="0.45"/>
+            <path d="M0,280 L180,210 L360,270 L540,190 L720,260 L900,180 L1080,250 L1260,200 L1440,280 L1440,320 L0,320 Z" fill="#160e0a"/>
+          </svg>
+        </div>
+        <div className="backdrop-layer fog-layer"></div>
+        <div className="backdrop-layer fireflies-layer">
+          <div className="firefly" style={{ left: '12%', top: '68%', animationDelay: '0s', animationDuration: '4s' }}></div>
+          <div className="firefly" style={{ left: '38%', top: '58%', animationDelay: '1.2s', animationDuration: '5.5s' }}></div>
+          <div className="firefly" style={{ left: '62%', top: '74%', animationDelay: '2.5s', animationDuration: '3.8s' }}></div>
+          <div className="firefly" style={{ left: '88%', top: '48%', animationDelay: '0.8s', animationDuration: '4.8s' }}></div>
+          <div className="firefly" style={{ left: '25%', top: '82%', animationDelay: '3.1s', animationDuration: '5.2s' }}></div>
+          <div className="firefly" style={{ left: '78%', top: '64%', animationDelay: '1.9s', animationDuration: '4.2s' }}></div>
+        </div>
+      </div>
+
       {/* Unified Top Floating Navbar */}
       <header className={`floating-nav ${showNav ? '' : 'hidden'}`}>
         
