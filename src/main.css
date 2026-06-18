@@ -17,6 +17,72 @@
   --font-retro: 'Press Start 2P', monospace;
 }
 
+/* Dynamic Level-Based Nature Wood Themes */
+.theme-wood-oak {
+  --bg-color: #1b110a;
+  --panel-bg: #291b11;
+  --panel-border: #422a1c;
+  --text-primary: #fcf6f0;
+  --text-secondary: #bba291;
+  --neon-green: #7ca85c;
+  --neon-cyan: #e2a050;
+  --neon-magenta: #e06030;
+  --neon-yellow: #f8c050;
+  --neon-red: #cc3c24;
+}
+
+.theme-wood-birch {
+  --bg-color: #121810;
+  --panel-bg: #202b1c;
+  --panel-border: #35462e;
+  --text-primary: #f2faf0;
+  --text-secondary: #a3c099;
+  --neon-green: #97d468;
+  --neon-cyan: #66e2c3;
+  --neon-magenta: #d968d4;
+  --neon-yellow: #e4e25a;
+  --neon-red: #e04f4f;
+}
+
+.theme-wood-redwood {
+  --bg-color: #190a07;
+  --panel-bg: #2a110c;
+  --panel-border: #441b14;
+  --text-primary: #faedea;
+  --text-secondary: #cda29b;
+  --neon-green: #e8590c;
+  --neon-cyan: #fcc419;
+  --neon-magenta: #e03131;
+  --neon-yellow: #ffd43b;
+  --neon-red: #c92a2a;
+}
+
+.theme-wood-frost {
+  --bg-color: #0b111e;
+  --panel-bg: #151f32;
+  --panel-border: #243654;
+  --text-primary: #edf4fe;
+  --text-secondary: #9cb6dc;
+  --neon-green: #3bc9db;
+  --neon-cyan: #74c0fc;
+  --neon-magenta: #a78bfa;
+  --neon-yellow: #e5dbff;
+  --neon-red: #ff8787;
+}
+
+.theme-wood-gold {
+  --bg-color: #120b02;
+  --panel-bg: #241605;
+  --panel-border: #3e270a;
+  --text-primary: #fffbeb;
+  --text-secondary: #dfbfa1;
+  --neon-green: #10b981;
+  --neon-cyan: #fbbf24;
+  --neon-magenta: #f59e0b;
+  --neon-yellow: #fef08a;
+  --neon-red: #ef4444;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
