@@ -6,6 +6,7 @@ interface CanvasGameProps {
   characterId: string;
   weaponId: string;
   trailId: string;
+  difficulty: string;
   onGameOver: (score: number, maxCombo: number, coins: number, diamonds: number) => void;
   onScoreUpdate: (score: number, combo: number) => void;
 }
@@ -342,22 +343,28 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
   characterId,
   weaponId,
   trailId,
+  difficulty,
   onGameOver,
   onScoreUpdate,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Game States
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isDead, setIsDead] = useState(false);
-  
+  // Determine starting time based on difficulty
+  const startTimer = difficulty === 'easy' ? 45.0 :
+                     difficulty === 'hard' ? 20.0 :
+                     difficulty === 'extreme' ? 15.0 :
+                     difficulty === 'nightmare' ? 10.0 :
+                     difficulty === 'impossible' ? 5.0 : 30.0;
+
   // Game Variables Ref (to avoid closures in animation frame)
   const stateRef = useRef({
+    isPlaying: false,
+    isDead: false,
     score: 0,
     combo: 0,
     maxCombo: 0,
-    timeRemaining: 30.0, // seconds
-    maxTime: 30.0,
+    timeRemaining: startTimer,
+    maxTime: startTimer,
     playerSide: 'left' as 'left' | 'right',
     isChopping: false,
     chopAnimTime: 0,
@@ -376,6 +383,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     bgScroll: 0,
     lastTime: 0,
     keys: {} as Record<string, boolean>,
+    obstacleBuffer: 0, // spacing tracker for branches
   });
 
   // World configs
@@ -462,12 +470,27 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     let chest: 'none' | 'left' | 'right' = 'none';
     let diamond: 'none' | 'left' | 'right' = 'none';
 
-    // Rules:
-    // 1. If previous had an obstacle, force at least 1 or 2 empty buffers to make it fair
-    const hadObstacle = prev.obstacle !== 'none';
+    // Difficulty parameters
+    let minSpacing = 2;
+    let obstacleProb = 0.45;
+    if (difficulty === 'easy') { minSpacing = 3; obstacleProb = 0.3; }
+    else if (difficulty === 'hard') { minSpacing = 1; obstacleProb = 0.55; }
+    else if (difficulty === 'extreme') { minSpacing = 1; obstacleProb = 0.65; }
+    else if (difficulty === 'nightmare') { minSpacing = 0; obstacleProb = 0.70; }
+    else if (difficulty === 'impossible') { minSpacing = 0; obstacleProb = 0.80; }
 
-    if (!hadObstacle && r < 0.45) {
+    const state = stateRef.current;
+
+    // Rules:
+    if (state.obstacleBuffer < minSpacing) {
+      state.obstacleBuffer++;
+      obstacle = 'none';
+    } else if (r < obstacleProb) {
       obstacle = Math.random() < 0.5 ? 'left' : 'right';
+      state.obstacleBuffer = 0;
+    } else {
+      state.obstacleBuffer++;
+      obstacle = 'none';
     }
 
     // Spawn coins/diamonds on opposite side of obstacles, or randomly
@@ -492,15 +515,14 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
 
   // Triggered when user chops
   const handleChop = (side: 'left' | 'right') => {
-    if (isDead) return;
+    const state = stateRef.current;
+    if (state.isDead) return;
     
     // Start music loop if it's the first swing of the game
-    if (!isPlaying) {
-      setIsPlaying(true);
+    if (!state.isPlaying) {
+      state.isPlaying = true;
       sound.startMusic(worldId.replace('world_', ''));
     }
-
-    const state = stateRef.current;
     state.playerSide = side;
     state.isChopping = true;
     state.chopAnimTime = 0.08; // 80ms animation frame
@@ -578,8 +600,10 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     const particleX = canvasRef.current!.width / 2 + (side === 'left' ? -30 : 30);
     const particleY = canvasRef.current!.height - 180;
     
-    // Weapon specific particles
-    const trailColor = trailId === 'trail_fire' ? '#FF4500' : (trailId === 'trail_spark' ? '#00FFFF' : (trailId === 'trail_rainbow' ? 'hsl(' + (Date.now() % 360) + ', 100%, 50%)' : '#ffffff'));
+    const trailColor = trailId === 'trail_fire' ? '#FF4500' :
+                       trailId === 'trail_spark' ? '#00FFFF' :
+                       trailId === 'trail_rainbow' ? 'hsl(' + (Date.now() % 360) + ', 100%, 50%)' :
+                       trailId === 'trail_dust' ? '#8B5A2B' : '#ffffff';
 
     for (let i = 0; i < 8; i++) {
       state.particles.push({
@@ -684,8 +708,8 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
   };
 
   const triggerDeath = (reason: string) => {
-    if (isDead) return;
-    setIsDead(true);
+    if (stateRef.current.isDead) return;
+    stateRef.current.isDead = true;
     sound.playHit();
     sound.playGameOver();
     sound.stopMusic();
@@ -718,7 +742,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
   // Keyboard controls listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isDead) return;
+      if (stateRef.current.isDead) return;
       const key = e.key.toLowerCase();
       
       // Prevent scrolling
@@ -749,7 +773,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isDead, isPlaying, worldId]);
+  }, [worldId]);
 
   // Main Canvas render loop
   useEffect(() => {
@@ -800,9 +824,16 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     const state = stateRef.current;
 
     // Timer tick down
-    if (isPlaying && !isDead) {
-      // Speed up decay rate as score increases to make it harder
-      const decayMultiplier = 1.0 + (state.score * 0.003);
+    if (state.isPlaying && !state.isDead) {
+      // Speed up decay rate based on difficulty and score
+      let decayMultiplier = 1.0;
+      if (difficulty === 'easy') decayMultiplier = 0.6;
+      else if (difficulty === 'hard') decayMultiplier = 1.4;
+      else if (difficulty === 'extreme') decayMultiplier = 1.8;
+      else if (difficulty === 'nightmare') decayMultiplier = 2.4;
+      else if (difficulty === 'impossible') decayMultiplier = 3.0;
+
+      decayMultiplier *= (1.0 + (state.score * 0.003));
       state.timeRemaining -= dt * decayMultiplier;
 
       if (state.timeRemaining <= 0) {
@@ -875,7 +906,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     updateWeather(dt);
 
     // Death transition logic
-    if (isDead) {
+    if (state.isDead) {
       state.deathTimer -= dt;
       if (state.deathTimer <= 0) {
         // Stop and call React Game Over callback
@@ -1017,7 +1048,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     drawFlyingSegments(ctx);
 
     // 6. Draw Player
-    if (!isDead) {
+    if (!state.isDead) {
       drawPlayer(ctx, canvas);
     }
 
@@ -1567,7 +1598,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     }
 
     // 4. Instructions overlay if game has not started
-    if (!isPlaying && !isDead) {
+    if (!state.isPlaying && !state.isDead) {
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1585,7 +1616,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
 
   // Manual Trigger handler for touch zones
   const handleTouch = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    if (isDead) return;
+    if (stateRef.current.isDead) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
