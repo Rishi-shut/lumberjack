@@ -438,7 +438,6 @@ export const App: React.FC = () => {
     { id: 'dashboard', label: 'JOURNAL', icon: <User size={16} /> },
     { id: 'shop', label: 'MERCHANT', icon: <ShoppingCart size={16} /> },
     { id: 'missions', label: 'BULLETIN', icon: <CheckSquare size={16} /> },
-    { id: 'leaderboard', label: 'RANKINGS', icon: <Trophy size={16} /> },
     { id: 'settings', label: 'SETTINGS', icon: <SettingsIcon size={16} /> },
     { id: 'admin', label: 'ADMIN', icon: <ShieldAlert size={16} /> }
   ];

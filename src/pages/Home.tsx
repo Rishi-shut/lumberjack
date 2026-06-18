@@ -29,6 +29,7 @@ export const Home: React.FC<HomeProps> = ({
   const worlds = shopItems.filter(item => item.type === 'world');
 
   const [selectedWorldId, setSelectedWorldId] = useState<string>('world_forest');
+  const [showTrailer, setShowTrailer] = useState(false);
 
   const selectedWorld = worlds.find(w => w.id === selectedWorldId) || worlds[0];
 
@@ -244,19 +245,11 @@ export const Home: React.FC<HomeProps> = ({
           <button 
             className="neon-btn-cyan" 
             style={{ fontSize: '0.95rem', padding: '14px 24px' }}
-            onClick={() => showAlert('Trailer Boot', 'Simulating game trailer boot... The lumberjack swings, logs fly, birds scatter! Playing at 60 FPS in your browser.')}
+            onClick={() => setShowTrailer(true)}
           >
             WATCH TRAILER
           </button>
 
-          <button 
-            className="neon-btn" 
-            style={{ fontSize: '0.95rem', padding: '14px 24px' }}
-            onClick={() => showAlert('Rankings Desk', 'Visit the Rankings journal tab in the navigation menu above to see the live top woodcutters!')}
-          >
-            LEADERBOARD
-          </button>
-          
           <button 
             className="neon-btn" 
             style={{ fontSize: '0.95rem', padding: '14px 24px' }}
@@ -847,6 +840,68 @@ export const Home: React.FC<HomeProps> = ({
           BUILD v1.4.2-STABLE | DB MODE: LOCAL-FIRST
         </div>
       </footer>
+
+      {/* Cinematic Trailer Modal */}
+      {showTrailer && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.92)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(8px)',
+          padding: '16px'
+        }}>
+          <div className="material-wood" style={{
+            maxWidth: '800px',
+            width: '100%',
+            aspectRatio: '16/9',
+            position: 'relative',
+            border: '4px solid var(--neon-yellow)',
+            boxShadow: '0 0 30px rgba(229,169,59,0.5)',
+            padding: '12px',
+            background: '#1c130d'
+          }}>
+            {/* Close Button */}
+            <button
+              className="neon-btn-magenta"
+              style={{
+                position: 'absolute',
+                top: '-20px',
+                right: '-20px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                zIndex: 1000
+              }}
+              onClick={() => setShowTrailer(false)}
+            >
+              ✕
+            </button>
+
+            {/* Video Iframe Container */}
+            <div style={{ width: '100%', height: '100%', borderRadius: '4px', overflow: 'hidden' }}>
+              <iframe 
+                width="100%" 
+                height="100%" 
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" 
+                title="Infinite Chop Trailer" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                allowFullScreen
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
