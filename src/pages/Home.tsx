@@ -136,7 +136,7 @@ export const Home: React.FC<HomeProps> = ({
           })}
         </div>
         
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', italic: 'true' }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
           💡 <em>{difficulties.find(d => d.id === difficulty)?.desc}</em> Gaining XP and coins scales with the multiplier.
         </p>
       </div>
