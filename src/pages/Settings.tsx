@@ -8,13 +8,15 @@ interface SettingsProps {
   onSettingsChange: () => void;
   showAlert: (title: string, message: string) => void;
   showConfirm: (title: string, message: string, onConfirm: () => void) => void;
+  setCurrentPage?: (page: any) => void;
 }
 
 export const Settings: React.FC<SettingsProps> = ({
   user,
   onSettingsChange,
   showAlert,
-  showConfirm
+  showConfirm,
+  setCurrentPage
 }) => {
   const [settings, setSettings] = useState(db.getSettings());
   const [emailInput, setEmailInput] = useState('');
@@ -300,8 +302,21 @@ export const Settings: React.FC<SettingsProps> = ({
               RESTORE SAVE FROM CLOUD
             </button>
             
+            {setCurrentPage && (
+              <button 
+                className="neon-btn" 
+                style={{ fontSize: '0.7rem', padding: '8px 18px', borderWidth: '2px' }}
+                onClick={() => {
+                  sound.playCoin();
+                  setCurrentPage('404');
+                }}
+              >
+                TRIGGER 404 SCREEN
+              </button>
+            )}
+
             {localStorage.getItem('infinite_chop_cloud_sync_time') && (
-              <span style={{ fontSize: '0.75rem', color: '#7c654e', fontStyle: 'italic' }}>
+              <span style={{ fontSize: '0.75rem', color: '#7c654e', fontStyle: 'italic', marginLeft: '8px' }}>
                 Last synced: {localStorage.getItem('infinite_chop_cloud_sync_time')}
               </span>
             )}

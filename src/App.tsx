@@ -68,7 +68,7 @@ export const App: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(db.getLeaderboard());
 
   // Routing State
-  const [currentPage, setCurrentPage] = useState<'home' | 'dashboard' | 'shop' | 'leaderboard' | 'missions' | 'settings' | 'admin'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'dashboard' | 'shop' | 'leaderboard' | 'missions' | 'settings' | 'admin' | '404'>('home');
   
   // Scroll tracker for navigation hiding
   const [showNav, setShowNav] = useState(true);
@@ -615,6 +615,7 @@ export const App: React.FC = () => {
             onSettingsChange={refreshState}
             showAlert={showAlert}
             showConfirm={showConfirm}
+            setCurrentPage={setCurrentPage}
           />
         )}
         {currentPage === 'admin' && (
@@ -624,6 +625,28 @@ export const App: React.FC = () => {
             showAlert={showAlert}
             showConfirm={showConfirm}
           />
+        )}
+        {currentPage === '404' && (
+          <div className="material-wood" style={{ padding: '65px 24px', textAlign: 'center', maxWidth: '480px', margin: '40px auto', background: 'linear-gradient(180deg, #322116, #1e130d)', boxShadow: '0 12px 24px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: '5rem', marginBottom: '20px', animation: 'breathAnim 1.5s infinite ease-in-out' }}>
+              🪓💥🪵
+            </div>
+            
+            <h2 className="retro-title" style={{ fontSize: '1.3rem', color: 'var(--neon-red)', marginBottom: '16px' }}>
+              PAGE CHOPPED! (404)
+            </h2>
+            
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6', marginBottom: '28px' }}>
+              Oh no! The Lumberjack got a bit too enthusiastic and accidentally chopped down this page. Nothing but splinters left here!
+            </p>
+
+            <button 
+              className="neon-btn-yellow" 
+              onClick={() => { sound.playCoin(); setCurrentPage('home'); }}
+            >
+              RETURN TO HUB
+            </button>
+          </div>
         )}
       </main>
 
