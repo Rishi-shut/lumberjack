@@ -553,11 +553,19 @@ class LocalStorageDB {
 
     try {
       // Fetch latest profile from DB to check for admin injections/modifications
-      const { data: dbProfile } = await supabase
+      const { data: dbProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('coins, diamonds, tickets, is_banned')
         .eq('id', session.user.id)
         .maybeSingle();
+
+      if (!fetchError && !dbProfile) {
+        // User was deleted from DB, logout immediately!
+        this.logoutUser();
+        localStorage.setItem('infinite_chop_sync_in_progress', 'false');
+        window.location.reload();
+        return;
+      }
 
       if (dbProfile) {
         // Check if user has been banned by admin
@@ -652,11 +660,17 @@ class LocalStorageDB {
   public async restoreSessionFromCloud(): Promise<boolean> {
     const { data: { session } } = await supabase.auth.getSession();
     if (session && session.user) {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .maybeSingle();
+
+      if (!error && !profile) {
+        // User was deleted from DB, logout immediately!
+        this.logoutUser();
+        return false;
+      }
 
       if (profile) {
         const userProfile: UserProfile = {

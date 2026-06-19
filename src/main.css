@@ -893,12 +893,20 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-body, html, #root, .game-container, canvas {
+body, html, #root {
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   touch-action: manipulation;
+}
+
+.game-container, .game-container canvas {
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  outline: none !important;
 }
 
 input, select, textarea {

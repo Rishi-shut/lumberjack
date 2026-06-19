@@ -315,49 +315,60 @@ export const App: React.FC = () => {
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',
+            event: '*',
             schema: 'public',
             table: 'profiles',
             filter: `id=eq.${userId}`
           },
           (payload) => {
-            const isSyncing = localStorage.getItem('infinite_chop_sync_in_progress') === 'true';
-            if (isSyncing) return;
+            if (payload.eventType === 'DELETE') {
+              db.logoutUser();
+              addToast('🔴 Your account has been deleted by an administrator.', 'info');
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
+              return;
+            }
 
-            const newCoins = payload.new.coins ?? 0;
-            const newDiamonds = payload.new.diamonds ?? 0;
-            const newTickets = payload.new.tickets ?? 0;
+            if (payload.eventType === 'UPDATE') {
+              const isSyncing = localStorage.getItem('infinite_chop_sync_in_progress') === 'true';
+              if (isSyncing) return;
 
-            const lastSyncedCoins = Number(localStorage.getItem('infinite_chop_last_synced_coins') ?? user.coins);
-            const lastSyncedDiamonds = Number(localStorage.getItem('infinite_chop_last_synced_diamonds') ?? user.diamonds);
-            const lastSyncedTickets = Number(localStorage.getItem('infinite_chop_last_synced_tickets') ?? (user.tickets || 0));
+              const newCoins = payload.new.coins ?? 0;
+              const newDiamonds = payload.new.diamonds ?? 0;
+              const newTickets = payload.new.tickets ?? 0;
 
-            const coinDiff = newCoins - lastSyncedCoins;
-            const diamondDiff = newDiamonds - lastSyncedDiamonds;
-            const ticketDiff = newTickets - lastSyncedTickets;
+              const lastSyncedCoins = Number(localStorage.getItem('infinite_chop_last_synced_coins') ?? user.coins);
+              const lastSyncedDiamonds = Number(localStorage.getItem('infinite_chop_last_synced_diamonds') ?? user.diamonds);
+              const lastSyncedTickets = Number(localStorage.getItem('infinite_chop_last_synced_tickets') ?? (user.tickets || 0));
 
-            if (coinDiff > 0 || diamondDiff > 0 || ticketDiff > 0) {
-              const updatedUser = db.getUser();
-              if (coinDiff > 0) {
-                updatedUser.coins += coinDiff;
-                updatedUser.stats.totalCoinsEarned = (updatedUser.stats.totalCoinsEarned || 0) + coinDiff;
-                localStorage.setItem('infinite_chop_last_synced_coins', newCoins.toString());
-                addToast(`🎁 System Admin granted you +${coinDiff.toLocaleString()} Gold Coins!`, 'admin');
+              const coinDiff = newCoins - lastSyncedCoins;
+              const diamondDiff = newDiamonds - lastSyncedDiamonds;
+              const ticketDiff = newTickets - lastSyncedTickets;
+
+              if (coinDiff > 0 || diamondDiff > 0 || ticketDiff > 0) {
+                const updatedUser = db.getUser();
+                if (coinDiff > 0) {
+                  updatedUser.coins += coinDiff;
+                  updatedUser.stats.totalCoinsEarned = (updatedUser.stats.totalCoinsEarned || 0) + coinDiff;
+                  localStorage.setItem('infinite_chop_last_synced_coins', newCoins.toString());
+                  addToast(`🎁 System Admin granted you +${coinDiff.toLocaleString()} Gold Coins!`, 'admin');
+                }
+                if (diamondDiff > 0) {
+                  updatedUser.diamonds += diamondDiff;
+                  updatedUser.stats.totalDiamondsEarned = (updatedUser.stats.totalDiamondsEarned || 0) + diamondDiff;
+                  localStorage.setItem('infinite_chop_last_synced_diamonds', newDiamonds.toString());
+                  addToast(`🎁 System Admin granted you +${diamondDiff.toLocaleString()} Crystal Gems!`, 'admin');
+                }
+                if (ticketDiff > 0) {
+                  updatedUser.tickets = (updatedUser.tickets || 0) + ticketDiff;
+                  localStorage.setItem('infinite_chop_last_synced_tickets', newTickets.toString());
+                  addToast(`🎁 System Admin granted you +${ticketDiff.toLocaleString()} Revive Tickets!`, 'admin');
+                }
+
+                localStorage.setItem('infinite_chop_user', JSON.stringify(updatedUser));
+                setUser(updatedUser);
               }
-              if (diamondDiff > 0) {
-                updatedUser.diamonds += diamondDiff;
-                updatedUser.stats.totalDiamondsEarned = (updatedUser.stats.totalDiamondsEarned || 0) + diamondDiff;
-                localStorage.setItem('infinite_chop_last_synced_diamonds', newDiamonds.toString());
-                addToast(`🎁 System Admin granted you +${diamondDiff.toLocaleString()} Crystal Gems!`, 'admin');
-              }
-              if (ticketDiff > 0) {
-                updatedUser.tickets = (updatedUser.tickets || 0) + ticketDiff;
-                localStorage.setItem('infinite_chop_last_synced_tickets', newTickets.toString());
-                addToast(`🎁 System Admin granted you +${ticketDiff.toLocaleString()} Revive Tickets!`, 'admin');
-              }
-
-              localStorage.setItem('infinite_chop_user', JSON.stringify(updatedUser));
-              setUser(updatedUser);
             }
           }
         )

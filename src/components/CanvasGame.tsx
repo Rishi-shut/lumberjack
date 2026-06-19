@@ -491,6 +491,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
   onScoreUpdate,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastTouchTimeRef = useRef<number>(0);
 
   const [showReviveConfirm, setShowReviveConfirm] = useState(false);
   const [reviveCountdown, setReviveCountdown] = useState(5);
@@ -4246,14 +4247,19 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     if (!canvas) return;
 
     let clickX = 0;
+    const now = Date.now();
     if ('touches' in e) {
       // touch event
       if (e.touches.length === 0) return;
+      lastTouchTimeRef.current = now;
       e.preventDefault(); // Prevent double action click emulation on mobile
       const rect = canvas.getBoundingClientRect();
       clickX = e.touches[0].clientX - rect.left;
     } else {
       // mouse click
+      if (now - lastTouchTimeRef.current < 500) {
+        return;
+      }
       const rect = canvas.getBoundingClientRect();
       clickX = e.clientX - rect.left;
     }
@@ -4268,7 +4274,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
   return (
     <div 
       className="game-container" 
-      style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', cursor: 'pointer', userSelect: 'none' }}
+      style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', cursor: 'pointer', userSelect: 'none', touchAction: 'none' }}
       onTouchStart={handleTouch}
       onMouseDown={handleTouch}
     >
