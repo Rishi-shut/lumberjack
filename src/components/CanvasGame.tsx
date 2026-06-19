@@ -901,7 +901,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     sound.stopMusic();
     
     const state = stateRef.current;
-    state.deathTimer = 0.5; // 0.5 seconds delay
+    state.deathTimer = 1; // 1 seconds delay
     state.combo = 0;
     state.comboLevel = 0;
 
@@ -1092,9 +1092,10 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     updateWeather(dt);
 
     // Death transition logic
-    if (state.isDead) {
+    if (state.isDead && state.deathTimer > 0) {
       state.deathTimer -= dt;
       if (state.deathTimer <= 0) {
+        state.deathTimer = 0;
         // Stop and call React Game Over callback
         onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected);
       }

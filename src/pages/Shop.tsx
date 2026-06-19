@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ShoppingBag, Star, RefreshCw, Key, Award, Shield } from 'lucide-react';
 import { db, ShopItem, UserProfile, getCharacterEmoji } from '../utils/LocalStorageDB';
 import { sound } from '../utils/AudioEngine';
+import geminiBananaImg from '../assets/gemini_banana.png';
 
 interface ShopProps {
   user: UserProfile;
@@ -226,19 +227,35 @@ export const Shop: React.FC<ShopProps> = ({
                   {/* Character/Weapon Preview Showcase Frame */}
                   <div style={{
                     width: '100%',
-                    height: '100px',
+                    height: '110px',
                     background: 'var(--bg-color)',
                     borderRadius: '8px',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '16px',
                     border: '1px solid var(--panel-border)',
                     position: 'relative',
+                    overflow: 'hidden',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                   }}>
+                    {/* Gemini Banana Watermark Background */}
+                    <img 
+                      src={geminiBananaImg} 
+                      alt="Gemini Banana" 
+                      style={{ 
+                        position: 'absolute', 
+                        width: '75px', 
+                        height: '75px', 
+                        opacity: 0.15, 
+                        objectFit: 'contain',
+                        pointerEvents: 'none'
+                      }} 
+                    />
+
                     {item.type === 'character' ? (
-                      <span style={{ fontSize: '2.5rem' }} className="character-breath">
+                      <span style={{ fontSize: '2.8rem', zIndex: 2 }} className="character-breath">
                         {getCharacterEmoji(item.id)}
                       </span>
                     ) : item.type === 'weapon' ? (
@@ -254,14 +271,19 @@ export const Shop: React.FC<ShopProps> = ({
                         color: '#fff', 
                         fontSize: '1.2rem',
                         border: '2px solid #fff',
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.4)'
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
+                        zIndex: 2
                       }}>
-                        🪓
+                        {item.id === 'weap_axe_wood' ? '🪵' : 
+                         item.id === 'weap_axe_golden' ? '🪙' :
+                         item.id === 'weap_axe_fire' ? '🔥' :
+                         item.id === 'weap_chainsaw' ? '⚙️' :
+                         item.id === 'weap_laser' ? '⚡' : '🪓'}
                       </div>
                     ) : item.type === 'trail' ? (
-                      <span style={{ fontSize: '1.8rem' }} className="character-breath">✨ {item.name.split(' ')[0]}</span>
+                      <span style={{ fontSize: '1.8rem', zIndex: 2 }} className="character-breath">✨ {item.name.split(' ')[0]}</span>
                     ) : (
-                      <span style={{ fontSize: '0.72rem', fontFamily: 'var(--font-retro)', color: 'var(--neon-yellow)' }}>🏆 {item.name}</span>
+                      <span style={{ fontSize: '0.72rem', fontFamily: 'var(--font-retro)', color: 'var(--neon-yellow)', zIndex: 2 }}>🏆 {item.name}</span>
                     )}
                   </div>
 

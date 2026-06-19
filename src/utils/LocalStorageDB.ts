@@ -225,6 +225,18 @@ class LocalStorageDB {
   }
 
   private initDatabase() {
+    // Public Release Self-Healing Reset
+    if (!localStorage.getItem('infinite_chop_launched_v1')) {
+      localStorage.removeItem(this.key('user'));
+      localStorage.removeItem(this.key('shop'));
+      localStorage.removeItem(this.key('achievements'));
+      localStorage.removeItem(this.key('missions'));
+      localStorage.removeItem(this.key('leaderboard'));
+      localStorage.removeItem(this.key('settings'));
+      localStorage.removeItem(this.key('telemetry'));
+      localStorage.setItem('infinite_chop_launched_v1', 'true');
+    }
+
     // Check if db already initialized
     if (!localStorage.getItem(this.key('user'))) {
       const defaultUser: UserProfile = {
@@ -383,6 +395,21 @@ class LocalStorageDB {
     user.username = newUsername;
     this.saveUser(user);
     this.logTelemetry('profile', `Username changed from ${oldName} to ${newUsername}`);
+    this.syncPlayerToLeaderboard(oldName);
+  }
+
+  public isUsernameTaken(username: string): boolean {
+    const leaderboard = this.getLeaderboard();
+    return leaderboard.some(entry => entry.username.toLowerCase() === username.toLowerCase());
+  }
+
+  public registerUserProfile(username: string) {
+    const user = this.getUser();
+    const oldName = user.username;
+    user.username = username;
+    user.isGuest = false;
+    this.saveUser(user);
+    this.logTelemetry('auth', `New user registered: ${username}`);
     this.syncPlayerToLeaderboard(oldName);
   }
 

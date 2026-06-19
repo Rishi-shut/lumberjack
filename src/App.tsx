@@ -59,6 +59,87 @@ const XpProgressBar: React.FC<{
   );
 };
 
+const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegisterSuccess }) => {
+  const [usernameInput, setUsernameInput] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = usernameInput.trim();
+
+    if (name.length < 3 || name.length > 15) {
+      setErrorMsg('Name must be between 3 and 15 characters.');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(name)) {
+      setErrorMsg('Name can only contain letters, numbers, and underscores.');
+      return;
+    }
+
+    if (db.isUsernameTaken(name)) {
+      setErrorMsg('This username is already taken! Choose another.');
+      return;
+    }
+
+    setErrorMsg('');
+    db.registerUserProfile(name);
+    onRegisterSuccess();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ position: 'relative' }}>
+        <input
+          type="text"
+          placeholder="Challenger Name..."
+          className="form-input"
+          value={usernameInput}
+          onChange={(e) => {
+            setUsernameInput(e.target.value);
+            if (errorMsg) setErrorMsg('');
+          }}
+          style={{
+            height: '46px',
+            fontSize: '0.95rem',
+            textAlign: 'center',
+            background: 'var(--bg-color)',
+            border: '2px solid var(--panel-border)',
+            color: 'var(--text-primary)',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            outline: 'none',
+            transition: 'border-color 0.2s'
+          }}
+          maxLength={15}
+          autoFocus
+        />
+      </div>
+
+      {errorMsg && (
+        <div style={{ color: 'var(--neon-red)', fontSize: '0.78rem', fontWeight: 'bold' }}>
+          ⚠️ {errorMsg}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        className="neon-btn-yellow"
+        style={{
+          height: '46px',
+          fontSize: '0.9rem',
+          padding: '0 24px',
+          fontWeight: '900',
+          borderRadius: '8px',
+          boxShadow: 'none'
+        }}
+      >
+        CLAIM PROFILE & START
+      </button>
+    </form>
+  );
+};
+
 export const App: React.FC = () => {
   // Database States
   const [user, setUser] = useState<UserProfile>(db.getUser());
@@ -268,8 +349,7 @@ export const App: React.FC = () => {
       newXpNeeded: res.xpNeeded || oldXpNeeded
     });
 
-    // Exit game loop and show summary modal
-    setActiveWorld(null);
+    // Exit game loop and show summary modal (Do not clear activeWorld yet to preserve game background rendering)
     setShowSummary(true);
     refreshState();
   };
@@ -278,6 +358,7 @@ export const App: React.FC = () => {
   const handleCloseSummary = () => {
     setShowSummary(false);
     setGameSummary(null);
+    setActiveWorld(null);
   };
 
   const handleManualReset = () => {
@@ -331,24 +412,26 @@ export const App: React.FC = () => {
     return (
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, backgroundColor: '#000' }}>
         {/* Back Button */}
-        <button
-          className="neon-btn-cyan"
-          style={{
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
-            zIndex: 10000,
-            padding: '8px 16px',
-            fontSize: '0.65rem'
-          }}
-          onClick={() => {
-            sound.stopMusic();
-            setActiveWorld(null);
-            refreshState();
-          }}
-        >
-          ← EXIT RUN
-        </button>
+        {!showSummary && (
+          <button
+            className="neon-btn-cyan"
+            style={{
+              position: 'absolute',
+              top: '20px',
+              left: '20px',
+              zIndex: 10000,
+              padding: '8px 16px',
+              fontSize: '0.65rem'
+            }}
+            onClick={() => {
+              sound.stopMusic();
+              setActiveWorld(null);
+              refreshState();
+            }}
+          >
+            ← EXIT RUN
+          </button>
+        )}
 
         <CanvasGame
           worldId={activeWorld}
@@ -359,6 +442,104 @@ export const App: React.FC = () => {
           onGameOver={handleGameOver}
           onScoreUpdate={() => {}}
         />
+
+        {/* Post-Game Summary Modal Overlay inside active gameplay overlay */}
+        {showSummary && gameSummary && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(255, 255, 255, 0.45)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(3px)',
+            padding: '16px'
+          }}>
+            <div className="game-card" style={{
+              maxWidth: '450px',
+              width: '100%',
+              textAlign: 'center',
+              border: '2px solid var(--neon-cyan)',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.05)',
+              animation: 'bounceSlow 2s infinite'
+            }}>
+              <h2 className="retro-title" style={{ color: 'var(--neon-red)', fontSize: '1.25rem', marginBottom: '8px' }}>
+                {gameSummary.banned ? 'CHEATING DETECTED' : 'GAME OVER'}
+              </h2>
+              
+              {gameSummary.newHighScore && !gameSummary.banned && (
+                <span className="rarity-tag rarity-legendary" style={{ display: 'inline-block', marginBottom: '16px', animation: 'pulseNeon 1s infinite' }}>
+                  ★ NEW HIGH SCORE ★
+                </span>
+              )}
+
+              <div style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid var(--panel-border)', borderRadius: '8px', padding: '16px', margin: '20px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Score Achieved</span>
+                  <span style={{ fontWeight: 'bold', fontFamily: 'var(--font-retro)', fontSize: '0.8rem', color: 'var(--text-primary)' }}>{gameSummary.score}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Max Combo</span>
+                  <span style={{ fontWeight: 'bold', fontFamily: 'var(--font-retro)', fontSize: '0.8rem', color: 'var(--neon-magenta)' }}>{gameSummary.maxCombo}x</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>XP Accumulated</span>
+                  <span style={{ fontWeight: 'bold', color: 'var(--neon-cyan)' }}>+{gameSummary.xpEarned} XP</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Earnings</span>
+                  <span style={{ fontWeight: 'bold', color: 'var(--neon-yellow)' }}>
+                    🪙 +{gameSummary.coins} {gameSummary.diamonds > 0 ? `💎 +${gameSummary.diamonds}` : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* Animated XP progression bar */}
+              <XpProgressBar
+                oldLevel={gameSummary.oldLevel}
+                oldXp={gameSummary.oldXp}
+                oldXpNeeded={gameSummary.oldXpNeeded}
+                newLevel={gameSummary.newLevel}
+                newXp={gameSummary.newXp}
+                newXpNeeded={gameSummary.newXpNeeded}
+                xpEarned={gameSummary.xpEarned}
+              />
+
+              {gameSummary.levelsGained > 0 && (
+                <div style={{ padding: '8px', background: 'rgba(16,185,129,0.05)', border: '1px solid var(--neon-green)', borderRadius: '6px', color: 'var(--neon-green)', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '20px' }}>
+                  🎉 LEVEL UP! You reached Level {gameSummary.newLevel}!
+                </div>
+              )}
+
+              {gameSummary.banned && (
+                <div style={{ padding: '8px', background: 'rgba(255,51,0,0.08)', border: '1px solid var(--neon-red)', borderRadius: '6px', color: 'var(--neon-red)', fontSize: '0.75rem', marginBottom: '20px' }}>
+                  Telemetry flagged Speed limit. Ban will lock on return to home.
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                <button className="neon-btn-magenta" style={{ flex: 1 }} onClick={handleCloseSummary}>
+                  RETURN TO HUB
+                </button>
+                {!gameSummary.banned && (
+                  <button 
+                    className="neon-btn-cyan" 
+                    style={{ flex: 1 }} 
+                    onClick={() => {
+                      handleCloseSummary();
+                      if (lastActiveWorld) {
+                        handlePlayWorld(lastActiveWorld);
+                      }
+                    }}
+                  >
+                    RETRY RUN
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -436,7 +617,7 @@ export const App: React.FC = () => {
     { id: 'missions', label: 'BULLETIN', icon: <CheckSquare size={16} /> },
     { id: 'leaderboard', label: 'LEADERBOARD', icon: <Trophy size={16} /> },
     { id: 'settings', label: 'SETTINGS', icon: <SettingsIcon size={16} /> },
-    { id: 'admin', label: 'ADMIN', icon: <ShieldAlert size={16} /> }
+    ...(user?.username === 'mriga' ? [{ id: 'admin', label: 'ADMIN', icon: <ShieldAlert size={16} /> }] : [])
   ];
 
   return (
@@ -636,12 +817,20 @@ export const App: React.FC = () => {
           />
         )}
         {currentPage === 'admin' && (
-          <Admin
-            user={user}
-            onAdminChange={refreshState}
-            showAlert={showAlert}
-            showConfirm={showConfirm}
-          />
+          user?.username === 'mriga' ? (
+            <Admin
+              user={user}
+              onAdminChange={refreshState}
+              showAlert={showAlert}
+              showConfirm={showConfirm}
+            />
+          ) : (
+            <div style={{ textAlign: 'center', padding: '80px 24px', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)' }}>
+              <h2 className="retro-title" style={{ color: 'var(--neon-red)', marginBottom: '16px' }}>ACCESS DENIED</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Only authorized administrators are permitted on this deck.</p>
+              <button className="neon-btn-yellow" onClick={() => setCurrentPage('home')}>Return to Hub</button>
+            </div>
+          )
         )}
         {currentPage === '404' && (
           <div className="material-wood" style={{ padding: '65px 24px', textAlign: 'center', maxWidth: '480px', margin: '40px auto', background: 'var(--panel-bg)', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
@@ -789,6 +978,44 @@ export const App: React.FC = () => {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Challenger Registration Overlay (First time users) */}
+      {user?.isGuest && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.96)',
+          zIndex: 1000000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(10px)',
+          padding: '16px'
+        }}>
+          <div className="game-card" style={{
+            maxWidth: '440px',
+            width: '100%',
+            textAlign: 'center',
+            padding: '40px 32px',
+            border: '3px dashed var(--panel-border)',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.06)',
+            background: 'var(--panel-bg)',
+            borderRadius: '16px'
+          }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '20px', animation: 'breathAnim 2s infinite ease-in-out' }}>🪵🪓</div>
+            
+            <h2 className="retro-title" style={{ fontSize: '1.2rem', color: 'var(--text-primary)', marginBottom: '8px', textShadow: 'none' }}>
+              CHALLENGER REGISTRATION
+            </h2>
+            
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.5', marginBottom: '28px' }}>
+              Enter your unique challenger username to record your high scores on the global leaderboards and initialize your profile.
+            </p>
+
+            <RegistrationForm onRegisterSuccess={refreshState} />
           </div>
         </div>
       )}
