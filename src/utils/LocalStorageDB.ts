@@ -1,5 +1,7 @@
 // Local Storage Database & Game State Service for Infinite Chop
 // Emulates a backend server using LocalStorage, including seeding, transactions, and admin controls.
+import { ADMIN_CONFIG } from '../config/adminConfig';
+import { supabase } from './supabaseClient';
 
 export interface UserProfile {
   username: string;
@@ -13,6 +15,7 @@ export interface UserProfile {
   maxCombo: number;
   coins: number;
   diamonds: number;
+  tickets?: number;
   equippedCharacter: string;
   equippedWeapon: string;
   equippedTrail: string;
@@ -20,6 +23,9 @@ export interface UserProfile {
   equippedBadge: string;
   equippedFrame: string;
   lastDailyClaim: string | null; // ISO string
+  hasPremiumPass?: boolean;
+  claimedFreeTiers?: number[];
+  claimedPremiumTiers?: number[];
   stats: {
     totalChops: number;
     totalChestsOpened: number;
@@ -53,6 +59,7 @@ export interface GameMission {
   rewardCoins: number;
   rewardDiamonds: number;
   claimed: boolean;
+  requiredMap?: string;
 }
 
 export interface LeaderboardEntry {
@@ -167,6 +174,17 @@ const DEFAULT_SHOP_ITEMS: ShopItem[] = [
   { id: 'world_volcano', name: 'Magma Core', description: 'Chop volcanic magma crystals beside lava.', type: 'world', cost: 5000, currency: 'coins', unlocked: false, rarity: 'legendary' },
   { id: 'world_autumn', name: 'Autumn Canopy', description: 'Chop golden maple trunks amidst falling maple leaves.', type: 'world', cost: 6000, currency: 'coins', unlocked: false, rarity: 'rare' },
   { id: 'world_desert', name: 'Sand Dune Oasis', description: 'Chop dry palm trunks near desert pyramids.', type: 'world', cost: 8000, currency: 'coins', unlocked: false, rarity: 'legendary' },
+  { id: 'world_haunted', name: 'Haunted Graveyard', description: 'Chop haunted branches under flickering lanterns.', type: 'world', cost: 4000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'world_space', name: 'Space Station', description: 'Chop floating girders under zero-gravity and asteroid threats.', type: 'world', cost: 7000, currency: 'coins', unlocked: false, rarity: 'legendary' },
+  { id: 'world_wasteland', name: 'Toxic Wasteland', description: 'Chop barrels while avoiding rising acid sludge.', type: 'world', cost: 4500, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'world_steampunk', name: 'Steampunk Workshop', description: 'Chop steam conduits while dodging boiling steam leaks.', type: 'world', cost: 5500, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'world_candy', name: 'Candy Land', description: 'Chop sweet candy canes while avoiding sour blocks.', type: 'world', cost: 3500, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'world_zen', name: 'Zen Garden', description: 'Chop cherry blossom trunks in a serene garden layout.', type: 'world', cost: 5000, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'world_coral', name: 'Coral Reef', description: 'Chop giant kelp stalks underwater surrounded by coral.', type: 'world', cost: 6500, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'world_cyberpunk', name: 'Cyberpunk Grid', description: 'Chop glowing neon cylinders amid futuristic skyscrapers.', type: 'world', cost: 8500, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'world_prehistoric', name: 'Prehistoric Jungle', description: 'Chop massive fern logs in dinosaur territory.', type: 'world', cost: 7500, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'world_sky', name: 'Sky Sanctuary', description: 'Chop marble floating pillars high in golden clouds.', type: 'world', cost: 9000, currency: 'coins', unlocked: false, rarity: 'legendary' },
+  { id: 'world_arcade', name: 'Retro Arcade', description: 'Chop 8-bit digital logs under retro scanlines.', type: 'world', cost: 10000, currency: 'coins', unlocked: false, rarity: 'legendary' },
 ];
 
 const DEFAULT_ACHIEVEMENTS: Achievement[] = [
@@ -206,6 +224,35 @@ const DEFAULT_MISSIONS: GameMission[] = [
 
 const SEED_LEADERBOARD: LeaderboardEntry[] = [];
 
+// Cookie helper functions
+export const setCookie = (name: string, value: string, days = 30) => {
+  const expires = new Date();
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/`;
+};
+
+export const getCookie = (name: string): string | null => {
+  const matches = document.cookie.match(new RegExp(
+    "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+  ));
+  return matches ? decodeURIComponent(matches[1]) : null;
+};
+
+export const deleteCookie = (name: string) => {
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+};
+
+export interface CloudRegistryEntry {
+  username: string;
+  passcode: string;
+  userProfile: UserProfile;
+  shop: ShopItem[];
+  achievements: Achievement[];
+  missions: GameMission[];
+  settings: any;
+  telemetry: any[];
+}
+
 class LocalStorageDB {
   private prefix = 'infinite_chop_';
 
@@ -213,9 +260,391 @@ class LocalStorageDB {
     this.initDatabase();
   }
 
+  public async isUsernameRegistered(username: string): Promise<boolean> {
+    const cleanName = username.trim();
+    if (!cleanName) return false;
+    const { data } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', cleanName)
+      .maybeSingle();
+    return !!data;
+  }
+
+  public async registerUser(username: string, passcode: string): Promise<{ success: boolean; error?: string }> {
+    const cleanName = username.trim();
+    if (cleanName.toLowerCase() === ADMIN_CONFIG.username.toLowerCase()) {
+      if (passcode !== ADMIN_CONFIG.passcode) {
+        return { success: false, error: 'Incorrect admin passcode. Access denied.' };
+      }
+    }
+
+    const isTaken = await this.isUsernameRegistered(cleanName);
+    if (isTaken) {
+      return { success: false, error: 'Username is already taken! Choose another.' };
+    }
+
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      email: `${cleanName.toLowerCase()}@infinitechop.com`,
+      password: passcode
+    });
+
+    if (signUpError) {
+      return { success: false, error: signUpError.message };
+    }
+
+    if (!authData.user) {
+      return { success: false, error: 'Registration failed.' };
+    }
+
+    const defaultUser: UserProfile = {
+      username: cleanName,
+      isGuest: false,
+      isBanned: false,
+      level: 1,
+      xp: 0,
+      xpNeeded: 100,
+      highScore: 0,
+      maxCombo: 0,
+      coins: 100,
+      diamonds: 0,
+      tickets: 0,
+      equippedCharacter: 'char_lumberjack',
+      equippedWeapon: 'weap_axe_wood',
+      equippedTrail: 'trail_none',
+      equippedTitle: 'title_none',
+      equippedBadge: 'Chop Icon',
+      equippedFrame: 'Standard',
+      lastDailyClaim: null,
+      stats: {
+        totalChops: 0,
+        totalChestsOpened: 0,
+        gamesPlayed: 0,
+        totalCoinsEarned: 100,
+        totalDiamondsEarned: 0,
+        timePlayed: 0,
+        worldRuns: { 'Pine Forest': 0 }
+      },
+      hasPremiumPass: false,
+      claimedFreeTiers: [],
+      claimedPremiumTiers: []
+    };
+
+    const defaultSettings = {
+      sfxVolume: 0.6,
+      musicVolume: 0.4,
+      masterVolume: 0.5,
+      muted: false,
+      graphics: 'high',
+      keyLeft: 'ArrowLeft',
+      keyRight: 'ArrowRight',
+      keyLeftAlt: 'a',
+      keyRightAlt: 'd',
+    };
+
+    const defaultTelemetry = [
+      { timestamp: new Date().toISOString(), type: 'system', message: `Registered profile: ${cleanName}` }
+    ];
+
+    const { error: insertError } = await supabase.from('profiles').insert({
+      id: authData.user.id,
+      username: cleanName,
+      is_banned: false,
+      level: 1,
+      xp: 0,
+      xp_needed: 100,
+      highscore: 0,
+      max_combo: 0,
+      coins: 100,
+      diamonds: 0,
+      tickets: 0,
+      equipped_character: 'char_lumberjack',
+      equipped_weapon: 'weap_axe_wood',
+      equipped_trail: 'trail_none',
+      equipped_title: 'title_none',
+      equipped_badge: 'Chop Icon',
+      equipped_frame: 'Standard',
+      last_daily_claim: null,
+      has_premium_pass: false,
+      claimed_free_tiers: [],
+      claimed_premium_tiers: [],
+      stats_data: defaultUser.stats,
+      shop_data: DEFAULT_SHOP_ITEMS,
+      achievements_data: DEFAULT_ACHIEVEMENTS,
+      missions_data: DEFAULT_MISSIONS,
+      settings_data: defaultSettings,
+      telemetry_data: defaultTelemetry
+    });
+
+    if (insertError) {
+      console.error('Error inserting profile:', insertError);
+      return { success: false, error: insertError.message };
+    }
+
+    localStorage.setItem(this.key('user'), JSON.stringify(defaultUser));
+    localStorage.setItem(this.key('shop'), JSON.stringify(DEFAULT_SHOP_ITEMS));
+    localStorage.setItem(this.key('achievements'), JSON.stringify(DEFAULT_ACHIEVEMENTS));
+    localStorage.setItem(this.key('missions'), JSON.stringify(DEFAULT_MISSIONS));
+    localStorage.setItem(this.key('settings'), JSON.stringify(defaultSettings));
+    localStorage.setItem(this.key('telemetry'), JSON.stringify(defaultTelemetry));
+
+    setCookie('infinite_chop_username', cleanName, 30);
+    localStorage.setItem('infinite_chop_logged_username', cleanName);
+    sessionStorage.setItem('infinite_chop_logged_username', cleanName);
+    localStorage.setItem('infinite_chop_logged_passcode', passcode);
+    sessionStorage.setItem('infinite_chop_logged_passcode', passcode);
+
+    this.logTelemetry('auth', `User registered successfully: ${cleanName}`);
+    return { success: true };
+  }
+
+  public async loginUser(username: string, passcode: string): Promise<{ success: boolean; error?: string }> {
+    const cleanName = username.trim();
+    if (cleanName.toLowerCase() === ADMIN_CONFIG.username.toLowerCase()) {
+      if (passcode !== ADMIN_CONFIG.passcode) {
+        return { success: false, error: 'Incorrect admin passcode. Access denied.' };
+      }
+    }
+
+    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: `${cleanName.toLowerCase()}@infinitechop.com`,
+      password: passcode
+    });
+
+    if (signInError) {
+      return { success: false, error: signInError.message };
+    }
+
+    if (!authData.user) {
+      return { success: false, error: 'Authentication failed.' };
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      return { success: false, error: profileError?.message || 'Profile record not found.' };
+    }
+
+    if (profile.is_banned) {
+      return { success: false, error: 'This account has been banned due to security violations.' };
+    }
+
+    const userProfile: UserProfile = {
+      username: profile.username,
+      isGuest: false,
+      isBanned: profile.is_banned,
+      level: profile.level,
+      xp: profile.xp,
+      xpNeeded: profile.xp_needed,
+      highScore: profile.highscore,
+      maxCombo: profile.max_combo,
+      coins: profile.coins,
+      diamonds: profile.diamonds,
+      tickets: profile.tickets || 0,
+      equippedCharacter: profile.equipped_character,
+      equippedWeapon: profile.equipped_weapon,
+      equippedTrail: profile.equipped_trail,
+      equippedTitle: profile.equipped_title,
+      equippedBadge: profile.equipped_badge || 'Chop Icon',
+      equippedFrame: profile.equipped_frame || 'Standard',
+      lastDailyClaim: profile.last_daily_claim,
+      hasPremiumPass: profile.has_premium_pass,
+      claimedFreeTiers: profile.claimed_free_tiers || [],
+      claimedPremiumTiers: profile.claimed_premium_tiers || [],
+      stats: profile.stats_data || {
+        totalChops: 0,
+        totalChestsOpened: 0,
+        gamesPlayed: 0,
+        totalCoinsEarned: profile.coins,
+        totalDiamondsEarned: profile.diamonds,
+        timePlayed: 0,
+        worldRuns: { 'Pine Forest': 0 }
+      }
+    };
+
+    localStorage.setItem(this.key('user'), JSON.stringify(userProfile));
+    if (profile.shop_data) localStorage.setItem(this.key('shop'), JSON.stringify(profile.shop_data));
+    if (profile.achievements_data) localStorage.setItem(this.key('achievements'), JSON.stringify(profile.achievements_data));
+    if (profile.missions_data) localStorage.setItem(this.key('missions'), JSON.stringify(profile.missions_data));
+    if (profile.settings_data) localStorage.setItem(this.key('settings'), JSON.stringify(profile.settings_data));
+    if (profile.telemetry_data) localStorage.setItem(this.key('telemetry'), JSON.stringify(profile.telemetry_data));
+
+    setCookie('infinite_chop_username', cleanName, 30);
+    localStorage.setItem('infinite_chop_logged_username', cleanName);
+    sessionStorage.setItem('infinite_chop_logged_username', cleanName);
+    localStorage.setItem('infinite_chop_logged_passcode', passcode);
+    sessionStorage.setItem('infinite_chop_logged_passcode', passcode);
+
+    this.logTelemetry('auth', `User logged in successfully: ${cleanName}`);
+    return { success: true };
+  }
+
+  public logoutUser() {
+    const user = this.getUser();
+    this.logTelemetry('auth', `User logged out: ${user.username}`);
+
+    deleteCookie('infinite_chop_username');
+    localStorage.removeItem('infinite_chop_logged_username');
+    sessionStorage.removeItem('infinite_chop_logged_username');
+    localStorage.removeItem('infinite_chop_logged_passcode');
+    sessionStorage.removeItem('infinite_chop_logged_passcode');
+
+    supabase.auth.signOut().catch(err => console.error("Error signing out from Supabase:", err));
+
+    const defaultUser: UserProfile = {
+      username: 'WoodChopper_' + Math.floor(1000 + Math.random() * 9000),
+      isGuest: true,
+      isBanned: false,
+      level: 1,
+      xp: 0,
+      xpNeeded: 100,
+      highScore: 0,
+      maxCombo: 0,
+      coins: 100,
+      diamonds: 0,
+      equippedCharacter: 'char_lumberjack',
+      equippedWeapon: 'weap_axe_wood',
+      equippedTrail: 'trail_none',
+      equippedTitle: 'title_none',
+      equippedBadge: 'Chop Icon',
+      equippedFrame: 'Standard',
+      lastDailyClaim: null,
+      stats: {
+        totalChops: 0,
+        totalChestsOpened: 0,
+        gamesPlayed: 0,
+        totalCoinsEarned: 100,
+        totalDiamondsEarned: 0,
+        timePlayed: 0,
+        worldRuns: { 'Pine Forest': 0 }
+      },
+      hasPremiumPass: false,
+      claimedFreeTiers: [],
+      claimedPremiumTiers: []
+    };
+
+    localStorage.setItem(this.key('user'), JSON.stringify(defaultUser));
+    localStorage.setItem(this.key('shop'), JSON.stringify(DEFAULT_SHOP_ITEMS));
+    localStorage.setItem(this.key('achievements'), JSON.stringify(DEFAULT_ACHIEVEMENTS));
+    localStorage.setItem(this.key('missions'), JSON.stringify(DEFAULT_MISSIONS));
+  }
+
+  public async syncActiveProfileToCloud(oldUsername?: string) {
+    const user = this.getUser();
+    if (user.isGuest) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || !session.user) return;
+
+    const updates = {
+      username: user.username,
+      highscore: user.highScore,
+      max_combo: user.maxCombo,
+      coins: user.coins,
+      diamonds: user.diamonds,
+      tickets: user.tickets || 0,
+      level: user.level,
+      xp: user.xp,
+      xp_needed: user.xpNeeded,
+      equipped_character: user.equippedCharacter,
+      equipped_weapon: user.equippedWeapon,
+      equipped_trail: user.equippedTrail,
+      equipped_title: user.equippedTitle,
+      equipped_badge: user.equippedBadge,
+      equipped_frame: user.equippedFrame,
+      last_daily_claim: user.lastDailyClaim,
+      has_premium_pass: user.hasPremiumPass,
+      claimed_free_tiers: user.claimedFreeTiers || [],
+      claimed_premium_tiers: user.claimedPremiumTiers || [],
+      stats_data: user.stats,
+      shop_data: this.getShop(),
+      achievements_data: this.getAchievements(),
+      missions_data: this.getMissions(),
+      settings_data: this.getSettings(),
+      telemetry_data: this.getTelemetry()
+    };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', session.user.id);
+
+    if (error) {
+      console.error('Error syncing profile to Supabase:', error);
+    } else {
+      this.logTelemetry('sync', `Successfully synced game state to cloud.`);
+    }
+  }
+
+  public async restoreSessionFromCloud(): Promise<boolean> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session && session.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        const userProfile: UserProfile = {
+          username: profile.username,
+          isGuest: false,
+          isBanned: profile.is_banned,
+          level: profile.level,
+          xp: profile.xp,
+          xpNeeded: profile.xp_needed,
+          highScore: profile.highscore,
+          maxCombo: profile.max_combo,
+          coins: profile.coins,
+          diamonds: profile.diamonds,
+          tickets: profile.tickets || 0,
+          equippedCharacter: profile.equipped_character,
+          equippedWeapon: profile.equipped_weapon,
+          equippedTrail: profile.equipped_trail,
+          equippedTitle: profile.equipped_title,
+          equippedBadge: profile.equipped_badge || 'Chop Icon',
+          equippedFrame: profile.equipped_frame || 'Standard',
+          lastDailyClaim: profile.last_daily_claim,
+          hasPremiumPass: profile.has_premium_pass,
+          claimedFreeTiers: profile.claimed_free_tiers || [],
+          claimedPremiumTiers: profile.claimed_premium_tiers || [],
+          stats: profile.stats_data || {
+            totalChops: 0,
+            totalChestsOpened: 0,
+            gamesPlayed: 0,
+            totalCoinsEarned: profile.coins,
+            totalDiamondsEarned: profile.diamonds,
+            timePlayed: 0,
+            worldRuns: { 'Pine Forest': 0 }
+          }
+        };
+
+        localStorage.setItem(this.key('user'), JSON.stringify(userProfile));
+        if (profile.shop_data) localStorage.setItem(this.key('shop'), JSON.stringify(profile.shop_data));
+        if (profile.achievements_data) localStorage.setItem(this.key('achievements'), JSON.stringify(profile.achievements_data));
+        if (profile.missions_data) localStorage.setItem(this.key('missions'), JSON.stringify(profile.missions_data));
+        if (profile.settings_data) localStorage.setItem(this.key('settings'), JSON.stringify(profile.settings_data));
+        if (profile.telemetry_data) localStorage.setItem(this.key('telemetry'), JSON.stringify(profile.telemetry_data));
+
+        localStorage.setItem('infinite_chop_logged_username', profile.username);
+        sessionStorage.setItem('infinite_chop_logged_username', profile.username);
+        setCookie('infinite_chop_username', profile.username, 30);
+        return true;
+      }
+    }
+    return false;
+  }
+
   private initDatabase() {
-    // Public Release Self-Healing Reset v2
-    if (!localStorage.getItem('infinite_chop_launched_v2')) {
+    // Supabase Reset Sweep to clear out legacy mock registries & test data
+    const hasSupabaseReset = localStorage.getItem('infinite_chop_supabase_reset_v1') || sessionStorage.getItem('infinite_chop_supabase_reset_v1');
+    if (!hasSupabaseReset) {
+      localStorage.removeItem('infinite_chop_cloud_registry');
+      sessionStorage.removeItem('infinite_chop_cloud_registry');
       localStorage.removeItem(this.key('user'));
       localStorage.removeItem(this.key('shop'));
       localStorage.removeItem(this.key('achievements'));
@@ -223,7 +652,24 @@ class LocalStorageDB {
       localStorage.removeItem(this.key('leaderboard'));
       localStorage.removeItem(this.key('settings'));
       localStorage.removeItem(this.key('telemetry'));
-      localStorage.setItem('infinite_chop_launched_v2', 'true');
+      localStorage.removeItem('infinite_chop_logged_username');
+      sessionStorage.removeItem('infinite_chop_logged_username');
+      localStorage.removeItem('infinite_chop_logged_passcode');
+      sessionStorage.removeItem('infinite_chop_logged_passcode');
+      deleteCookie('infinite_chop_username');
+
+      localStorage.setItem('infinite_chop_supabase_reset_v1', 'true');
+      sessionStorage.setItem('infinite_chop_supabase_reset_v1', 'true');
+    }
+
+    // Sync logged username/passcode from sessionStorage fallback if localStorage was wiped on reload
+    let savedName = getCookie('infinite_chop_username') || localStorage.getItem('infinite_chop_logged_username');
+    if (!savedName) {
+      savedName = sessionStorage.getItem('infinite_chop_logged_username');
+      if (savedName) {
+        localStorage.setItem('infinite_chop_logged_username', savedName);
+        setCookie('infinite_chop_username', savedName, 30);
+      }
     }
 
     // Check if db already initialized
@@ -237,8 +683,9 @@ class LocalStorageDB {
         xpNeeded: 100,
         highScore: 0,
         maxCombo: 0,
-        coins: 100, // starting coins
+        coins: 100,
         diamonds: 0,
+        tickets: 0,
         equippedCharacter: 'char_lumberjack',
         equippedWeapon: 'weap_axe_wood',
         equippedTrail: 'trail_none',
@@ -254,26 +701,27 @@ class LocalStorageDB {
           totalDiamondsEarned: 0,
           timePlayed: 0,
           worldRuns: { 'Pine Forest': 0 }
-        }
+        },
+        hasPremiumPass: false,
+        claimedFreeTiers: [],
+        claimedPremiumTiers: []
       };
       
       localStorage.setItem(this.key('user'), JSON.stringify(defaultUser));
       localStorage.setItem(this.key('shop'), JSON.stringify(DEFAULT_SHOP_ITEMS));
       localStorage.setItem(this.key('achievements'), JSON.stringify(DEFAULT_ACHIEVEMENTS));
       localStorage.setItem(this.key('missions'), JSON.stringify(DEFAULT_MISSIONS));
-      localStorage.setItem(this.key('leaderboard'), JSON.stringify(SEED_LEADERBOARD));
       localStorage.setItem(this.key('settings'), JSON.stringify({
         sfxVolume: 0.6,
         musicVolume: 0.4,
         masterVolume: 0.5,
         muted: false,
-        graphics: 'high', // low, medium, high
+        graphics: 'high',
         keyLeft: 'ArrowLeft',
         keyRight: 'ArrowRight',
         keyLeftAlt: 'a',
         keyRightAlt: 'd',
       }));
-      // Telemetry Logs
       localStorage.setItem(this.key('telemetry'), JSON.stringify([
         { timestamp: new Date().toISOString(), type: 'system', message: 'Database initialized successfully.' }
       ]));
@@ -316,12 +764,114 @@ class LocalStorageDB {
     return JSON.parse(localStorage.getItem(this.key('achievements'))!);
   }
 
+  public checkAndRegenerateDailyMissions() {
+    const today = new Date().toDateString();
+    const lastRegen = localStorage.getItem(this.key('last_missions_regen'));
+    
+    if (lastRegen !== today) {
+      this.regenerateDailyMissions();
+      localStorage.setItem(this.key('last_missions_regen'), today);
+    }
+  }
+
+  public regenerateDailyMissions() {
+    const maps = ['Pine Forest', 'Metro Heights', 'Glacial Spires', 'Vector Core', 'Magma Core', 'Autumn Canopy', 'Sand Dune Oasis', 'Haunted Graveyard', 'Space Station', 'Toxic Wasteland', 'Steampunk Workshop', 'Candy Land'];
+    const randomMap = maps[Math.floor(Math.random() * maps.length)];
+    
+    const chopTarget = Math.floor(150 + Math.random() * 250); // 150 to 400
+    const comboTarget = Math.floor(15 + Math.random() * 35);  // 15 to 50
+    const coinTarget = Math.floor(50 + Math.random() * 150);  // 50 to 200
+    const playTarget = Math.floor(2 + Math.random() * 3);     // 2 to 5
+
+    const dailyMissions: GameMission[] = [
+      {
+        id: `mis_d_chop_${chopTarget}`,
+        title: `Chop ${chopTarget} blocks on ${randomMap}`,
+        type: 'daily',
+        target: chopTarget,
+        current: 0,
+        rewardCoins: Math.floor(100 + Math.random() * 100),
+        rewardDiamonds: Math.random() < 0.5 ? 1 : 2,
+        claimed: false,
+        requiredMap: randomMap
+      },
+      {
+        id: `mis_d_combo_${comboTarget}`,
+        title: `Get a ${comboTarget} combo multiplier`,
+        type: 'daily',
+        target: comboTarget,
+        current: 0,
+        rewardCoins: Math.floor(80 + Math.random() * 120),
+        rewardDiamonds: Math.random() < 0.3 ? 1 : 2,
+        claimed: false
+      },
+      {
+        id: `mis_d_coins_${coinTarget}`,
+        title: `Collect ${coinTarget} coins in single or multiple games`,
+        type: 'daily',
+        target: coinTarget,
+        current: 0,
+        rewardCoins: Math.floor(100 + Math.random() * 100),
+        rewardDiamonds: Math.random() < 0.5 ? 1 : 2,
+        claimed: false
+      },
+      {
+        id: `mis_d_play_${playTarget}`,
+        title: `Play ${playTarget} game matches on any sector`,
+        type: 'daily',
+        target: playTarget,
+        current: 0,
+        rewardCoins: Math.floor(70 + Math.random() * 80),
+        rewardDiamonds: 1,
+        claimed: false
+      }
+    ];
+
+    const currentMissions = JSON.parse(localStorage.getItem(this.key('missions')) || '[]');
+    const weeklyMissions = currentMissions.filter((m: any) => m.type === 'weekly');
+    const finalWeeklyMissions = weeklyMissions.length > 0 ? weeklyMissions : [
+      { id: 'mis_w_chop_3000', title: 'Chop 3,000 blocks this week', type: 'weekly', target: 3000, current: 0, rewardCoins: 600, rewardDiamonds: 5, claimed: false },
+      { id: 'mis_w_score_1000', title: 'Reach 1,000 high score', type: 'weekly', target: 1000, current: 0, rewardCoins: 500, rewardDiamonds: 4, claimed: false },
+      { id: 'mis_w_chests_3', title: 'Open 3 shop chests', type: 'weekly', target: 3, current: 0, rewardCoins: 400, rewardDiamonds: 3, claimed: false },
+      { id: 'mis_w_gold_2000', title: 'Collect 2,000 coins in games', type: 'weekly', target: 2000, current: 0, rewardCoins: 600, rewardDiamonds: 6, claimed: false },
+    ];
+
+    const allMissions = [...dailyMissions, ...finalWeeklyMissions];
+    localStorage.setItem(this.key('missions'), JSON.stringify(allMissions));
+  }
+
   public getMissions(): GameMission[] {
+    this.checkAndRegenerateDailyMissions();
     return JSON.parse(localStorage.getItem(this.key('missions'))!);
   }
 
-  public getLeaderboard(): LeaderboardEntry[] {
-    return JSON.parse(localStorage.getItem(this.key('leaderboard'))!);
+  public async getLeaderboard(): Promise<LeaderboardEntry[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username, highscore, max_combo, coins, equipped_character, equipped_title, equipped_frame, stats_data, is_banned')
+      .eq('is_banned', false)
+      .order('highscore', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error('Error fetching leaderboard:', error);
+      return [];
+    }
+
+    return (data || []).map(p => {
+      const stats = p.stats_data || {};
+      const totalCoinsEarned = stats.totalCoinsEarned || p.coins || 0;
+      return {
+        username: p.username,
+        country: p.username === 'mriga' ? 'US' : 'US',
+        score: p.highscore || 0,
+        maxCombo: p.max_combo || 0,
+        coins: totalCoinsEarned,
+        avatar: p.equipped_character || 'char_lumberjack',
+        title: p.equipped_title || 'Chop Cadet',
+        frame: p.equipped_frame || 'Standard'
+      };
+    });
   }
 
   public getSettings() {
@@ -336,18 +886,22 @@ class LocalStorageDB {
 
   public saveUser(user: UserProfile) {
     localStorage.setItem(this.key('user'), JSON.stringify(user));
+    this.syncActiveProfileToCloud();
   }
 
   public saveShop(shop: ShopItem[]) {
     localStorage.setItem(this.key('shop'), JSON.stringify(shop));
+    this.syncActiveProfileToCloud();
   }
 
   public saveAchievements(ach: Achievement[]) {
     localStorage.setItem(this.key('achievements'), JSON.stringify(ach));
+    this.syncActiveProfileToCloud();
   }
 
   public saveMissions(mis: GameMission[]) {
     localStorage.setItem(this.key('missions'), JSON.stringify(mis));
+    this.syncActiveProfileToCloud();
   }
 
   public saveLeaderboard(leader: LeaderboardEntry[]) {
@@ -356,6 +910,7 @@ class LocalStorageDB {
 
   public saveSettings(settings: any) {
     localStorage.setItem(this.key('settings'), JSON.stringify(settings));
+    this.syncActiveProfileToCloud();
   }
 
   public logTelemetry(type: string, message: string) {
@@ -368,7 +923,7 @@ class LocalStorageDB {
   // --- Profile Actions ---
 
   public linkAccount(email: string, username: string, passcode?: string) {
-    if (username.toLowerCase() === 'mriga' && passcode !== 'CHOP_ADMIN_99') {
+    if (username.toLowerCase() === ADMIN_CONFIG.username.toLowerCase() && passcode !== ADMIN_CONFIG.passcode) {
       throw new Error('Unauthorized admin account linkage.');
     }
     const user = this.getUser();
@@ -382,7 +937,7 @@ class LocalStorageDB {
   }
 
   public updateUsername(newUsername: string, passcode?: string) {
-    if (newUsername.toLowerCase() === 'mriga' && passcode !== 'CHOP_ADMIN_99') {
+    if (newUsername.toLowerCase() === ADMIN_CONFIG.username.toLowerCase() && passcode !== ADMIN_CONFIG.passcode) {
       throw new Error('Unauthorized admin username change.');
     }
     const user = this.getUser();
@@ -393,13 +948,13 @@ class LocalStorageDB {
     this.syncPlayerToLeaderboard(oldName);
   }
 
-  public isUsernameTaken(username: string): boolean {
-    const leaderboard = this.getLeaderboard();
+  public async isUsernameTaken(username: string): Promise<boolean> {
+    const leaderboard = await this.getLeaderboard();
     return leaderboard.some(entry => entry.username.toLowerCase() === username.toLowerCase());
   }
 
   public registerUserProfile(username: string, passcode?: string) {
-    if (username.toLowerCase() === 'mriga' && passcode !== 'CHOP_ADMIN_99') {
+    if (username.toLowerCase() === ADMIN_CONFIG.username.toLowerCase() && passcode !== ADMIN_CONFIG.passcode) {
       throw new Error('Unauthorized admin registration.');
     }
     const user = this.getUser();
@@ -413,7 +968,7 @@ class LocalStorageDB {
 
   // --- Game Submission Transaction ---
 
-  public submitGameSession(score: number, maxCombo: number, coinsEarned: number, diamondsEarned: number, worldName: string, timeSpentSeconds: number) {
+  public submitGameSession(score: number, maxCombo: number, coinsEarned: number, diamondsEarned: number, worldName: string, timeSpentSeconds: number, ticketsEarned: number = 0) {
     const user = this.getUser();
     
     if (user.isBanned) {
@@ -445,6 +1000,7 @@ class LocalStorageDB {
 
     user.coins += coinsEarned;
     user.diamonds += diamondsEarned;
+    user.tickets = (user.tickets || 0) + ticketsEarned;
 
     // 2. High Score / Combo
     let newHighScore = false;
@@ -478,14 +1034,35 @@ class LocalStorageDB {
     this.updateAchievementProgress('worlds', Object.keys(user.stats.worldRuns).length);
 
     // 5. Update Missions Progress
-    this.updateMissionProgress('mis_d_chop_300', score);
-    this.updateMissionProgress('mis_d_combo_30', maxCombo);
-    this.updateMissionProgress('mis_d_coins_100', coinsEarned);
-    this.updateMissionProgress('mis_d_play_3', 1);
-
-    this.updateMissionProgress('mis_w_chop_3000', score);
-    this.updateMissionProgress('mis_w_score_1000', score);
-    this.updateMissionProgress('mis_w_gold_2000', coinsEarned);
+    const activeMissions = this.getMissions();
+    activeMissions.forEach(m => {
+      if (m.claimed) return;
+      if (m.type === 'daily') {
+        if (m.id.startsWith('mis_d_chop')) {
+          if (!m.requiredMap || m.requiredMap === worldName) {
+            m.current = Math.min(m.target, m.current + score);
+          }
+        }
+        else if (m.id.startsWith('mis_d_combo')) {
+          m.current = Math.min(m.target, Math.max(m.current, maxCombo));
+        }
+        else if (m.id.startsWith('mis_d_coins')) {
+          m.current = Math.min(m.target, m.current + coinsEarned);
+        }
+        else if (m.id.startsWith('mis_d_play')) {
+          m.current = Math.min(m.target, m.current + 1);
+        }
+      } else if (m.type === 'weekly') {
+        if (m.id === 'mis_w_chop_3000') {
+          m.current = Math.min(m.target, m.current + score);
+        } else if (m.id === 'mis_w_score_1000') {
+          m.current = Math.min(m.target, Math.max(m.current, score));
+        } else if (m.id === 'mis_w_gold_2000') {
+          m.current = Math.min(m.target, m.current + coinsEarned);
+        }
+      }
+    });
+    this.saveMissions(activeMissions);
 
     // 6. Sync to leaderboards
     this.syncPlayerToLeaderboard();
@@ -555,7 +1132,7 @@ class LocalStorageDB {
     this.syncPlayerToLeaderboard();
   }
 
-  public openChest(chestType: 'mystery' | 'treasure' | 'epic'): { success: boolean; rewardType?: string; rewardAmount?: number; rewardItem?: ShopItem; reason?: string } {
+  public openChest(chestType: 'mystery' | 'treasure' | 'epic'): { success: boolean; rewardType?: string; rewardAmount?: number; rewardItem?: ShopItem; bonusTicket?: boolean; reason?: string } {
     const user = this.getUser();
     let cost = 150;
     if (chestType === 'treasure') cost = 500;
@@ -571,13 +1148,20 @@ class LocalStorageDB {
     const rand = Math.random();
     
     if (chestType === 'mystery') {
-      // Small coins or diamonds
-      if (rand < 0.85) {
+      // 10% tickets, 75% coins, 15% diamonds
+      if (rand < 0.10) {
+        user.tickets = (user.tickets || 0) + 1;
+        this.saveUser(user);
+        this.logTelemetry('chest', `Opened Mystery Chest: earned 1 Revive Ticket.`);
+        this.syncActiveProfileToCloud();
+        return { success: true, rewardType: 'tickets', rewardAmount: 1 };
+      } else if (rand < 0.85) {
         const coins = Math.floor(50 + Math.random() * 250);
         user.coins += coins;
         user.stats.totalCoinsEarned += coins;
         this.saveUser(user);
         this.logTelemetry('chest', `Opened Mystery Chest: earned ${coins} coins.`);
+        this.syncActiveProfileToCloud();
         return { success: true, rewardType: 'coins', rewardAmount: coins };
       } else {
         const diamonds = Math.floor(1 + Math.random() * 4);
@@ -585,9 +1169,15 @@ class LocalStorageDB {
         user.stats.totalDiamondsEarned += diamonds;
         this.saveUser(user);
         this.logTelemetry('chest', `Opened Mystery Chest: earned ${diamonds} diamonds.`);
+        this.syncActiveProfileToCloud();
         return { success: true, rewardType: 'diamonds', rewardAmount: diamonds };
       }
     } else {
+      const bonusTicket = Math.random() < 0.15;
+      if (bonusTicket) {
+        user.tickets = (user.tickets || 0) + 1;
+      }
+
       // Unlocks cosmetic or premium items
       const shop = this.getShop();
       const lockedItems = shop.filter(item => !item.unlocked && item.id !== 'char_lumberjack' && item.id !== 'weap_axe_wood');
@@ -607,15 +1197,17 @@ class LocalStorageDB {
 
       if (rewardItem) {
         this.saveUser(user);
-        this.logTelemetry('chest', `Opened ${chestType} chest: unlocked ${rewardItem.name}.`);
-        return { success: true, rewardType: 'item', rewardItem };
+        this.logTelemetry('chest', `Opened ${chestType} chest: unlocked ${rewardItem.name}${bonusTicket ? ' + Bonus Revive Ticket' : ''}.`);
+        this.syncActiveProfileToCloud();
+        return { success: true, rewardType: 'item', rewardItem, bonusTicket };
       } else {
         // Fallback if all items unlocked
         const refundCoins = chestType === 'treasure' ? 600 : 1800;
         user.coins += refundCoins;
         this.saveUser(user);
-        this.logTelemetry('chest', `Opened ${chestType} chest: all items unlocked! Refunded ${refundCoins} coins.`);
-        return { success: true, rewardType: 'coins', rewardAmount: refundCoins };
+        this.logTelemetry('chest', `Opened ${chestType} chest: all items unlocked! Refunded ${refundCoins} coins${bonusTicket ? ' + Bonus Revive Ticket' : ''}.`);
+        this.syncActiveProfileToCloud();
+        return { success: true, rewardType: 'coins', rewardAmount: refundCoins, bonusTicket };
       }
     }
   }
@@ -706,12 +1298,17 @@ class LocalStorageDB {
 
   private updateMissionProgress(missionId: string, progressValue: number) {
     const missions = this.getMissions();
-    const mission = missions.find(m => m.id === missionId);
+    const mission = missions.find(m => {
+      if (m.id === missionId) return true;
+      if (missionId === 'mis_d_play_3' && m.id.startsWith('mis_d_play')) return true;
+      return false;
+    });
+
     if (mission && !mission.claimed) {
-      if (mission.id === 'mis_d_play_3' || mission.id === 'mis_w_chests_3') {
+      if (mission.id.startsWith('mis_d_play') || mission.id === 'mis_w_chests_3' || mission.id.startsWith('mis_d_chop') || mission.id.startsWith('mis_d_coins')) {
         // Incremental missions
         mission.current = Math.min(mission.target, mission.current + progressValue);
-      } else if (mission.id === 'mis_d_combo_30' || mission.id === 'mis_w_score_1000') {
+      } else if (mission.id.startsWith('mis_d_combo') || mission.id === 'mis_w_score_1000') {
         // High watermark missions
         mission.current = Math.min(mission.target, Math.max(mission.current, progressValue));
       } else {
@@ -723,38 +1320,33 @@ class LocalStorageDB {
   }
 
   private syncPlayerToLeaderboard(oldUsername?: string) {
-    const user = this.getUser();
-    let leaderboard = this.getLeaderboard();
-
-    // Remove duplicates or old usernames of the player to avoid double ranks
-    leaderboard = leaderboard.filter(entry => {
-      if (entry.username === user.username) return false;
-      if (oldUsername && entry.username === oldUsername) return false;
-      return true;
-    });
-
-    const playerEntry: LeaderboardEntry = {
-      username: user.username,
-      country: 'US', // default profile country
-      score: user.highScore,
-      maxCombo: user.maxCombo,
-      coins: user.stats.totalCoinsEarned,
-      avatar: user.equippedCharacter,
-      title: user.equippedTitle,
-      frame: user.equippedFrame
-    };
-
-    leaderboard.push(playerEntry);
-
-    // Re-sort leaderboard by score descending
-    leaderboard.sort((a, b) => b.score - a.score);
-    this.saveLeaderboard(leaderboard);
+    this.syncActiveProfileToCloud(oldUsername);
   }
 
   // --- Admin Methods ---
 
-  public getAdminStats() {
-    const leaderboard = this.getLeaderboard();
+  public async getAllPlayers(): Promise<{ username: string; level: number; coins: number; diamonds: number; isBanned: boolean }[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username, level, coins, diamonds, is_banned')
+      .order('username', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching all players for admin:', error);
+      return [];
+    }
+
+    return (data || []).map(p => ({
+      username: p.username,
+      level: p.level || 1,
+      coins: p.coins || 0,
+      diamonds: p.diamonds || 0,
+      isBanned: p.is_banned || false
+    }));
+  }
+
+  public async getAdminStats() {
+    const leaderboard = await this.getLeaderboard();
     const user = this.getUser();
     
     // Aggregate telemetry data for metrics
@@ -771,25 +1363,172 @@ class LocalStorageDB {
     };
   }
 
-  public adminBanUser(ban: boolean) {
-    const user = this.getUser();
-    user.isBanned = ban;
-    this.saveUser(user);
-    this.logTelemetry('admin', `Admin ${ban ? 'BANNED' : 'UNBANNED'} player ${user.username}`);
+  public async adminBanUser(targetUsername: string, ban: boolean): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_banned: ban })
+      .eq('username', targetUsername);
+
+    if (error) {
+      console.error('Error banning user:', error);
+      return { success: false, error: error.message };
+    }
+
+    this.logTelemetry('admin', `Admin ${ban ? 'BANNED' : 'UNBANNED'} player ${targetUsername}`);
+    
+    // If the banned user is the active user, update local cache too
+    const activeUser = this.getUser();
+    if (activeUser.username.toLowerCase() === targetUsername.toLowerCase()) {
+      activeUser.isBanned = ban;
+      localStorage.setItem(this.key('user'), JSON.stringify(activeUser));
+    }
+
+    return { success: true };
   }
 
-  public adminGrantCurrency(type: 'coins' | 'diamonds', amount: number) {
-    const user = this.getUser();
-    if (type === 'coins') {
-      user.coins += amount;
-      user.stats.totalCoinsEarned += amount;
-    } else {
-      user.diamonds += amount;
-      user.stats.totalDiamondsEarned += amount;
+  public async adminGrantCurrency(targetUsername: string, type: 'coins' | 'diamonds' | 'tickets', amount: number): Promise<{ success: boolean; error?: string }> {
+    // 1. Fetch current profile values
+    const { data: profile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('coins, diamonds, tickets, stats_data')
+      .eq('username', targetUsername)
+      .maybeSingle();
+
+    if (fetchError || !profile) {
+      return { success: false, error: fetchError?.message || 'Player not found.' };
     }
-    this.saveUser(user);
-    this.logTelemetry('admin', `Admin GRANTED ${amount} ${type} to ${user.username}`);
-    this.syncPlayerToLeaderboard();
+
+    const currentCoins = profile.coins || 0;
+    const currentDiamonds = profile.diamonds || 0;
+    const currentTickets = profile.tickets || 0;
+    const stats = profile.stats_data || {};
+    
+    let updates: any = {};
+    if (type === 'coins') {
+      updates.coins = currentCoins + amount;
+      stats.totalCoinsEarned = (stats.totalCoinsEarned || 0) + amount;
+      updates.stats_data = stats;
+    } else if (type === 'diamonds') {
+      updates.diamonds = currentDiamonds + amount;
+      stats.totalDiamondsEarned = (stats.totalDiamondsEarned || 0) + amount;
+      updates.stats_data = stats;
+    } else {
+      updates.tickets = currentTickets + amount;
+    }
+
+    // 2. Perform database update
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('username', targetUsername);
+
+    if (updateError) {
+      console.error('Error updating player currency:', updateError);
+      return { success: false, error: updateError.message };
+    }
+
+    this.logTelemetry('admin', `Admin GRANTED ${amount} ${type} to player ${targetUsername}`);
+
+    // If target is active user, update local cache
+    const activeUser = this.getUser();
+    if (activeUser.username.toLowerCase() === targetUsername.toLowerCase()) {
+      if (type === 'coins') {
+        activeUser.coins = updates.coins;
+        activeUser.stats.totalCoinsEarned = stats.totalCoinsEarned;
+      } else if (type === 'diamonds') {
+        activeUser.diamonds = updates.diamonds;
+        activeUser.stats.totalDiamondsEarned = stats.totalDiamondsEarned;
+      } else {
+        activeUser.tickets = updates.tickets;
+      }
+      localStorage.setItem(this.key('user'), JSON.stringify(activeUser));
+    }
+
+    return { success: true };
+  }
+
+  public async adminResetPlayerData(targetUsername: string): Promise<{ success: boolean; error?: string }> {
+    const defaultStats = {
+      totalChops: 0,
+      totalChestsOpened: 0,
+      gamesPlayed: 0,
+      totalCoinsEarned: 100,
+      totalDiamondsEarned: 0,
+      timePlayed: 0,
+      worldRuns: { 'Pine Forest': 0 }
+    };
+
+    const updates = {
+      highscore: 0,
+      max_combo: 0,
+      coins: 100,
+      diamonds: 0,
+      tickets: 0,
+      level: 1,
+      xp: 0,
+      xp_needed: 100,
+      equipped_character: 'char_lumberjack',
+      equipped_weapon: 'weap_axe_wood',
+      equipped_trail: 'trail_none',
+      equipped_title: 'title_none',
+      equipped_badge: 'Chop Icon',
+      equipped_frame: 'Standard',
+      last_daily_claim: null,
+      has_premium_pass: false,
+      claimed_free_tiers: [],
+      claimed_premium_tiers: [],
+      stats_data: defaultStats,
+      shop_data: DEFAULT_SHOP_ITEMS,
+      achievements_data: DEFAULT_ACHIEVEMENTS,
+      missions_data: DEFAULT_MISSIONS
+    };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('username', targetUsername);
+
+    if (error) {
+      console.error('Error resetting player data:', error);
+      return { success: false, error: error.message };
+    }
+
+    this.logTelemetry('admin', `Admin RESET stats and inventory for player ${targetUsername}`);
+
+    // If target is active user, update local cache
+    const activeUser = this.getUser();
+    if (activeUser.username.toLowerCase() === targetUsername.toLowerCase()) {
+      const userProfile: UserProfile = {
+        username: activeUser.username,
+        isGuest: false,
+        isBanned: activeUser.isBanned,
+        level: 1,
+        xp: 0,
+        xpNeeded: 100,
+        highScore: 0,
+        maxCombo: 0,
+        coins: 100,
+        diamonds: 0,
+        tickets: 0,
+        equippedCharacter: 'char_lumberjack',
+        equippedWeapon: 'weap_axe_wood',
+        equippedTrail: 'trail_none',
+        equippedTitle: 'title_none',
+        equippedBadge: 'Chop Icon',
+        equippedFrame: 'Standard',
+        lastDailyClaim: null,
+        stats: defaultStats,
+        hasPremiumPass: false,
+        claimedFreeTiers: [],
+        claimedPremiumTiers: []
+      };
+      localStorage.setItem(this.key('user'), JSON.stringify(userProfile));
+      localStorage.setItem(this.key('shop'), JSON.stringify(DEFAULT_SHOP_ITEMS));
+      localStorage.setItem(this.key('achievements'), JSON.stringify(DEFAULT_ACHIEVEMENTS));
+      localStorage.setItem(this.key('missions'), JSON.stringify(DEFAULT_MISSIONS));
+    }
+
+    return { success: true };
   }
 
   public adminResetAllData() {
@@ -806,7 +1545,7 @@ class LocalStorageDB {
 
   public syncToCloud(): { success: boolean; timestamp?: string; error?: string } {
     const user = this.getUser();
-    if (user.username !== 'mriga') {
+    if (user.username !== ADMIN_CONFIG.username) {
       return { success: false, error: 'Unauthorized: Only the admin can backup to cloud.' };
     }
     const shop = this.getShop();
@@ -825,7 +1564,7 @@ class LocalStorageDB {
 
   public loadFromCloudBackup(): { success: boolean; error?: string } {
     const user = this.getUser();
-    if (user.username !== 'mriga') {
+    if (user.username !== ADMIN_CONFIG.username) {
       return { success: false, error: 'Unauthorized: Only the admin can restore from cloud.' };
     }
     const backupStr = localStorage.getItem(this.key('cloud_sync_backup'));
@@ -848,6 +1587,134 @@ class LocalStorageDB {
     } catch (e) {
       return { success: false, error: 'Corrupt backup data!' };
     }
+  }
+
+  public buyPremiumPass(): { success: boolean; error?: string } {
+    const user = this.getUser();
+    if (user.hasPremiumPass) {
+      return { success: false, error: 'Premium Track is already activated!' };
+    }
+    if (user.diamonds < 20) {
+      return { success: false, error: 'Not enough diamonds! Earn them by playing or completing daily missions.' };
+    }
+    user.diamonds -= 20;
+    user.hasPremiumPass = true;
+    this.saveUser(user);
+    this.logTelemetry('shop', 'Unlocked Season Pass Premium track.');
+    return { success: true };
+  }
+
+  public claimTierReward(tier: number, track: 'free' | 'premium'): { success: boolean; error?: string } {
+    const user = this.getUser();
+    if (user.level < tier) {
+      return { success: false, error: `Required level ${tier} not reached!` };
+    }
+
+    if (track === 'free') {
+      user.claimedFreeTiers = user.claimedFreeTiers || [];
+      if (user.claimedFreeTiers.includes(tier)) {
+        return { success: false, error: 'Reward already claimed!' };
+      }
+      this.grantRewardByTier(tier, 'free', user);
+      user.claimedFreeTiers.push(tier);
+    } else {
+      if (!user.hasPremiumPass) {
+        return { success: false, error: 'Premium track is not unlocked!' };
+      }
+      user.claimedPremiumTiers = user.claimedPremiumTiers || [];
+      if (user.claimedPremiumTiers.includes(tier)) {
+        return { success: false, error: 'Reward already claimed!' };
+      }
+      this.grantRewardByTier(tier, 'premium', user);
+      user.claimedPremiumTiers.push(tier);
+    }
+
+    this.saveUser(user);
+    return { success: true };
+  }
+
+  private grantRewardByTier(tier: number, track: 'free' | 'premium', user: UserProfile) {
+    if (track === 'free') {
+      switch (tier) {
+        case 1:
+          user.coins += 200;
+          user.stats.totalCoinsEarned += 200;
+          break;
+        case 2:
+          user.coins += 400;
+          user.stats.totalCoinsEarned += 400;
+          break;
+        case 3:
+          this.unlockCosmetic('weap_axe_golden');
+          break;
+        case 4:
+          this.unlockCosmetic('trail_dust');
+          break;
+        case 5:
+          user.tickets = (user.tickets || 0) + 2;
+          break;
+        case 6:
+          this.unlockCosmetic('title_combo');
+          break;
+        case 7:
+          user.coins += 1500;
+          user.stats.totalCoinsEarned += 1500;
+          break;
+        case 8:
+          this.unlockCosmetic('char_knight');
+          break;
+      }
+    } else {
+      switch (tier) {
+        case 1:
+          user.diamonds += 5;
+          user.stats.totalDiamondsEarned += 5;
+          break;
+        case 2:
+          this.unlockCosmetic('title_cyber');
+          break;
+        case 3:
+          this.unlockCosmetic('char_viking');
+          break;
+        case 4:
+          user.tickets = (user.tickets || 0) + 5;
+          break;
+        case 5:
+          this.unlockCosmetic('weap_axe_fire');
+          break;
+        case 6:
+          this.unlockCosmetic('trail_spark');
+          break;
+        case 7:
+          this.unlockCosmetic('weap_blade');
+          break;
+        case 8:
+          this.unlockCosmetic('char_robot');
+          break;
+      }
+    }
+  }
+
+  private unlockCosmetic(itemId: string) {
+    const shop = this.getShop();
+    const item = shop.find(i => i.id === itemId);
+    if (item) {
+      item.unlocked = true;
+      this.saveShop(shop);
+      this.logTelemetry('reward', `Unlocked cosmetic: ${item.name} via Season Pass.`);
+    }
+  }
+
+  public useReviveTicket(): { success: boolean; ticketsLeft?: number; error?: string } {
+    const user = this.getUser();
+    if (!user.tickets || user.tickets <= 0) {
+      return { success: false, error: 'No tickets available' };
+    }
+    user.tickets -= 1;
+    this.saveUser(user);
+    this.logTelemetry('game', 'Used 1 Revive Ticket.');
+    this.syncActiveProfileToCloud();
+    return { success: true, ticketsLeft: user.tickets };
   }
 }
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Shield, Users, DollarSign, Database, RefreshCcw, AlertTriangle, Cpu } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Users, DollarSign, Database, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { db, UserProfile } from '../utils/LocalStorageDB';
 
 interface AdminProps {
@@ -15,36 +15,100 @@ export const Admin: React.FC<AdminProps> = ({
   showAlert,
   showConfirm
 }) => {
-  const stats = db.getAdminStats();
-  const [grantType, setGrantType] = useState<'coins' | 'diamonds'>('coins');
+  const [stats, setStats] = useState<{
+    totalRegistrations: number;
+    activeToday: number;
+    totalRevenue: number;
+    telemetryLogs: any[];
+    playerBanned: boolean;
+  }>({
+    totalRegistrations: 0,
+    activeToday: 0,
+    totalRevenue: 0,
+    telemetryLogs: [],
+    playerBanned: user.isBanned
+  });
+
+  const [allPlayers, setAllPlayers] = useState<{ username: string; level: number; coins: number; diamonds: number; isBanned: boolean }[]>([]);
+  const [selectedPlayerUsername, setSelectedPlayerUsername] = useState<string>('');
+
+  const loadStats = () => {
+    db.getAdminStats()
+      .then(res => setStats(res))
+      .catch(err => console.error("Error loading admin stats:", err));
+
+    db.getAllPlayers()
+      .then(players => {
+        setAllPlayers(players);
+        if (players.length > 0) {
+          setSelectedPlayerUsername(prev => {
+            if (prev && players.some(p => p.username === prev)) return prev;
+            const currentLogged = players.find(p => p.username === user.username);
+            return currentLogged ? currentLogged.username : players[0].username;
+          });
+        }
+      })
+      .catch(err => console.error("Error loading players list:", err));
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, [user]);
+
+  const [grantType, setGrantType] = useState<'coins' | 'diamonds' | 'tickets'>('coins');
   const [grantAmount, setGrantAmount] = useState(1000);
 
+  const targetPlayer = allPlayers.find(p => p.username === selectedPlayerUsername);
+  const isTargetBanned = targetPlayer ? targetPlayer.isBanned : false;
+  const targetLevel = targetPlayer ? targetPlayer.level : 1;
+
   const handleBanToggle = () => {
-    const nextBan = !user.isBanned;
+    if (!selectedPlayerUsername) return;
+    const nextBan = !isTargetBanned;
     showConfirm(
       'Confirm Security Action',
-      `Are you sure you want to ${nextBan ? 'BAN' : 'UNBAN'} the player ${user.username}?`,
+      `Are you sure you want to ${nextBan ? 'BAN' : 'UNBAN'} the player ${selectedPlayerUsername}?`,
       () => {
-        db.adminBanUser(nextBan);
-        onAdminChange();
+        db.adminBanUser(selectedPlayerUsername, nextBan).then(res => {
+          if (res.success) {
+            loadStats();
+            onAdminChange();
+          } else {
+            showAlert('Error', res.error || 'Ban operation failed.');
+          }
+        });
       }
     );
   };
 
   const handleGrantCurrency = () => {
-    db.adminGrantCurrency(grantType, grantAmount);
-    showAlert('Success', `Successfully granted ${grantAmount} ${grantType} to ${user.username}!`);
-    onAdminChange();
+    if (!selectedPlayerUsername) return;
+    db.adminGrantCurrency(selectedPlayerUsername, grantType, grantAmount).then(res => {
+      if (res.success) {
+        showAlert('Success', `Successfully granted ${grantAmount} ${grantType} to ${selectedPlayerUsername}!`);
+        loadStats();
+        onAdminChange();
+      } else {
+        showAlert('Error', res.error || 'Currency grant failed.');
+      }
+    });
   };
 
-  const handleResetData = () => {
+  const handleResetPlayerData = () => {
+    if (!selectedPlayerUsername) return;
     showConfirm(
-      'WARNING: WIPE DATA',
-      "This will completely wipe all local storage data, including your high scores, inventory, and coins, and restore initial seed data. Do you want to proceed?",
+      'WARNING: WIPE PLAYER DATA',
+      `This will completely wipe all scores, unlocks, and coins for the player ${selectedPlayerUsername}. Do you want to proceed?`,
       () => {
-        db.adminResetAllData();
-        showAlert('Database Restored', "Database restored to initial seed configuration!");
-        onAdminChange();
+        db.adminResetPlayerData(selectedPlayerUsername).then(res => {
+          if (res.success) {
+            showAlert('Database Restored', `Successfully shredded all stats and progress for player ${selectedPlayerUsername}!`);
+            loadStats();
+            onAdminChange();
+          } else {
+            showAlert('Error', res.error || 'Reset operation failed.');
+          }
+        });
       }
     );
   };
@@ -92,52 +156,36 @@ export const Admin: React.FC<AdminProps> = ({
         </div>
       </div>
 
-      <div className="grid-2" style={{ gap: '24px' }}>
+      <div style={{ maxWidth: '700px', margin: '0 auto', width: '100%' }}>
         
-        {/* Left Side: Real-time Telemetry Monitor (Stone console bezel) */}
-        <div className="material-stone" style={{ display: 'flex', flexDirection: 'column', height: '440px', padding: '24px', background: 'linear-gradient(180deg, #23252a, #16181b)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', borderBottom: '2px solid #383c44', paddingBottom: '12px' }}>
-            <Cpu size={18} style={{ color: 'var(--neon-cyan)' }} />
-            <h3 className="retro-title" style={{ fontSize: '0.82rem', color: 'var(--neon-cyan)', margin: 0 }}>
-              TELEMETRY CORE DUMP
-            </h3>
-          </div>
-          
-          <div style={{
-            flex: 1,
-            background: '#0e1013',
-            borderRadius: '6px',
-            border: '2px solid #1a1c21',
-            padding: '16px',
-            overflowY: 'auto',
-            fontFamily: 'monospace',
-            fontSize: '0.75rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.8)'
-          }}>
-            {stats.telemetryLogs.map((log, i) => {
-              let color = '#a1a09e';
-              if (log.type === 'cheat') color = 'var(--neon-red)';
-              else if (log.type === 'admin') color = 'var(--neon-yellow)';
-              else if (log.type === 'shop') color = 'var(--neon-cyan)';
-              else if (log.type === 'game') color = 'var(--neon-green)';
-
-              return (
-                <div key={i} style={{ borderBottom: '1px solid #1a1c21', paddingBottom: '6px', lineHeight: '1.4' }}>
-                  <span style={{ color: '#555e70' }}>[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
-                  <span style={{ color, fontWeight: 'bold' }}>({log.type.toUpperCase()})</span>{' '}
-                  <span style={{ color: '#c5c8cf' }}>{log.message}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Right Side: Injection and restriction services */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
+          {/* Target Challenger Selector */}
+          <div className="material-stone" style={{ padding: '24px', background: 'linear-gradient(180deg, #23252a, #16181b)' }}>
+            <h3 className="retro-title" style={{ fontSize: '0.82rem', color: 'var(--neon-cyan)', marginBottom: '16px', borderBottom: '2px dashed #383c44', paddingBottom: '10px', marginTop: 0 }}>
+              🎯 TARGET CHALLENGER SELECTOR
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Choose Challenger Profile</label>
+                <select 
+                  className="form-input" 
+                  value={selectedPlayerUsername}
+                  onChange={(e) => setSelectedPlayerUsername(e.target.value)}
+                  style={{ background: '#121316', border: '2px solid #383c44', color: '#fff', height: '40px', fontSize: '0.85rem' }}
+                >
+                  {allPlayers.map(p => (
+                    <option key={p.username} value={p.username}>
+                      {p.username} (Lv {p.level}) {p.isBanned ? '🚫 BANNED' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* Currency injection panel */}
           <div className="material-stone" style={{ padding: '24px', background: 'linear-gradient(180deg, #23252a, #16181b)' }}>
             <h3 className="retro-title" style={{ fontSize: '0.82rem', color: 'var(--neon-yellow)', marginBottom: '16px', borderBottom: '2px dashed #383c44', paddingBottom: '10px', marginTop: 0 }}>
@@ -151,7 +199,7 @@ export const Admin: React.FC<AdminProps> = ({
                   type="text" 
                   readOnly 
                   className="form-input" 
-                  value={`${user.username} (Level ${user.level})`} 
+                  value={selectedPlayerUsername ? `${selectedPlayerUsername} (Level ${targetLevel})` : 'No player selected'} 
                   style={{ cursor: 'not-allowed', opacity: 0.6, background: '#121316', border: '2px solid #383c44' }} 
                 />
               </div>
@@ -167,6 +215,7 @@ export const Admin: React.FC<AdminProps> = ({
                   >
                     <option value="coins">🪙 Coins Gold</option>
                     <option value="diamonds">💎 Gems Crystal</option>
+                    <option value="tickets">🎫 Revive Tickets</option>
                   </select>
                 </div>
 
@@ -186,6 +235,7 @@ export const Admin: React.FC<AdminProps> = ({
                 className="neon-btn-cyan" 
                 style={{ marginTop: '6px', fontSize: '0.75rem', borderWidth: '2px' }} 
                 onClick={handleGrantCurrency}
+                disabled={!selectedPlayerUsername}
               >
                 INJECT VALUE
               </button>
@@ -198,7 +248,7 @@ export const Admin: React.FC<AdminProps> = ({
             style={{ 
               padding: '24px', 
               background: 'linear-gradient(180deg, #23252a, #16181b)',
-              borderColor: user.isBanned ? 'var(--neon-red)' : '#383c44'
+              borderColor: isTargetBanned ? 'var(--neon-red)' : '#383c44'
             }}
           >
             <h3 className="retro-title" style={{ fontSize: '0.82rem', color: 'var(--neon-red)', marginBottom: '16px', borderBottom: '2px dashed #383c44', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', marginTop: 0 }}>
@@ -210,28 +260,30 @@ export const Admin: React.FC<AdminProps> = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#121316', border: '2px solid #383c44', borderRadius: '8px' }}>
                 <div>
                   <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0 }}>Simulated Player Ban</h4>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>Locks the current challenger profile out of runs.</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>Locks the selected challenger profile out of runs.</p>
                 </div>
                 
                 <button 
-                  className={user.isBanned ? 'neon-btn-cyan' : 'neon-btn-magenta'}
+                  className={isTargetBanned ? 'neon-btn-cyan' : 'neon-btn-magenta'}
                   style={{ padding: '6px 14px', fontSize: '0.65rem', borderWidth: '2px' }}
                   onClick={handleBanToggle}
+                  disabled={!selectedPlayerUsername}
                 >
-                  {user.isBanned ? 'UNBAN HERO' : 'BAN HERO'}
+                  {isTargetBanned ? 'UNBAN HERO' : 'BAN HERO'}
                 </button>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#121316', border: '2px solid #383c44', borderRadius: '8px' }}>
                 <div>
-                  <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0 }}>Wipe Local Databases</h4>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>Restores all scores, unlocks, and assets to seed state.</p>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0 }}>Shred Player Profile</h4>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>Resets all scores, unlocks, and coins for this player in database.</p>
                 </div>
                 
                 <button 
                   className="neon-btn-magenta"
                   style={{ padding: '6px 14px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px', borderWidth: '2px' }}
-                  onClick={handleResetData}
+                  onClick={handleResetPlayerData}
+                  disabled={!selectedPlayerUsername}
                 >
                   <RefreshCcw size={12} /> SHRED
                 </button>

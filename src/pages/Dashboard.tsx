@@ -322,9 +322,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <span style={{ color: 'var(--text-secondary)' }}>Total Gold Minted</span>
                     <span style={{ fontWeight: '800', color: 'var(--neon-yellow)' }}>🪙 {user.stats.totalCoinsEarned.toLocaleString()}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '8px', fontSize: '0.85rem' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Total Gems Gathered</span>
                     <span style={{ fontWeight: '800', color: 'var(--neon-cyan)' }}>💎 {user.stats.totalDiamondsEarned}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Available Revive Tickets</span>
+                    <span style={{ fontWeight: '800', color: 'var(--neon-magenta)' }}>🎫 {user.tickets || 0}</span>
                   </div>
                 </div>
               </div>

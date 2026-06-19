@@ -23,7 +23,7 @@ export const Shop: React.FC<ShopProps> = ({
   
   // Chest animation state
   const [openingChest, setOpeningChest] = useState<string | null>(null);
-  const [chestReward, setChestReward] = useState<{ type: string; amount?: number; item?: ShopItem } | null>(null);
+  const [chestReward, setChestReward] = useState<{ type: string; amount?: number; item?: ShopItem; bonusTicket?: boolean } | null>(null);
   const [wiggleClass, setWiggleClass] = useState(false);
 
   const filteredItems = shopItems.filter(item => item.type === activeTab);
@@ -72,9 +72,9 @@ export const Shop: React.FC<ShopProps> = ({
       
       if (result.success) {
         if (result.rewardType === 'item') {
-          setChestReward({ type: 'item', item: result.rewardItem });
+          setChestReward({ type: 'item', item: result.rewardItem, bonusTicket: result.bonusTicket });
         } else {
-          setChestReward({ type: result.rewardType || 'coins', amount: result.rewardAmount });
+          setChestReward({ type: result.rewardType || 'coins', amount: result.rewardAmount, bonusTicket: result.bonusTicket });
         }
         onPurchaseComplete();
       } else {
@@ -93,15 +93,51 @@ export const Shop: React.FC<ShopProps> = ({
   };
 
   const handleBuyPremiumPass = () => {
-    if (user.diamonds < 20) {
-      showAlert('No Diamonds', 'Not enough diamonds! Earn them by playing or completing daily missions.');
-      return;
+    const result = db.buyPremiumPass();
+    if (result.success) {
+      showAlert('Season Pass Activated', 'Season Pass Premium Track Activated!');
+      onPurchaseComplete();
+    } else {
+      showAlert('Error', result.error || 'Failed to buy Premium Pass.');
     }
-    
-    db.adminGrantCurrency('diamonds', -20);
-    db.logTelemetry('shop', 'Unlocked Season Pass Premium track.');
-    showAlert('Season Pass Activated', 'Season Pass Premium Track Activated!');
-    onPurchaseComplete();
+  };
+
+  const handleClaimTier = (tier: number, track: 'free' | 'premium') => {
+    const result = db.claimTierReward(tier, track);
+    if (result.success) {
+      showAlert('Reward Claimed!', 'Your reward has been added to your inventory.');
+      onPurchaseComplete();
+    } else {
+      showAlert('Error', result.error || 'Failed to claim reward.');
+    }
+  };
+
+  const getTierRewardDetails = (tier: number, track: 'free' | 'premium') => {
+    if (track === 'free') {
+      switch (tier) {
+        case 1: return { name: '200 Coins', icon: '🪙' };
+        case 2: return { name: '400 Coins', icon: '🪙' };
+        case 3: return { name: 'Golden Axe', icon: '🪓' };
+        case 4: return { name: 'Dust Trail', icon: '✨' };
+        case 5: return { name: '2 Revive Tickets', icon: '🎫' };
+        case 6: return { name: 'Combo Master Title', icon: '🏷️' };
+        case 7: return { name: '1500 Coins', icon: '🪙' };
+        case 8: return { name: 'Knight Character', icon: '🛡️' };
+        default: return { name: 'Coins', icon: '🪙' };
+      }
+    } else {
+      switch (tier) {
+        case 1: return { name: '5 Diamonds', icon: '💎' };
+        case 2: return { name: 'Cyber Master Title', icon: '🏷️' };
+        case 3: return { name: 'Viking Character', icon: '🪓' };
+        case 4: return { name: '5 Revive Tickets', icon: '🎫' };
+        case 5: return { name: 'Fire Axe', icon: '🔥' };
+        case 6: return { name: 'Spark Trail', icon: '⚡' };
+        case 7: return { name: 'Blade Weapon', icon: '🗡️' };
+        case 8: return { name: 'Robot Character', icon: '🤖' };
+        default: return { name: 'Diamonds', icon: '💎' };
+      }
+    }
   };
 
   return (
@@ -372,12 +408,18 @@ export const Shop: React.FC<ShopProps> = ({
                       <div style={{ fontSize: '1.3rem', fontWeight: '900', color: 'var(--text-primary)', fontFamily: 'var(--font-retro)' }}>
                         {chestReward.type === 'coins' && `🪙 +${chestReward.amount}`}
                         {chestReward.type === 'diamonds' && `💎 +${chestReward.amount}`}
+                        {chestReward.type === 'tickets' && `🎫 +${chestReward.amount}`}
                         {chestReward.type === 'item' && `${chestReward.item?.name}`}
                       </div>
                       {chestReward.item && (
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '6px', fontStyle: 'italic' }}>
                           "{chestReward.item.description}"
                         </p>
+                      )}
+                      {chestReward.bonusTicket && (
+                        <div style={{ marginTop: '12px', fontSize: '0.72rem', color: 'var(--neon-magenta)', fontFamily: 'var(--font-retro)' }}>
+                          🎉 BONUS: +1 Revive Ticket 🎫
+                        </div>
                       )}
                     </div>
                     
@@ -444,66 +486,174 @@ export const Shop: React.FC<ShopProps> = ({
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '20px', marginBottom: '30px', gap: '16px' }}>
             <div>
               <h2 className="retro-title" style={{ fontSize: '1.15rem', color: 'var(--neon-yellow)' }}>SEASON 1: TIMBER VOYAGE</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '4px' }}>Level up your profile to unlock tiers. Claims are automatic!</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '4px' }}>
+                Chop trunks to earn profile XP and level up! Current Level: <span style={{ color: 'var(--neon-yellow)', fontWeight: 'bold' }}>{user.level}</span>
+              </p>
             </div>
             
-            <button 
-              className="neon-btn-magenta"
-              style={{ padding: '10px 20px', fontSize: '0.75rem' }}
-              onClick={handleBuyPremiumPass}
-            >
-              ACTIVATE PREMIUM: 💎 20
-            </button>
+            {user.hasPremiumPass ? (
+              <div 
+                className="rarity-tag rarity-legendary"
+                style={{ padding: '10px 20px', fontSize: '0.75rem', border: '2px solid var(--neon-yellow)', animation: 'pulseNeon 1.5s infinite' }}
+              >
+                👑 PREMIUM TRACK ACTIVE
+              </div>
+            ) : (
+              <button 
+                className="neon-btn-magenta"
+                style={{ padding: '10px 20px', fontSize: '0.75rem' }}
+                onClick={handleBuyPremiumPass}
+              >
+                ACTIVATE PREMIUM: 💎 20
+              </button>
+            )}
           </div>
 
           {/* Render tiers (1 to 8) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {[1, 2, 3, 4, 5, 6, 7, 8].map(tier => {
               const unlocked = user.level >= tier;
+              
+              const freeReward = getTierRewardDetails(tier, 'free');
+              const premiumReward = getTierRewardDetails(tier, 'premium');
+              
+              const isFreeClaimed = user.claimedFreeTiers?.includes(tier);
+              const isPremiumClaimed = user.claimedPremiumTiers?.includes(tier);
+
               return (
                 <div 
                   key={tier}
                   className="material-wood"
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '16px 20px',
-                    background: unlocked ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(16, 185, 129, 0.12))' : 'var(--panel-bg)',
+                    flexDirection: 'column',
+                    padding: '20px',
+                    background: unlocked ? 'linear-gradient(135deg, rgba(30,41,59,0.4) 0%, rgba(15,23,42,0.6) 100%)' : 'var(--panel-bg)',
                     borderColor: unlocked ? 'var(--neon-green)' : 'var(--panel-border)',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                    gap: '12px'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{
-                      fontFamily: 'var(--font-retro)',
-                      fontSize: '0.72rem',
-                      color: unlocked ? 'var(--neon-green)' : 'var(--text-secondary)',
-                      background: 'rgba(0,0,0,0.03)',
-                      border: '1px solid var(--panel-border)',
-                      padding: '8px',
-                      borderRadius: '4px',
-                      minWidth: '50px',
-                      textAlign: 'center'
-                    }}>
-                      T{tier}
-                    </div>
-                    <div>
-                      <h4 style={{ fontWeight: 'bold', color: unlocked ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                        Tier {tier} Reward Contract
-                      </h4>
-                      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                        Requires Level {tier}. Status: {unlocked ? 'Unlocked & Claimed' : 'Locked'}
-                      </p>
+                  {/* Top Tier Info */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        fontFamily: 'var(--font-retro)',
+                        fontSize: '0.8rem',
+                        color: unlocked ? 'var(--neon-green)' : 'var(--text-secondary)',
+                        background: 'rgba(0,0,0,0.2)',
+                        border: '2px solid var(--panel-border)',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                      }}>
+                        TIER {tier}
+                      </div>
+                      <span style={{ fontSize: '0.75rem', color: unlocked ? 'var(--neon-green)' : 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>
+                        {unlocked ? '🔓 UNLOCKED' : `🔒 LOCKED (Requires Lv. ${tier})`}
+                      </span>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'right', fontSize: '0.78rem', fontFamily: 'var(--font-retro)' }}>
-                      <span style={{ display: 'block', color: 'var(--neon-yellow)' }}>Free: 🪙 {tier * 100}</span>
-                      <span style={{ display: 'block', color: 'var(--neon-cyan)', marginTop: '4px' }}>Premium: 💎 {tier}</span>
+                  {/* Tracks Row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', flexWrap: 'wrap' }}>
+                    
+                    {/* Free Track Card */}
+                    <div 
+                      style={{ 
+                        background: 'rgba(0, 0, 0, 0.2)', 
+                        border: '1.5px solid var(--panel-border)', 
+                        borderRadius: '8px', 
+                        padding: '12px', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        justifyContent: 'space-between',
+                        minHeight: '100px'
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>FREE TRACK REWARD</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                          <span style={{ fontSize: '1.6rem' }}>{freeReward.icon}</span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{freeReward.name}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '12px' }}>
+                        {isFreeClaimed ? (
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', fontFamily: 'var(--font-retro)' }}>✓ CLAIMED</div>
+                        ) : unlocked ? (
+                          <button 
+                            className="neon-btn-green" 
+                            style={{ width: '100%', padding: '6px 12px', fontSize: '0.68rem', borderRadius: '4px' }}
+                            onClick={() => handleClaimTier(tier, 'free')}
+                          >
+                            CLAIM FREE
+                          </button>
+                        ) : (
+                          <button 
+                            className="retro-btn" 
+                            style={{ width: '100%', padding: '6px 12px', fontSize: '0.68rem', borderRadius: '4px', opacity: 0.5, cursor: 'not-allowed' }}
+                            disabled
+                          >
+                            LOCKED
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Premium Track Card */}
+                    <div 
+                      style={{ 
+                        background: user.hasPremiumPass ? 'rgba(217, 119, 6, 0.05)' : 'rgba(0,0,0,0.15)', 
+                        border: user.hasPremiumPass ? '1.5px solid var(--neon-yellow)' : '1.5px solid var(--panel-border)', 
+                        borderRadius: '8px', 
+                        padding: '12px', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        justifyContent: 'space-between',
+                        minHeight: '100px'
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontSize: '0.62rem', color: user.hasPremiumPass ? 'var(--neon-yellow)' : 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>👑 PREMIUM REWARD</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                          <span style={{ fontSize: '1.6rem' }}>{premiumReward.icon}</span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{premiumReward.name}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '12px' }}>
+                        {!user.hasPremiumPass ? (
+                          <button 
+                            className="retro-btn" 
+                            style={{ width: '100%', padding: '6px 12px', fontSize: '0.68rem', borderRadius: '4px', color: 'var(--neon-yellow)', borderColor: 'var(--neon-yellow)', opacity: 0.8 }}
+                            onClick={handleBuyPremiumPass}
+                          >
+                            GET PREMIUM PASS
+                          </button>
+                        ) : isPremiumClaimed ? (
+                          <div style={{ color: 'var(--neon-yellow)', fontSize: '0.7rem', fontFamily: 'var(--font-retro)' }}>✓ CLAIMED</div>
+                        ) : unlocked ? (
+                          <button 
+                            className="neon-btn-magenta" 
+                            style={{ width: '100%', padding: '6px 12px', fontSize: '0.68rem', borderRadius: '4px' }}
+                            onClick={() => handleClaimTier(tier, 'premium')}
+                          >
+                            CLAIM PREMIUM
+                          </button>
+                        ) : (
+                          <button 
+                            className="retro-btn" 
+                            style={{ width: '100%', padding: '6px 12px', fontSize: '0.68rem', borderRadius: '4px', opacity: 0.5, cursor: 'not-allowed' }}
+                            disabled
+                          >
+                            LOCKED
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               );

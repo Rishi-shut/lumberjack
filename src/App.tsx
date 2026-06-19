@@ -63,10 +63,41 @@ const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegis
   const [usernameInput, setUsernameInput] = useState('');
   const [passcodeInput, setPasscodeInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isCheckLoading, setIsCheckLoading] = useState(false);
 
-  const showPasscodeField = usernameInput.trim().toLowerCase() === 'mriga';
+  useEffect(() => {
+    const name = usernameInput.trim();
+    if (name.length >= 3) {
+      let active = true;
+      setIsCheckLoading(true);
+      db.isUsernameRegistered(name)
+        .then(registered => {
+          if (active) {
+            setIsRegistered(registered);
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setIsRegistered(false);
+          }
+        })
+        .finally(() => {
+          if (active) {
+            setIsCheckLoading(false);
+          }
+        });
+      return () => {
+        active = false;
+      };
+    } else {
+      setIsRegistered(false);
+      setIsCheckLoading(false);
+    }
+  }, [usernameInput]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const name = usernameInput.trim();
 
@@ -80,26 +111,44 @@ const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegis
       return;
     }
 
-    if (name.toLowerCase() === 'mriga') {
-      if (passcodeInput !== 'CHOP_ADMIN_99') {
-        setErrorMsg('Invalid admin passcode. Only the real admin can register as mriga.');
-        return;
-      }
-    } else {
-      if (db.isUsernameTaken(name)) {
-        setErrorMsg('This username is already taken! Choose another.');
-        return;
-      }
-    }
-
     setErrorMsg('');
+    setIsAuthLoading(true);
     try {
-      db.registerUserProfile(name, name.toLowerCase() === 'mriga' ? passcodeInput : undefined);
-      onRegisterSuccess();
+      if (isRegistered) {
+        const res = await db.loginUser(name, passcodeInput);
+        if (res.success) {
+          onRegisterSuccess();
+        } else {
+          setErrorMsg(res.error || 'Login failed.');
+        }
+      } else {
+        if (!passcodeInput.trim()) {
+          setErrorMsg('Please set a passcode to secure your name.');
+          setIsAuthLoading(false);
+          return;
+        }
+        const res = await db.registerUser(name, passcodeInput);
+        if (res.success) {
+          onRegisterSuccess();
+        } else {
+          setErrorMsg(res.error || 'Registration failed.');
+        }
+      }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Registration failed.');
+      setErrorMsg(err.message || 'Authentication error.');
+    } finally {
+      setIsAuthLoading(false);
     }
   };
+
+  const name = usernameInput.trim();
+  const showStatus = name.length >= 3;
+  const statusColor = name.toLowerCase() === 'mriga' ? 'var(--neon-yellow)' : (isRegistered ? 'var(--neon-cyan)' : 'var(--neon-green)');
+  const statusText = name.toLowerCase() === 'mriga' 
+    ? '👑 ADMIN ACCOUNT DETECTED'
+    : (isCheckLoading 
+        ? '⏳ Checking availability...' 
+        : (isRegistered ? '🔒 Account found! Enter passcode to log in & sync.' : '✅ Name available! Choose a passcode to register.'));
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -109,6 +158,7 @@ const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegis
           placeholder="Challenger Name..."
           className="form-input"
           value={usernameInput}
+          disabled={isAuthLoading}
           onChange={(e) => {
             setUsernameInput(e.target.value);
             if (errorMsg) setErrorMsg('');
@@ -118,28 +168,37 @@ const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegis
             fontSize: '0.95rem',
             textAlign: 'center',
             background: 'var(--bg-color)',
-            border: '2px solid var(--panel-border)',
+            border: `2px solid ${showStatus ? statusColor : 'var(--panel-border)'}`,
+            boxShadow: showStatus ? `0 0 10px ${statusColor}44` : 'none',
             color: 'var(--text-primary)',
             borderRadius: '8px',
             fontWeight: 'bold',
             outline: 'none',
-            transition: 'border-color 0.2s'
+            transition: 'all 0.2s ease-in-out',
+            opacity: isAuthLoading ? 0.6 : 1
           }}
           maxLength={15}
           autoFocus
         />
       </div>
 
-      {showPasscodeField && (
+      {showStatus && (
+        <div style={{ fontSize: '0.78rem', color: statusColor, fontWeight: 'bold', fontFamily: 'var(--font-retro)', textAlign: 'center' }}>
+          {statusText}
+        </div>
+      )}
+
+      {showStatus && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
-          <label style={{ fontSize: '0.78rem', color: 'var(--neon-yellow)', fontWeight: 'bold', fontFamily: 'var(--font-retro)' }}>
-            ADMIN ACCESS PASSCODE
+          <label style={{ fontSize: '0.78rem', color: name.toLowerCase() === 'mriga' ? 'var(--neon-yellow)' : (isRegistered ? 'var(--neon-cyan)' : 'var(--neon-green)'), fontWeight: 'bold', fontFamily: 'var(--font-retro)' }}>
+            {isRegistered ? 'ENTER SECURITY PASSCODE' : 'SET NEW SECURITY PASSCODE'}
           </label>
           <input
             type="password"
-            placeholder="Enter Admin Passcode..."
+            placeholder={isRegistered ? "Enter passcode..." : "Choose passcode..."}
             className="form-input"
             value={passcodeInput}
+            disabled={isAuthLoading}
             onChange={(e) => {
               setPasscodeInput(e.target.value);
               if (errorMsg) setErrorMsg('');
@@ -149,11 +208,12 @@ const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegis
               fontSize: '0.95rem',
               textAlign: 'center',
               background: 'var(--bg-color)',
-              border: '2px solid var(--neon-yellow)',
+              border: `2px solid ${name.toLowerCase() === 'mriga' ? 'var(--neon-yellow)' : (isRegistered ? 'var(--neon-cyan)' : 'var(--neon-green)')}`,
               color: 'var(--text-primary)',
               borderRadius: '8px',
               fontWeight: 'bold',
               outline: 'none',
+              opacity: isAuthLoading ? 0.6 : 1
             }}
             required
           />
@@ -168,17 +228,20 @@ const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegis
 
       <button
         type="submit"
-        className="neon-btn-yellow"
+        disabled={isAuthLoading || isCheckLoading}
+        className={isRegistered ? "neon-btn-cyan" : "neon-btn-yellow"}
         style={{
           height: '46px',
           fontSize: '0.9rem',
           padding: '0 24px',
           fontWeight: '900',
           borderRadius: '8px',
-          boxShadow: 'none'
+          boxShadow: 'none',
+          opacity: (isAuthLoading || isCheckLoading) ? 0.6 : 1,
+          cursor: (isAuthLoading || isCheckLoading) ? 'not-allowed' : 'pointer'
         }}
       >
-        CLAIM PROFILE & START
+        {isAuthLoading ? 'AUTHENTICATING...' : (isRegistered ? 'LOG IN & CHOP' : 'CREATE ACCOUNT & CHOP')}
       </button>
     </form>
   );
@@ -190,10 +253,11 @@ export const App: React.FC = () => {
   const [shopItems, setShopItems] = useState<ShopItem[]>(db.getShop());
   const [achievements, setAchievements] = useState<Achievement[]>(db.getAchievements());
   const [missions, setMissions] = useState<GameMission[]>(db.getMissions());
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(db.getLeaderboard());
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   // Routing State
   const [currentPage, setCurrentPage] = useState<'home' | 'dashboard' | 'shop' | 'leaderboard' | 'missions' | 'settings' | 'admin' | '404'>('home');
+  const [runId, setRunId] = useState(0);
   
   // Scroll tracker for navigation hiding
   const [showNav, setShowNav] = useState(true);
@@ -213,6 +277,14 @@ export const App: React.FC = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+
+  useEffect(() => {
+    if (currentPage === 'leaderboard') {
+      db.getLeaderboard()
+        .then(setLeaderboard)
+        .catch(err => console.error("Error loading leaderboard on page switch:", err));
+    }
+  }, [currentPage]);
 
   // Mobile dropdown state
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -252,11 +324,27 @@ export const App: React.FC = () => {
   useEffect(() => {
     setLoadingTip(tips[Math.floor(Math.random() * tips.length)]);
     
+    let sessionRestored = false;
+    let progressDone = false;
+
+    db.restoreSessionFromCloud()
+      .catch(err => console.error("Session restore error:", err))
+      .finally(() => {
+        sessionRestored = true;
+        refreshState();
+        if (progressDone) {
+          setTimeout(() => setIsLoading(false), 300);
+        }
+      });
+
     const progressInterval = setInterval(() => {
       setLoadingProgress(prev => {
         if (prev >= 100) {
           clearInterval(progressInterval);
-          setTimeout(() => setIsLoading(false), 300);
+          progressDone = true;
+          if (sessionRestored) {
+            setTimeout(() => setIsLoading(false), 300);
+          }
           return 100;
         }
         return prev + Math.floor(Math.random() * 15) + 5;
@@ -277,6 +365,7 @@ export const App: React.FC = () => {
     maxCombo: number;
     coins: number;
     diamonds: number;
+    ticketsEarned?: number;
     xpEarned: number;
     levelsGained: number;
     newHighScore: boolean;
@@ -332,18 +421,19 @@ export const App: React.FC = () => {
     setShopItems(db.getShop());
     setAchievements(db.getAchievements());
     setMissions(db.getMissions());
-    setLeaderboard(db.getLeaderboard());
+    db.getLeaderboard().then(setLeaderboard).catch(err => console.error("Error loading leaderboard:", err));
   };
 
   // Switch to gameplay
   const handlePlayWorld = (worldId: string) => {
+    setRunId(prev => prev + 1);
     setActiveWorld(worldId);
     setLastActiveWorld(worldId);
     setGameStartTime(Date.now());
   };
 
   // Capture Score and submit session
-  const handleGameOver = (score: number, maxCombo: number, coinsCollected: number, diamondsCollected: number) => {
+  const handleGameOver = (score: number, maxCombo: number, coinsCollected: number, diamondsCollected: number, ticketsCollected: number = 0) => {
     if (!activeWorld) return;
 
     const timeSpent = (Date.now() - gameStartTime) / 1000;
@@ -358,6 +448,8 @@ export const App: React.FC = () => {
 
     const finalCoins = Math.floor(coinsCollected * mult);
     const finalDiamonds = Math.floor(diamondsCollected * mult);
+    const finalTickets = ticketsCollected; // Tickets are not multiplied by difficulty
+
     const xpEarned = Math.floor((score + Math.floor(timeSpent * 2)) * mult);
 
     const oldLevel = user.level;
@@ -371,7 +463,8 @@ export const App: React.FC = () => {
       finalCoins,
       finalDiamonds,
       worldName,
-      timeSpent
+      timeSpent,
+      finalTickets
     );
 
     // Save summary details
@@ -380,6 +473,7 @@ export const App: React.FC = () => {
       maxCombo,
       coins: finalCoins,
       diamonds: finalDiamonds,
+      ticketsEarned: finalTickets,
       xpEarned: xpEarned,
       levelsGained: res.levelsGained || 0,
       newHighScore: res.newHighScore || false,
@@ -478,6 +572,7 @@ export const App: React.FC = () => {
         )}
 
         <CanvasGame
+          key={`${activeWorld}_${runId}`}
           worldId={activeWorld}
           characterId={user.equippedCharacter}
           weaponId={user.equippedWeapon}
@@ -534,7 +629,7 @@ export const App: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Earnings</span>
                   <span style={{ fontWeight: 'bold', color: 'var(--neon-yellow)' }}>
-                    🪙 +{gameSummary.coins} {gameSummary.diamonds > 0 ? `💎 +${gameSummary.diamonds}` : ''}
+                    🪙 +{gameSummary.coins} {gameSummary.diamonds > 0 ? `💎 +${gameSummary.diamonds}` : ''} {gameSummary.ticketsEarned && gameSummary.ticketsEarned > 0 ? `🎫 +${gameSummary.ticketsEarned}` : ''}
                   </span>
                 </div>
               </div>
@@ -749,6 +844,9 @@ export const App: React.FC = () => {
             <div className="stat-chip" style={{ color: 'var(--neon-cyan)', padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--neon-cyan)', background: 'rgba(14, 165, 233, 0.08)', borderRadius: '6px' }}>
               <span>💎 {user.diamonds}</span>
             </div>
+            <div className="stat-chip" style={{ color: 'var(--neon-magenta)', padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--neon-magenta)', background: 'rgba(236, 72, 153, 0.08)', borderRadius: '6px' }}>
+              <span>🎫 {user.tickets || 0}</span>
+            </div>
           </div>
 
           {/* Hamburger Menu Trigger (Mobile only) */}
@@ -796,6 +894,9 @@ export const App: React.FC = () => {
               </div>
               <div className="stat-chip" style={{ color: 'var(--neon-cyan)', flex: 1, justifyContent: 'center', background: 'rgba(14, 165, 233, 0.08)', border: '1px solid var(--neon-cyan)', borderRadius: '6px', padding: '6px 12px' }}>
                 <span>💎 {user.diamonds}</span>
+              </div>
+              <div className="stat-chip" style={{ color: 'var(--neon-magenta)', flex: 1, justifyContent: 'center', background: 'rgba(236, 72, 153, 0.08)', border: '1px solid var(--neon-magenta)', borderRadius: '6px', padding: '6px 12px' }}>
+                <span>🎫 {user.tickets || 0}</span>
               </div>
             </div>
           </div>
@@ -947,7 +1048,7 @@ export const App: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Earnings</span>
                 <span style={{ fontWeight: 'bold', color: 'var(--neon-yellow)' }}>
-                  🪙 +{gameSummary.coins} {gameSummary.diamonds > 0 ? `💎 +${gameSummary.diamonds}` : ''}
+                  🪙 +{gameSummary.coins} {gameSummary.diamonds > 0 ? `💎 +${gameSummary.diamonds}` : ''} {gameSummary.ticketsEarned && gameSummary.ticketsEarned > 0 ? `🎫 +${gameSummary.ticketsEarned}` : ''}
                 </span>
               </div>
             </div>

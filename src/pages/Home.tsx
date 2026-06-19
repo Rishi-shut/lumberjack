@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Shield, Globe, Award, Sparkles, ChevronRight, Moon, Wind, Sun } from 'lucide-react';
 import { db, ShopItem, getCharacterEmoji, getCharacterLabel } from '../utils/LocalStorageDB';
+import { sound } from '../utils/AudioEngine';
 
 // Custom Interactive Cinematic HTML5 Video Player
 const fallbackSlides = [
@@ -392,6 +393,104 @@ export const Home: React.FC<HomeProps> = ({
   const worlds = shopItems.filter(item => item.type === 'world');
 
   const [showTrailer, setShowTrailer] = useState(false);
+  const [showAtlas, setShowAtlas] = useState(false);
+  const [atlasFilter, setAtlasFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
+  const [atlasSearch, setAtlasSearch] = useState('');
+
+  const getSectorForWorld = (worldId: string): 'nature' | 'urban' | 'hazard' | 'special' => {
+    if (['world_forest', 'world_autumn', 'world_desert', 'world_zen', 'world_coral'].includes(worldId)) return 'nature';
+    if (['world_city', 'world_volcano', 'world_steampunk', 'world_cyberpunk'].includes(worldId)) return 'urban';
+    if (['world_ice', 'world_wasteland', 'world_haunted', 'world_prehistoric'].includes(worldId)) return 'hazard';
+    if (['world_cyber', 'world_space', 'world_candy', 'world_sky', 'world_arcade'].includes(worldId)) return 'special';
+    return 'nature';
+  };
+
+  const [selectedSector, setSelectedSector] = useState<'nature' | 'urban' | 'hazard' | 'special'>(() => getSectorForWorld(selectedWorldId));
+
+  const activeDaily = (() => {
+    try {
+      const ms = db.getMissions().filter(m => m.type === 'daily');
+      return ms.find(m => !m.claimed) || ms[0];
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  const getDynamicDailyDetails = () => {
+    if (!activeDaily) {
+      return {
+        title: 'The Frozen Timber Trial',
+        description: 'Achieve a score of 180 logs on the Frost Mountain world. You must navigate heavy snow piles and fast branch decay.',
+        rewardText: '+400 COINS',
+        worldId: 'world_ice',
+        buttonText: 'ACCEPT CONTRACT'
+      };
+    }
+
+    const worldNameMap: Record<string, string> = {
+      'Pine Forest': 'world_forest',
+      'Metro Heights': 'world_city',
+      'Glacial Spires': 'world_ice',
+      'Vector Core': 'world_cyber',
+      'Magma Core': 'world_volcano',
+      'Autumn Canopy': 'world_autumn',
+      'Sand Dune Oasis': 'world_desert',
+      'Haunted Graveyard': 'world_haunted',
+      'Space Station': 'world_space',
+      'Toxic Wasteland': 'world_wasteland',
+      'Steampunk Workshop': 'world_steampunk',
+      'Candy Land': 'world_candy',
+      'Zen Garden': 'world_zen',
+      'Coral Reef': 'world_coral',
+      'Cyberpunk Grid': 'world_cyberpunk',
+      'Prehistoric Jungle': 'world_prehistoric',
+      'Sky Sanctuary': 'world_sky',
+      'Retro Arcade': 'world_arcade'
+    };
+
+    let title = activeDaily.title;
+    let description = `Fulfill this daily bulletin contract. Progress: ${activeDaily.current} / ${activeDaily.target}.`;
+    let buttonText = 'ACCEPT CONTRACT';
+    let targetWorldId = 'world_forest';
+
+    if (activeDaily.id.includes('chop')) {
+      const mapName = activeDaily.requiredMap || 'Pine Forest';
+      targetWorldId = worldNameMap[mapName] || 'world_forest';
+      title = `Chop Challenge: ${mapName}`;
+      description = `Fulfill this contract by chopping at least ${activeDaily.target} blocks on the ${mapName} world. Current progress: ${activeDaily.current}/${activeDaily.target}.`;
+    } else if (activeDaily.id.includes('combo')) {
+      title = `Streak Challenge: ${activeDaily.target}x Combo`;
+      description = `Chop rapidly to build up a massive streak and hit a combo multiplier of ${activeDaily.target}x. Current streak: ${activeDaily.current}x.`;
+      targetWorldId = selectedWorldId;
+    } else if (activeDaily.id.includes('coins')) {
+      title = `Collect ${activeDaily.target} Coins`;
+      description = `Collect at least ${activeDaily.target} coins during game sessions. Current progress: ${activeDaily.current}/${activeDaily.target}.`;
+      targetWorldId = selectedWorldId;
+    } else if (activeDaily.id.includes('play')) {
+      title = `Deploy ${activeDaily.target} Matches`;
+      description = `Play ${activeDaily.target} game matches on any sector. Current progress: ${activeDaily.current}/${activeDaily.target}.`;
+      targetWorldId = selectedWorldId;
+    }
+
+    if (activeDaily.current >= activeDaily.target) {
+      buttonText = 'COMPLETE (CLAIM IN BULLETIN)';
+    }
+
+    const rewardParts = [];
+    if (activeDaily.rewardCoins > 0) rewardParts.push(`${activeDaily.rewardCoins} COINS`);
+    if (activeDaily.rewardDiamonds > 0) rewardParts.push(`${activeDaily.rewardDiamonds} GEMS`);
+    const rewardText = `+${rewardParts.join(' & ')}`;
+
+    return {
+      title,
+      description,
+      rewardText,
+      worldId: targetWorldId,
+      buttonText
+    };
+  };
+
+  const dailyDetails = getDynamicDailyDetails();
 
   const selectedWorld = worlds.find(w => w.id === selectedWorldId) || worlds[0];
 
@@ -680,35 +779,39 @@ export const Home: React.FC<HomeProps> = ({
           </div>
           
           <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', fontWeight: '800', marginBottom: '10px' }}>
-            The Frozen Timber Trial
+            {dailyDetails.title}
           </h2>
           
           <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '16px' }}>
-            Achieve a score of **180 logs** on the Frost Mountain world. You must navigate heavy snow piles and fast branch decay.
+            {dailyDetails.description}
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '1.1rem' }}>🪙</span>
-              <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-retro)' }}>+400 COINS</span>
+              <span style={{ fontSize: '1.1rem' }}>🎁</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-retro)' }}>
+                {dailyDetails.rewardText}
+              </span>
             </div>
             
             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>
-              ENDS IN: 12h 44m
+              RESET: DAILY
             </div>
 
             <button 
               className="neon-btn-yellow" 
               style={{ padding: '8px 20px', fontSize: '0.75rem', borderWidth: '2px' }}
               onClick={() => {
-                setSelectedWorldId('world_ice');
+                setSelectedWorldId(dailyDetails.worldId);
+                const targetSector = getSectorForWorld(dailyDetails.worldId);
+                setSelectedSector(targetSector);
                 setTimeout(() => {
                   const deck = document.getElementById('departure-deck');
                   if (deck) deck.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 100);
               }}
             >
-              ACCEPT CONTRACT
+              {dailyDetails.buttonText}
             </button>
           </div>
         </div>
@@ -783,9 +886,66 @@ export const Home: React.FC<HomeProps> = ({
 
       {/* World Selection Grid */}
       <div id="world-selection" style={{ scrollMarginTop: '100px', marginBottom: '40px' }}>
-        <h2 className="retro-title" style={{ fontSize: '1rem', textAlign: 'left', marginBottom: '20px', color: 'var(--neon-yellow)' }}>
-          SELECT NATURE SECTOR
-        </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+          <h2 className="retro-title" style={{ fontSize: '1rem', margin: 0, color: 'var(--neon-yellow)' }}>
+            SELECT MISSION SECTOR
+          </h2>
+          
+          {/* Sector Tabs */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {[
+              { id: 'nature', name: 'NATURE', icon: '🌲' },
+              { id: 'urban', name: 'URBAN', icon: '🏙️' },
+              { id: 'hazard', name: 'HAZARD', icon: '☣️' },
+              { id: 'special', name: 'SPECIAL', icon: '✨' }
+            ].map(sec => {
+              const isSecSelected = selectedSector === sec.id;
+              return (
+                <button
+                  key={sec.id}
+                  onClick={() => setSelectedSector(sec.id as any)}
+                  className="retro-btn"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.62rem',
+                    borderRadius: '4px',
+                    background: isSecSelected ? 'var(--neon-yellow)' : 'var(--panel-bg)',
+                    color: isSecSelected ? '#000000' : 'var(--text-primary)',
+                    borderColor: isSecSelected ? 'var(--neon-yellow)' : 'var(--panel-border)',
+                    boxShadow: isSecSelected ? '0 0 10px rgba(229,169,59,0.25)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span>{sec.icon}</span> {sec.name}
+                </button>
+              );
+            })}
+            
+            <button
+              onClick={() => { sound.playCoin(); setShowAtlas(true); }}
+              className="retro-btn"
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.62rem',
+                borderRadius: '4px',
+                background: 'var(--panel-bg)',
+                color: 'var(--neon-cyan)',
+                borderColor: 'var(--neon-cyan)',
+                boxShadow: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              🗺️ WORLD ATLAS
+            </button>
+          </div>
+        </div>
         
         <div 
           style={{ 
@@ -795,131 +955,226 @@ export const Home: React.FC<HomeProps> = ({
             marginBottom: '35px' 
           }}
         >
-          {worlds.map(world => {
-            let bgGradient = 'linear-gradient(135deg, var(--panel-bg), var(--bg-color))';
-            let accent = 'var(--panel-border)';
-            let weatherIcon = '☀️';
-            let weatherText = 'Sunny Breeze';
+          {worlds
+            .filter(world => {
+              const sectorWorldIds = {
+                nature: ['world_forest', 'world_autumn', 'world_desert', 'world_zen', 'world_coral'],
+                urban: ['world_city', 'world_volcano', 'world_steampunk', 'world_cyberpunk'],
+                hazard: ['world_ice', 'world_wasteland', 'world_haunted', 'world_prehistoric'],
+                special: ['world_cyber', 'world_space', 'world_candy', 'world_sky', 'world_arcade']
+              };
+              return sectorWorldIds[selectedSector]?.includes(world.id);
+            })
+            .map(world => {
+              let bgGradient = 'linear-gradient(135deg, var(--panel-bg), var(--bg-color))';
+              let accent = 'var(--panel-border)';
+              let weatherIcon = '☀️';
+              let weatherText = 'Sunny Breeze';
+              let modifierText = '🪵 Standard Logs';
 
-            if (world.id === 'world_forest') {
-              bgGradient = 'linear-gradient(135deg, #f1faf2, #e2f0e4)';
-              accent = 'var(--neon-green)';
-              weatherIcon = '🍃';
-              weatherText = 'Falling Leaves';
-            }
-            if (world.id === 'world_city') {
-              bgGradient = 'linear-gradient(135deg, #f3f4f6, #e5e7eb)';
-              accent = 'var(--neon-cyan)';
-              weatherIcon = '☁️';
-              weatherText = 'Foggy Forest';
-            }
-            if (world.id === 'world_ice') {
-              bgGradient = 'linear-gradient(135deg, #ecfeff, #cfe2fe)';
-              accent = 'var(--neon-cyan)';
-              weatherIcon = '❄️';
-              weatherText = 'Heavy Blizzard';
-            }
-            if (world.id === 'world_cyber') {
-              bgGradient = 'linear-gradient(135deg, #fdf4ff, #fae8ff)';
-              accent = 'var(--neon-magenta)';
-              weatherIcon = '🔥';
-              weatherText = 'Ember Storm';
-            }
-            if (world.id === 'world_volcano') {
-              bgGradient = 'linear-gradient(135deg, #fff7ed, #ffedd5)';
-              accent = 'var(--neon-red)';
-              weatherIcon = '🌋';
-              weatherText = 'Magma Rain';
-            }
-            if (world.id === 'world_autumn') {
-              bgGradient = 'linear-gradient(135deg, #fffbeb, #fef3c7)';
-              accent = 'var(--neon-yellow)';
-              weatherIcon = '🍂';
-              weatherText = 'Maple Swirl';
-            }
-            if (world.id === 'world_desert') {
-              bgGradient = 'linear-gradient(135deg, #fefcbf, #fef08a)';
-              accent = 'var(--neon-yellow)';
-              weatherIcon = '🏜️';
-              weatherText = 'Heat Shimmer';
-            }
+              if (world.id === 'world_forest') {
+                bgGradient = 'linear-gradient(135deg, #1f3020, #131e13)';
+                accent = 'var(--neon-green)';
+                weatherIcon = '🍃';
+                weatherText = 'Falling Leaves';
+                modifierText = '🪵 Standard Logs';
+              }
+              if (world.id === 'world_city') {
+                bgGradient = 'linear-gradient(135deg, #1b2230, #101520)';
+                accent = 'var(--neon-cyan)';
+                weatherIcon = '☁️';
+                weatherText = 'Heavy Fog';
+                modifierText = '🏢 High-rise Balkons';
+              }
+              if (world.id === 'world_ice') {
+                bgGradient = 'linear-gradient(135deg, #112835, #08151f)';
+                accent = 'var(--neon-cyan)';
+                weatherIcon = '❄️';
+                weatherText = 'Heavy Blizzard';
+                modifierText = '❄️ Freezing Frost';
+              }
+              if (world.id === 'world_cyber') {
+                bgGradient = 'linear-gradient(135deg, #2b172d, #18091a)';
+                accent = 'var(--neon-magenta)';
+                weatherIcon = '🔋';
+                weatherText = 'Neon Surge';
+                modifierText = '🔌 Cyber Grid';
+              }
+              if (world.id === 'world_volcano') {
+                bgGradient = 'linear-gradient(135deg, #301711, #1b0905)';
+                accent = 'var(--neon-red)';
+                weatherIcon = '🌋';
+                weatherText = 'Magma Rain';
+                modifierText = '🌋 Magma Splashes';
+              }
+              if (world.id === 'world_autumn') {
+                bgGradient = 'linear-gradient(135deg, #2c2013, #191007)';
+                accent = 'var(--neon-yellow)';
+                weatherIcon = '🍂';
+                weatherText = 'Maple Swirl';
+                modifierText = '🍁 Floating Leaves';
+              }
+              if (world.id === 'world_desert') {
+                bgGradient = 'linear-gradient(135deg, #2d2a13, #1a1807)';
+                accent = 'var(--neon-yellow)';
+                weatherIcon = '🏜️';
+                weatherText = 'Sandstorm Wind';
+                modifierText = '🏜️ Sandstorm Wind';
+              }
+              if (world.id === 'world_haunted') {
+                bgGradient = 'linear-gradient(135deg, #181024, #0c0617)';
+                accent = '#4de680';
+                weatherIcon = '👻';
+                weatherText = 'Eerie Fog';
+                modifierText = '🕯️ Vignette Dark';
+              }
+              if (world.id === 'world_space') {
+                bgGradient = 'linear-gradient(135deg, #0f172a, #020617)';
+                accent = '#00ffff';
+                weatherIcon = '☄️';
+                weatherText = 'Asteroid Storm';
+                modifierText = '🛸 Asteroid Alert';
+              }
+              if (world.id === 'world_wasteland') {
+                bgGradient = 'linear-gradient(135deg, #142116, #09100a)';
+                accent = '#aee50d';
+                weatherIcon = '🤢';
+                weatherText = 'Acid Rain';
+                modifierText = '☣️ Acid Sludge';
+              }
+              if (world.id === 'world_steampunk') {
+                bgGradient = 'linear-gradient(135deg, #2b1810, #140804)';
+                accent = '#ffaa66';
+                weatherIcon = '💨';
+                weatherText = 'Venting Smog';
+                modifierText = '⚙️ Steampunk Steam';
+              }
+              if (world.id === 'world_candy') {
+                bgGradient = 'linear-gradient(135deg, #351c22, #200d11)';
+                accent = '#e11d48';
+                weatherIcon = '🍬';
+                weatherText = 'Candy Confetti';
+                modifierText = '🍭 Sweet & Sour';
+              }
+              if (world.id === 'world_zen') {
+                bgGradient = 'linear-gradient(135deg, #1c1218, #0f090d)';
+                accent = '#ffb7c5';
+                weatherIcon = '🌸';
+                weatherText = 'Cherry Blossoms';
+                modifierText = '🌸 Serene Peace';
+              }
+              if (world.id === 'world_coral') {
+                bgGradient = 'linear-gradient(135deg, #09212d, #041017)';
+                accent = '#00ffff';
+                weatherIcon = '🫧';
+                weatherText = 'Deep Sea Bubbles';
+                modifierText = '🌊 Sea Resistance';
+              }
+              if (world.id === 'world_cyberpunk') {
+                bgGradient = 'linear-gradient(135deg, #140d21, #0a0612)';
+                accent = '#39ff14';
+                weatherIcon = '⚡';
+                weatherText = 'Neon Rain';
+                modifierText = '🏙️ Glitch Speed';
+              }
+              if (world.id === 'world_prehistoric') {
+                bgGradient = 'linear-gradient(135deg, #2b1c10, #140b05)';
+                accent = '#ff4500';
+                weatherIcon = '🦖';
+                weatherText = 'Volcano Ash';
+                modifierText = '🌋 Dino Tremors';
+              }
+              if (world.id === 'world_sky') {
+                bgGradient = 'linear-gradient(135deg, #18283a, #0a131c)';
+                accent = '#ffd700';
+                weatherIcon = '☁️';
+                weatherText = 'Drifting Clouds';
+                modifierText = '💨 Windy Gusts';
+              }
+              if (world.id === 'world_arcade') {
+                bgGradient = 'linear-gradient(135deg, #09090b, #000000)';
+                accent = '#ff007f';
+                weatherIcon = '👾';
+                weatherText = 'Glitch Pixels';
+                modifierText = '🕹️ High Tempo';
+              }
 
-            const isSelected = selectedWorldId === world.id;
+              const isSelected = selectedWorldId === world.id;
 
-            return (
-              <div 
-                key={world.id}
-                className="material-wood"
-                style={{
-                  background: bgGradient,
-                  borderWidth: '3px',
-                  borderColor: isSelected ? 'var(--neon-yellow)' : (world.unlocked ? accent : 'var(--panel-border)'),
-                  opacity: world.unlocked ? 1 : 0.82,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  minHeight: '220px',
-                  padding: '20px',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  cursor: 'pointer',
-                  boxShadow: isSelected ? '0 0 20px rgba(229,169,59,0.25), 0 6px 12px rgba(0,0,0,0.1)' : '0 6px 12px rgba(0,0,0,0.05)'
-                }}
-                onClick={() => handleWorldSelect(world)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  if (world.unlocked) {
+              return (
+                <div 
+                  key={world.id}
+                  className="material-wood"
+                  style={{
+                    background: bgGradient,
+                    borderWidth: '3px',
+                    borderColor: isSelected ? 'var(--neon-yellow)' : (world.unlocked ? accent : 'var(--panel-border)'),
+                    opacity: world.unlocked ? 1 : 0.82,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    minHeight: '220px',
+                    padding: '20px',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    cursor: 'pointer',
+                    boxShadow: isSelected ? '0 0 20px rgba(229,169,59,0.25), 0 6px 12px rgba(0,0,0,0.1)' : '0 6px 12px rgba(0,0,0,0.05)'
+                  }}
+                  onClick={() => handleWorldSelect(world)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    if (world.unlocked) {
+                      e.currentTarget.style.boxShadow = isSelected 
+                        ? '0 0 25px rgba(229,169,59,0.35), 0 10px 20px rgba(0,0,0,0.1)' 
+                        : `0 10px 20px rgba(0,0,0,0.08), 0 0 10px ${accent}22`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.boxShadow = isSelected 
-                      ? '0 0 25px rgba(229,169,59,0.35), 0 10px 20px rgba(0,0,0,0.1)' 
-                      : `0 10px 20px rgba(0,0,0,0.08), 0 0 10px ${accent}22`;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = isSelected 
-                    ? '0 0 20px rgba(229,169,59,0.25), 0 6px 12px rgba(0,0,0,0.1)' 
-                    : '0 6px 12px rgba(0,0,0,0.05)';
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-                    <h3 className="retro-title" style={{ fontSize: '0.9rem', margin: 0, textShadow: 'none', color: 'var(--text-primary)' }}>
-                      {world.name}
-                    </h3>
-                    {isSelected ? (
-                      <span className="rarity-tag rarity-legendary" style={{ fontSize: '8px', padding: '2px 6px', animation: 'pulseNeon 1.5s infinite' }}>
-                        SELECTED
-                      </span>
-                    ) : world.unlocked ? (
-                      <span style={{ color: 'var(--neon-green)', fontSize: '0.65rem', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>READY</span>
-                    ) : (
-                      <span style={{ color: 'var(--neon-yellow)', fontSize: '0.68rem', fontFamily: 'var(--font-retro)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        🪙 {world.cost}
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', lineHeight: '1.5', margin: '8px 0 16px' }}>
-                    {world.description}
-                  </p>
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                    <span>{weatherIcon}</span>
-                    <span>{weatherText}</span>
+                      ? '0 0 20px rgba(229,169,59,0.25), 0 6px 12px rgba(0,0,0,0.1)' 
+                      : '0 6px 12px rgba(0,0,0,0.05)';
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
+                      <h3 className="retro-title" style={{ fontSize: '0.85rem', margin: 0, textShadow: 'none', color: '#ffffff' }}>
+                        {world.name}
+                      </h3>
+                      {isSelected ? (
+                        <span className="rarity-tag rarity-legendary" style={{ fontSize: '8px', padding: '2px 6px', animation: 'pulseNeon 1.5s infinite' }}>
+                          SELECTED
+                        </span>
+                      ) : world.unlocked ? (
+                        <span style={{ color: 'var(--neon-green)', fontSize: '0.65rem', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>READY</span>
+                      ) : (
+                        <span style={{ color: 'var(--neon-yellow)', fontSize: '0.68rem', fontFamily: 'var(--font-retro)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          🪙 {world.cost}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', lineHeight: '1.5', margin: '8px 0 16px' }}>
+                      {world.description}
+                    </p>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed var(--panel-border)', paddingTop: '10px' }}>
-                    <span className={`rarity-tag rarity-${world.rarity}`} style={{ fontSize: '8px', padding: '2px 6px' }}>
-                      {world.rarity}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                      {world.id === 'world_cyber' ? '🔌 Laser Beams' : (world.id === 'world_ice' ? '🏔️ Slippery Ice' : (world.id === 'world_autumn' ? '🍁 Maple Trunks' : (world.id === 'world_desert' ? '🌴 Palm Trunks' : '🪵 Standard Logs')))}
-                    </span>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>
+                      <span>{weatherIcon}</span>
+                      <span>{weatherText}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed var(--panel-border)', paddingTop: '10px' }}>
+                      <span className={`rarity-tag rarity-${world.rarity}`} style={{ fontSize: '8px', padding: '2px 6px' }}>
+                        {world.rarity}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: accent }}>
+                        {modifierText}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
 
         {/* MISSION DEPARTURE DECK (Control Console) */}
@@ -964,7 +1219,7 @@ export const Home: React.FC<HomeProps> = ({
             <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>SECTOR:</span>
               <span style={{ fontSize: '1.05rem', color: 'var(--text-primary)', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {selectedWorldId === 'world_forest' ? '🌲' : (selectedWorldId === 'world_city' ? '🏙️' : (selectedWorldId === 'world_ice' ? '🏔️' : (selectedWorldId === 'world_cyber' ? '🔌' : '🌋')))} {selectedWorld?.name || 'Forest'}
+                {selectedWorldId === 'world_forest' ? '🌲' : (selectedWorldId === 'world_city' ? '🏙️' : (selectedWorldId === 'world_ice' ? '🏔️' : (selectedWorldId === 'world_cyber' ? '🔌' : (selectedWorldId === 'world_haunted' ? '👻' : (selectedWorldId === 'world_space' ? '☄️' : (selectedWorldId === 'world_wasteland' ? '🤢' : (selectedWorldId === 'world_steampunk' ? '💨' : (selectedWorldId === 'world_candy' ? '🍬' : '🌋'))))))))} {selectedWorld?.name || 'Forest'}
               </span>
             </div>
 
@@ -1153,6 +1408,231 @@ export const Home: React.FC<HomeProps> = ({
           src="https://ik.imagekit.io/xqdg6zpy8/Cinematic_Game_Trailer_Prompt%20(online-video-cutter.com).mp4" 
           onClose={() => setShowTrailer(false)} 
         />
+      )}
+
+      {/* World Atlas Pop-up Modal */}
+      {showAtlas && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(8, 10, 20, 0.98)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'none',
+          padding: '24px'
+        }}>
+          <div className="material-wood animate-glow" style={{
+            maxWidth: '1000px',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            border: '2px solid var(--neon-cyan)',
+            boxShadow: '0 0 25px rgba(6,182,212,0.2)',
+            padding: '28px',
+            background: 'var(--panel-bg)',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '16px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '2rem' }}>🗺️</span>
+                <div style={{ textAlign: 'left' }}>
+                  <h3 className="retro-title" style={{ fontSize: '1.15rem', color: 'var(--neon-cyan)', margin: 0, textShadow: 'none' }}>
+                    WORLD ATLAS DIRECTORY
+                  </h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                    A global directory of all 18 infinite worlds, weather patterns, and environmental modifiers.
+                  </p>
+                </div>
+              </div>
+              <button
+                className="neon-btn-magenta"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold',
+                }}
+                onClick={() => setShowAtlas(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Filter Bar */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'rgba(0,0,0,0.02)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+              {/* Search */}
+              <input
+                type="text"
+                placeholder="Search worlds by name..."
+                className="form-input"
+                style={{ maxWidth: '280px', height: '36px', fontSize: '0.8rem', background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)' }}
+                value={atlasSearch}
+                onChange={(e) => setAtlasSearch(e.target.value)}
+              />
+
+              {/* Toggle status */}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {(['all', 'unlocked', 'locked'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setAtlasFilter(f)}
+                    className="retro-btn"
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '0.65rem',
+                      borderRadius: '4px',
+                      background: atlasFilter === f ? 'var(--neon-yellow)' : 'transparent',
+                      color: atlasFilter === f ? '#000' : 'var(--text-secondary)',
+                      borderColor: atlasFilter === f ? 'var(--neon-yellow)' : 'var(--panel-border)',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      textTransform: 'uppercase'
+                    }}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Scrollable Grid Container */}
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '6px' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                gap: '16px',
+                padding: '2px'
+              }}>
+                {worlds
+                  .filter(world => {
+                    const matchesSearch = world.name.toLowerCase().includes(atlasSearch.toLowerCase());
+                    const matchesFilter = atlasFilter === 'all'
+                      ? true
+                      : (atlasFilter === 'unlocked' ? world.unlocked : !world.unlocked);
+                    return matchesSearch && matchesFilter;
+                  })
+                  .map(world => {
+                    const isSelected = selectedWorldId === world.id;
+                    let bgGrad = 'linear-gradient(135deg, var(--panel-bg), var(--bg-color))';
+                    let wAccent = 'var(--panel-border)';
+                    let wIcon = '🌲';
+                    let wText = 'Sunny Breeze';
+                    let mText = '🪵 Standard Logs';
+                    let sectorName = 'NATURE';
+
+                    const sec = getSectorForWorld(world.id);
+                    if (sec === 'nature') sectorName = '🌲 NATURE';
+                    else if (sec === 'urban') sectorName = '🏙️ URBAN';
+                    else if (sec === 'hazard') sectorName = '☣️ HAZARD';
+                    else if (sec === 'special') sectorName = '✨ SPECIAL';
+
+                    if (world.id === 'world_forest') { bgGrad = 'linear-gradient(135deg, #1f3020, #131e13)'; wAccent = 'var(--neon-green)'; wIcon = '🍃'; wText = 'Falling Leaves'; mText = '🪵 Standard Logs'; }
+                    else if (world.id === 'world_city') { bgGrad = 'linear-gradient(135deg, #1b2230, #101520)'; wAccent = 'var(--neon-cyan)'; wIcon = '☁️'; wText = 'Heavy Fog'; mText = '🏢 High-rise Balkons'; }
+                    else if (world.id === 'world_ice') { bgGrad = 'linear-gradient(135deg, #112835, #08151f)'; wAccent = 'var(--neon-cyan)'; wIcon = '❄️'; wText = 'Heavy Blizzard'; mText = '❄️ Freezing Frost'; }
+                    else if (world.id === 'world_cyber') { bgGrad = 'linear-gradient(135deg, #2b172d, #18091a)'; wAccent = 'var(--neon-magenta)'; wIcon = '🔋'; wText = 'Neon Surge'; mText = '🔌 Cyber Grid'; }
+                    else if (world.id === 'world_volcano') { bgGrad = 'linear-gradient(135deg, #301711, #1b0905)'; wAccent = 'var(--neon-red)'; wIcon = '🌋'; wText = 'Magma Rain'; mText = '🌋 Magma Splashes'; }
+                    else if (world.id === 'world_autumn') { bgGrad = 'linear-gradient(135deg, #2c2013, #191007)'; wAccent = 'var(--neon-yellow)'; wIcon = '🍂'; wText = 'Maple Swirl'; mText = '🍁 Floating Leaves'; }
+                    else if (world.id === 'world_desert') { bgGrad = 'linear-gradient(135deg, #2d2a13, #1a1807)'; wAccent = 'var(--neon-yellow)'; wIcon = '🏜️'; wText = 'Sandstorm Wind'; mText = '🏜️ Sandstorm Wind'; }
+                    else if (world.id === 'world_haunted') { bgGrad = 'linear-gradient(135deg, #181024, #0c0617)'; wAccent = '#4de680'; wIcon = '👻'; wText = 'Eerie Fog'; mText = '🕯️ Vignette Dark'; }
+                    else if (world.id === 'world_space') { bgGrad = 'linear-gradient(135deg, #0f172a, #020617)'; wAccent = '#00ffff'; wIcon = '☄️'; wText = 'Asteroid Storm'; mText = '🛸 Asteroid Alert'; }
+                    else if (world.id === 'world_wasteland') { bgGrad = 'linear-gradient(135deg, #142116, #09100a)'; wAccent = '#aee50d'; wIcon = '🤢'; wText = 'Acid Rain'; mText = '☣️ Acid Sludge'; }
+                    else if (world.id === 'world_steampunk') { bgGrad = 'linear-gradient(135deg, #2b1810, #140804)'; wAccent = '#ffaa66'; wIcon = '💨'; wText = 'Venting Smog'; mText = '⚙️ Steampunk Steam'; }
+                    else if (world.id === 'world_candy') { bgGrad = 'linear-gradient(135deg, #351c22, #200d11)'; wAccent = '#e11d48'; wIcon = '🍬'; wText = 'Candy Confetti'; mText = '🍭 Sweet & Sour'; }
+                    else if (world.id === 'world_zen') { bgGrad = 'linear-gradient(135deg, #1c1218, #0f090d)'; wAccent = '#ffb7c5'; wIcon = '🌸'; wText = 'Cherry Blossoms'; mText = '🌸 Serene Peace'; }
+                    else if (world.id === 'world_coral') { bgGrad = 'linear-gradient(135deg, #09212d, #041017)'; wAccent = '#00ffff'; wIcon = '🫧'; wText = 'Deep Sea Bubbles'; mText = '🌊 Sea Resistance'; }
+                    else if (world.id === 'world_cyberpunk') { bgGrad = 'linear-gradient(135deg, #140d21, #0a0612)'; wAccent = '#39ff14'; wIcon = '⚡'; wText = 'Neon Rain'; mText = '🏙️ Glitch Speed'; }
+                    else if (world.id === 'world_prehistoric') { bgGrad = 'linear-gradient(135deg, #2b1c10, #140b05)'; wAccent = '#ff4500'; wIcon = '🦖'; wText = 'Volcano Ash'; mText = '🌋 Dino Tremors'; }
+                    else if (world.id === 'world_sky') { bgGrad = 'linear-gradient(135deg, #18283a, #0a131c)'; wAccent = '#ffd700'; wIcon = '☁️'; wText = 'Drifting Clouds'; mText = '💨 Windy Gusts'; }
+                    else if (world.id === 'world_arcade') { bgGrad = 'linear-gradient(135deg, #09090b, #000000)'; wAccent = '#ff007f'; wIcon = '👾'; wText = 'Glitch Pixels'; mText = '🕹️ High Tempo'; }
+
+                    return (
+                      <div
+                        key={world.id}
+                        className="material-leather"
+                        style={{
+                          background: bgGrad,
+                          border: `2px solid ${isSelected ? 'var(--neon-yellow)' : (world.unlocked ? wAccent : 'var(--panel-border)')}`,
+                          padding: '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          minHeight: '180px',
+                          cursor: 'pointer',
+                          opacity: world.unlocked ? 1 : 0.85,
+                          boxShadow: isSelected ? '0 0 15px rgba(229,169,59,0.3)' : 'none',
+                          transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
+                          willChange: 'transform',
+                          transform: 'translateZ(0)',
+                          textAlign: 'left'
+                        }}
+                        onClick={() => {
+                          if (world.unlocked) {
+                            handleWorldSelect(world);
+                            setShowAtlas(false);
+                          }
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>
+                              {sectorName}
+                            </span>
+                            <span style={{ fontSize: '1.25rem' }}>{wIcon}</span>
+                          </div>
+                          
+                          <h4 className="retro-title" style={{ fontSize: '0.75rem', margin: '4px 0 2px', textShadow: 'none', color: isSelected ? 'var(--neon-yellow)' : 'var(--text-primary)' }}>
+                            {world.name}
+                          </h4>
+                          
+                          <p style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', margin: '4px 0 8px', lineHeight: '1.4' }}>
+                            {world.description}
+                          </p>
+                        </div>
+
+                        <div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                            <span className="rarity-tag" style={{ fontSize: '0.58rem', padding: '1px 4px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', border: '1px solid var(--panel-border)' }}>
+                              {wText}
+                            </span>
+                            <span className="rarity-tag" style={{ fontSize: '0.58rem', padding: '1px 4px', background: 'rgba(0,0,0,0.2)', color: wAccent, border: `1px solid ${wAccent}33` }}>
+                              {mText}
+                            </span>
+                          </div>
+
+                          {!world.unlocked ? (
+                            <button
+                              className="neon-btn-yellow"
+                              style={{ width: '100%', padding: '6px 0', fontSize: '0.65rem', fontWeight: 'bold' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleWorldSelect(world);
+                              }}
+                            >
+                              🔓 UNLOCK FOR {world.cost} {world.currency === 'coins' ? '🪙' : '💎'}
+                            </button>
+                          ) : (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: 'var(--neon-green)', fontWeight: 'bold' }}>
+                              <span>✓ UNLOCKED</span>
+                              {isSelected && <span style={{ color: 'var(--neon-yellow)' }}>● ACTIVE</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

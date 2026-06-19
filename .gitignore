@@ -25,3 +25,8 @@ dist-ssr
 
 # Detailed implementation readme
 README.md
+
+# Admin Credentials
+src/config/adminConfig.ts
+
+.env
