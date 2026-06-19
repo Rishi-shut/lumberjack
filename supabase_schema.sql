@@ -54,9 +54,9 @@ CREATE POLICY "Allow admin mriga to update any profile"
   ON public.profiles FOR UPDATE
   USING (
     EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE public.profiles.id = auth.uid() 
-      AND LOWER(public.profiles.username) = 'mriga'
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() 
+      AND LOWER(p.username) = 'mriga'
     )
   );
 
