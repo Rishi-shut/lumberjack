@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { Award, Zap, Trophy, Clock, CheckCircle2, User, Sparkles } from 'lucide-react';
-import { db, UserProfile, Achievement } from '../utils/LocalStorageDB';
+import { db, UserProfile, Achievement, LeaderboardEntry } from '../utils/LocalStorageDB';
+import Leaderboard from './Leaderboard';
 
 interface DashboardProps {
   user: UserProfile;
   achievements: Achievement[];
   onEquipChange: () => void;
+  leaderboard?: LeaderboardEntry[];
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   user,
   achievements,
-  onEquipChange
+  onEquipChange,
+  leaderboard
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'stats' | 'achievements'>('stats');
+  const [activeSubTab, setActiveSubTab] = useState<'stats' | 'achievements' | 'leaderboard'>('stats');
 
   // Format seconds to hh:mm:ss
   const formatTime = (secs: number) => {
@@ -234,6 +237,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
             >
               Achievements ({achievements.filter(a => a.unlocked).length} / {achievements.length})
             </button>
+
+            <button 
+              style={{
+                background: 'none',
+                border: 'none',
+                color: activeSubTab === 'leaderboard' ? 'var(--neon-cyan)' : 'var(--text-secondary)',
+                fontFamily: 'var(--font-display)',
+                fontSize: '0.95rem',
+                fontWeight: '900',
+                cursor: 'pointer',
+                borderBottom: '3px solid',
+                borderColor: activeSubTab === 'leaderboard' ? 'var(--neon-cyan)' : 'transparent',
+                paddingBottom: '8px',
+                transition: 'all 0.15s ease'
+              }}
+              onClick={() => setActiveSubTab('leaderboard')}
+            >
+              Leaderboard
+            </button>
           </div>
 
           {/* Sub Tab: STATS */}
@@ -383,6 +405,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Sub Tab: LEADERBOARD */}
+          {activeSubTab === 'leaderboard' && leaderboard && (
+            <div style={{ marginTop: '10px' }}>
+              <Leaderboard user={user} leaderboard={leaderboard} />
             </div>
           )}
         </div>

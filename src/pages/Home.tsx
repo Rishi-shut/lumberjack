@@ -1150,7 +1150,7 @@ export const Home: React.FC<HomeProps> = ({
       {/* Cinematic Trailer Modal */}
       {showTrailer && (
         <CinematicVideoPlayer 
-          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" 
+          src="https://ik.imagekit.io/xqdg6zpy8/Cinematic_Game_Trailer_Prompt%20(online-video-cutter.com).mp4" 
           onClose={() => setShowTrailer(false)} 
         />
       )}

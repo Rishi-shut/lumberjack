@@ -434,6 +434,7 @@ export const App: React.FC = () => {
     { id: 'dashboard', label: 'JOURNAL', icon: <User size={16} /> },
     { id: 'shop', label: 'MERCHANT', icon: <ShoppingCart size={16} /> },
     { id: 'missions', label: 'BULLETIN', icon: <CheckSquare size={16} /> },
+    { id: 'leaderboard', label: 'LEADERBOARD', icon: <Trophy size={16} /> },
     { id: 'settings', label: 'SETTINGS', icon: <SettingsIcon size={16} /> },
     { id: 'admin', label: 'ADMIN', icon: <ShieldAlert size={16} /> }
   ];
@@ -599,6 +600,7 @@ export const App: React.FC = () => {
             user={user}
             achievements={achievements}
             onEquipChange={refreshState}
+            leaderboard={leaderboard}
           />
         )}
         {currentPage === 'shop' && (
