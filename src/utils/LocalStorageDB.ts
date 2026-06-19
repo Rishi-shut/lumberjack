@@ -1,8 +1,8 @@
 // Local Storage Database & Game State Service for Infinite Chop
 // Emulates a backend server using LocalStorage, including seeding, transactions, and admin controls.
 const ADMIN_CONFIG = {
-  username: import.meta.env.VITE_ADMIN_USERNAME || 'mriga',
-  passcode: import.meta.env.VITE_ADMIN_PASSCODE || 'CHOP_ADMIN_99'
+  username: import.meta.env.VITE_ADMIN_USERNAME || '',
+  passcode: import.meta.env.VITE_ADMIN_PASSCODE || ''
 };
 import { supabase } from './supabaseClient';
 
@@ -385,6 +385,9 @@ class LocalStorageDB {
     }
 
     localStorage.setItem(this.key('user'), JSON.stringify(defaultUser));
+    localStorage.setItem(this.key('last_synced_coins'), defaultUser.coins.toString());
+    localStorage.setItem(this.key('last_synced_diamonds'), defaultUser.diamonds.toString());
+    localStorage.setItem(this.key('last_synced_tickets'), (defaultUser.tickets || 0).toString());
     localStorage.setItem(this.key('shop'), JSON.stringify(DEFAULT_SHOP_ITEMS));
     localStorage.setItem(this.key('achievements'), JSON.stringify(DEFAULT_ACHIEVEMENTS));
     localStorage.setItem(this.key('missions'), JSON.stringify(DEFAULT_MISSIONS));
@@ -470,6 +473,9 @@ class LocalStorageDB {
     };
 
     localStorage.setItem(this.key('user'), JSON.stringify(userProfile));
+    localStorage.setItem(this.key('last_synced_coins'), profile.coins.toString());
+    localStorage.setItem(this.key('last_synced_diamonds'), profile.diamonds.toString());
+    localStorage.setItem(this.key('last_synced_tickets'), (profile.tickets || 0).toString());
     if (profile.shop_data) localStorage.setItem(this.key('shop'), JSON.stringify(profile.shop_data));
     if (profile.achievements_data) localStorage.setItem(this.key('achievements'), JSON.stringify(profile.achievements_data));
     if (profile.missions_data) localStorage.setItem(this.key('missions'), JSON.stringify(profile.missions_data));
@@ -543,6 +549,57 @@ class LocalStorageDB {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !session.user) return;
 
+    // Fetch latest profile from DB to check for admin injections/modifications
+    const { data: dbProfile } = await supabase
+      .from('profiles')
+      .select('coins, diamonds, tickets, is_banned')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    if (dbProfile) {
+      // Check if user has been banned by admin
+      if (dbProfile.is_banned && !user.isBanned) {
+        user.isBanned = true;
+        localStorage.setItem(this.key('user'), JSON.stringify(user));
+        this.logTelemetry('sync', `User has been banned by administrator.`);
+        return; // Stop sync
+      }
+
+      // Check for coin, diamond, ticket changes from admin
+      const dbCoins = dbProfile.coins ?? 0;
+      const dbDiamonds = dbProfile.diamonds ?? 0;
+      const dbTickets = dbProfile.tickets ?? 0;
+
+      const lastSyncedCoins = Number(localStorage.getItem(this.key('last_synced_coins')) ?? user.coins);
+      const lastSyncedDiamonds = Number(localStorage.getItem(this.key('last_synced_diamonds')) ?? user.diamonds);
+      const lastSyncedTickets = Number(localStorage.getItem(this.key('last_synced_tickets')) ?? (user.tickets || 0));
+
+      const coinDelta = dbCoins - lastSyncedCoins;
+      const diamondDelta = dbDiamonds - lastSyncedDiamonds;
+      const ticketDelta = dbTickets - lastSyncedTickets;
+
+      let merged = false;
+      if (coinDelta !== 0) {
+        user.coins = Math.max(0, user.coins + coinDelta);
+        user.stats.totalCoinsEarned = Math.max(0, (user.stats.totalCoinsEarned || 0) + coinDelta);
+        merged = true;
+      }
+      if (diamondDelta !== 0) {
+        user.diamonds = Math.max(0, user.diamonds + diamondDelta);
+        user.stats.totalDiamondsEarned = Math.max(0, (user.stats.totalDiamondsEarned || 0) + diamondDelta);
+        merged = true;
+      }
+      if (ticketDelta !== 0) {
+        user.tickets = Math.max(0, (user.tickets || 0) + ticketDelta);
+        merged = true;
+      }
+
+      if (merged) {
+        localStorage.setItem(this.key('user'), JSON.stringify(user));
+        this.logTelemetry('sync', `Admin adjustments detected and merged: Coins(${coinDelta}), Diamonds(${diamondDelta}), Tickets(${ticketDelta})`);
+      }
+    }
+
     const updates = {
       username: user.username,
       highscore: user.highScore,
@@ -579,6 +636,9 @@ class LocalStorageDB {
     if (error) {
       console.error('Error syncing profile to Supabase:', error);
     } else {
+      localStorage.setItem(this.key('last_synced_coins'), user.coins.toString());
+      localStorage.setItem(this.key('last_synced_diamonds'), user.diamonds.toString());
+      localStorage.setItem(this.key('last_synced_tickets'), (user.tickets || 0).toString());
       this.logTelemetry('sync', `Successfully synced game state to cloud.`);
     }
   }
@@ -627,6 +687,9 @@ class LocalStorageDB {
         };
 
         localStorage.setItem(this.key('user'), JSON.stringify(userProfile));
+        localStorage.setItem(this.key('last_synced_coins'), profile.coins.toString());
+        localStorage.setItem(this.key('last_synced_diamonds'), profile.diamonds.toString());
+        localStorage.setItem(this.key('last_synced_tickets'), (profile.tickets || 0).toString());
         if (profile.shop_data) localStorage.setItem(this.key('shop'), JSON.stringify(profile.shop_data));
         if (profile.achievements_data) localStorage.setItem(this.key('achievements'), JSON.stringify(profile.achievements_data));
         if (profile.missions_data) localStorage.setItem(this.key('missions'), JSON.stringify(profile.missions_data));
@@ -1445,6 +1508,9 @@ class LocalStorageDB {
         activeUser.tickets = updates.tickets;
       }
       localStorage.setItem(this.key('user'), JSON.stringify(activeUser));
+      localStorage.setItem(this.key('last_synced_coins'), activeUser.coins.toString());
+      localStorage.setItem(this.key('last_synced_diamonds'), activeUser.diamonds.toString());
+      localStorage.setItem(this.key('last_synced_tickets'), (activeUser.tickets || 0).toString());
     }
 
     return { success: true };
