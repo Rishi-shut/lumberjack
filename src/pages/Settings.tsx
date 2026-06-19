@@ -213,116 +213,120 @@ export const Settings: React.FC<SettingsProps> = ({
       </div>
 
       {/* Cloud Sync account binding (Aged Parchment) */}
-      <div 
-        className="material-paper" 
-        style={{ 
-          marginTop: '32px', 
-          padding: '24px 28px',
-          color: 'var(--text-primary)',
-          boxShadow: 'none'
-        }}
-      >
-        <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--neon-yellow)', textShadow: 'none' }}>
-          <Cloud size={18} style={{ color: 'var(--neon-yellow)' }} /> CLOUD SYNCHRONIZATION LEDGER
-        </h3>
+      {user.username === 'mriga' && (
+        <div 
+          className="material-paper" 
+          style={{ 
+            marginTop: '32px', 
+            padding: '24px 28px',
+            color: 'var(--text-primary)',
+            boxShadow: 'none'
+          }}
+        >
+          <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--neon-yellow)', textShadow: 'none' }}>
+            <Cloud size={18} style={{ color: 'var(--neon-yellow)' }} /> CLOUD SYNCHRONIZATION LEDGER
+          </h3>
 
-        {user.isGuest ? (
-          <form onSubmit={handleLinkAccount} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', marginBottom: '20px' }}>
-            <div style={{ flex: 1, minWidth: '240px' }}>
-              <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Synchronize Email</label>
-              <input 
-                type="email" required placeholder="name@domain.com" className="form-input" 
-                style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
-                value={emailInput} onChange={(e) => setEmailInput(e.target.value)}
-              />
-            </div>
-            
-            <div style={{ flex: 1, minWidth: '240px' }}>
-              <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Challenger Username</label>
-              <input 
-                type="text" required placeholder="Lumbermaster" className="form-input" 
-                style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
-                value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)}
-              />
-            </div>
+          {user.isGuest ? (
+            <form onSubmit={handleLinkAccount} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', marginBottom: '20px' }}>
+              <div style={{ flex: 1, minWidth: '240px' }}>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Synchronize Email</label>
+                <input 
+                  type="email" required placeholder="name@domain.com" className="form-input" 
+                  style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                  value={emailInput} onChange={(e) => setEmailInput(e.target.value)}
+                />
+              </div>
+              
+              <div style={{ flex: 1, minWidth: '240px' }}>
+                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Challenger Username</label>
+                <input 
+                  type="text" required placeholder="Lumbermaster" className="form-input" 
+                  style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                  value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)}
+                />
+              </div>
 
-            <button type="submit" className="neon-btn-cyan" style={{ height: '40px', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem' }}>
-              <Link size={14} /> LINK CONTRACT
-            </button>
-          </form>
-        ) : (
-          <div style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid var(--neon-green)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div>
-              <span style={{ fontSize: '0.62rem', color: 'var(--neon-green)', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>SYNCHRONIZED CONTRACT</span>
-              <h4 style={{ fontWeight: '900', fontSize: '1.05rem', marginTop: '4px', color: 'var(--text-primary)' }}>Linked Hero: {user.username}</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>Backup dispatch email: {user.email}</p>
+              <button type="submit" className="neon-btn-cyan" style={{ height: '40px', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem' }}>
+                <Link size={14} /> LINK CONTRACT
+              </button>
+            </form>
+          ) : (
+            <div style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid var(--neon-green)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <span style={{ fontSize: '0.62rem', color: 'var(--neon-green)', fontFamily: 'var(--font-retro)', fontWeight: 'bold' }}>SYNCHRONIZED CONTRACT</span>
+                <h4 style={{ fontWeight: '900', fontSize: '1.05rem', marginTop: '4px', color: 'var(--text-primary)' }}>Linked Hero: {user.username}</h4>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>Backup dispatch email: {user.email}</p>
+              </div>
+              <span style={{ fontSize: '2.5rem' }}>☁️</span>
             </div>
-            <span style={{ fontSize: '2.5rem' }}>☁️</span>
-          </div>
-        )}
+          )}
 
-        {/* Sync telemetry backup */}
-        <div style={{ padding: '18px', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
-          <h4 style={{ fontSize: '0.85rem', fontWeight: '850', color: 'var(--text-primary)', marginBottom: '12px' }}>Simulate Cloud Backup Operations</h4>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-            <button 
-              className="neon-btn-yellow"
-              style={{ fontSize: '0.7rem', padding: '8px 18px', borderWidth: '2px' }}
-              onClick={() => {
-                const res = db.syncToCloud();
-                if (res.success) {
-                  localStorage.setItem('infinite_chop_cloud_sync_time', res.timestamp);
-                  showAlert('Sync Completed', 'Local game data sync backup completed successfully!');
-                  onSettingsChange();
-                }
-              }}
-            >
-              BACKUP SAVE TO CLOUD
-            </button>
-            
-            <button 
-              className="neon-btn-magenta" 
-              style={{ fontSize: '0.7rem', padding: '8px 18px', borderWidth: '2px' }}
-              onClick={() => {
-                showConfirm(
-                  'Restore Data',
-                  'Wipe current local data and restore from cloud backup?',
-                  () => {
-                    const res = db.loadFromCloudBackup();
-                    if (res.success) {
-                      showAlert('Restore Success', 'Ecosystem data restored successfully from cloud backup!');
-                      onSettingsChange();
-                    } else {
-                      showAlert('Restore Failed', `Restore failed: ${res.error}`);
-                    }
-                  }
-                );
-              }}
-            >
-              RESTORE SAVE FROM CLOUD
-            </button>
-            
-            {setCurrentPage && (
+          {/* Sync telemetry backup */}
+          <div style={{ padding: '18px', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: '850', color: 'var(--text-primary)', marginBottom: '12px' }}>Simulate Cloud Backup Operations</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
               <button 
-                className="neon-btn" 
+                className="neon-btn-yellow"
                 style={{ fontSize: '0.7rem', padding: '8px 18px', borderWidth: '2px' }}
                 onClick={() => {
-                  sound.playCoin();
-                  setCurrentPage('404');
+                  const res = db.syncToCloud();
+                  if (res.success) {
+                    localStorage.setItem('infinite_chop_cloud_sync_time', res.timestamp || '');
+                    showAlert('Sync Completed', 'Local game data sync backup completed successfully!');
+                    onSettingsChange();
+                  } else {
+                    showAlert('Sync Failed', res.error || 'Unknown error.');
+                  }
                 }}
               >
-                TRIGGER 404 SCREEN
+                BACKUP SAVE TO CLOUD
               </button>
-            )}
+              
+              <button 
+                className="neon-btn-magenta" 
+                style={{ fontSize: '0.7rem', padding: '8px 18px', borderWidth: '2px' }}
+                onClick={() => {
+                  showConfirm(
+                    'Restore Data',
+                    'Wipe current local data and restore from cloud backup?',
+                    () => {
+                      const res = db.loadFromCloudBackup();
+                      if (res.success) {
+                        showAlert('Restore Success', 'Ecosystem data restored successfully from cloud backup!');
+                        onSettingsChange();
+                      } else {
+                        showAlert('Restore Failed', `Restore failed: ${res.error}`);
+                      }
+                    }
+                  );
+                }}
+              >
+                RESTORE SAVE FROM CLOUD
+              </button>
+              
+              {setCurrentPage && (
+                <button 
+                  className="neon-btn" 
+                  style={{ fontSize: '0.7rem', padding: '8px 18px', borderWidth: '2px' }}
+                  onClick={() => {
+                    sound.playCoin();
+                    setCurrentPage('404');
+                  }}
+                >
+                  TRIGGER 404 SCREEN
+                </button>
+              )}
 
-            {localStorage.getItem('infinite_chop_cloud_sync_time') && (
-              <span style={{ fontSize: '0.75rem', color: '#7c654e', fontStyle: 'italic', marginLeft: '8px' }}>
-                Last synced: {localStorage.getItem('infinite_chop_cloud_sync_time')}
-              </span>
-            )}
+              {localStorage.getItem('infinite_chop_cloud_sync_time') && (
+                <span style={{ fontSize: '0.75rem', color: '#7c654e', fontStyle: 'italic', marginLeft: '8px' }}>
+                  Last synced: {localStorage.getItem('infinite_chop_cloud_sync_time')}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
     </div>
   );

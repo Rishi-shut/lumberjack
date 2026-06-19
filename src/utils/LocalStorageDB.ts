@@ -204,18 +204,7 @@ const DEFAULT_MISSIONS: GameMission[] = [
   { id: 'mis_w_gold_2000', title: 'Collect 2,000 coins in games', type: 'weekly', target: 2000, current: 0, rewardCoins: 600, rewardDiamonds: 6, claimed: false },
 ];
 
-const SEED_LEADERBOARD: LeaderboardEntry[] = [
-  { username: 'LumberKing_99', country: 'US', score: 1450, maxCombo: 98, coins: 4500, avatar: 'char_viking', title: 'Log Slayer', frame: 'Neon Glow' },
-  { username: 'CyberSlicer', country: 'JP', score: 1220, maxCombo: 84, coins: 3820, avatar: 'char_ninja', title: 'Netrunner', frame: 'Neon Glow' },
-  { username: 'OlafChops', country: 'NO', score: 980, maxCombo: 72, coins: 2900, avatar: 'char_viking', title: 'Timber Titan', frame: 'Frozen Crystal' },
-  { username: 'SamuraiWood', country: 'KR', score: 850, maxCombo: 68, coins: 2100, avatar: 'char_samurai', title: 'Combo Master', frame: 'Standard' },
-  { username: 'ForestGump', country: 'CA', score: 710, maxCombo: 55, coins: 1840, avatar: 'char_lumberjack', title: 'Timber Titan', frame: 'Standard' },
-  { username: 'YetiChop', country: 'RU', score: 620, maxCombo: 49, coins: 1400, avatar: 'char_lumberjack', title: 'Chop Cadet', frame: 'Frozen Crystal' },
-  { username: 'LaserNinja', country: 'DE', score: 550, maxCombo: 40, coins: 1100, avatar: 'char_ninja', title: 'Chop Cadet', frame: 'Standard' },
-  { username: 'CocoNut', country: 'BR', score: 480, maxCombo: 35, coins: 920, avatar: 'char_pirate', title: 'Chop Cadet', frame: 'Standard' },
-  { username: 'Valkyrie_9', country: 'SE', score: 420, maxCombo: 31, coins: 810, avatar: 'char_viking', title: 'Chop Cadet', frame: 'Standard' },
-  { username: 'MinerMax', country: 'AU', score: 350, maxCombo: 28, coins: 640, avatar: 'char_lumberjack', title: 'Chop Cadet', frame: 'Standard' },
-];
+const SEED_LEADERBOARD: LeaderboardEntry[] = [];
 
 class LocalStorageDB {
   private prefix = 'infinite_chop_';
@@ -225,8 +214,8 @@ class LocalStorageDB {
   }
 
   private initDatabase() {
-    // Public Release Self-Healing Reset
-    if (!localStorage.getItem('infinite_chop_launched_v1')) {
+    // Public Release Self-Healing Reset v2
+    if (!localStorage.getItem('infinite_chop_launched_v2')) {
       localStorage.removeItem(this.key('user'));
       localStorage.removeItem(this.key('shop'));
       localStorage.removeItem(this.key('achievements'));
@@ -234,7 +223,7 @@ class LocalStorageDB {
       localStorage.removeItem(this.key('leaderboard'));
       localStorage.removeItem(this.key('settings'));
       localStorage.removeItem(this.key('telemetry'));
-      localStorage.setItem('infinite_chop_launched_v1', 'true');
+      localStorage.setItem('infinite_chop_launched_v2', 'true');
     }
 
     // Check if db already initialized
@@ -378,7 +367,10 @@ class LocalStorageDB {
 
   // --- Profile Actions ---
 
-  public linkAccount(email: string, username: string) {
+  public linkAccount(email: string, username: string, passcode?: string) {
+    if (username.toLowerCase() === 'mriga' && passcode !== 'CHOP_ADMIN_99') {
+      throw new Error('Unauthorized admin account linkage.');
+    }
     const user = this.getUser();
     const oldName = user.username;
     user.isGuest = false;
@@ -389,7 +381,10 @@ class LocalStorageDB {
     this.syncPlayerToLeaderboard(oldName);
   }
 
-  public updateUsername(newUsername: string) {
+  public updateUsername(newUsername: string, passcode?: string) {
+    if (newUsername.toLowerCase() === 'mriga' && passcode !== 'CHOP_ADMIN_99') {
+      throw new Error('Unauthorized admin username change.');
+    }
     const user = this.getUser();
     const oldName = user.username;
     user.username = newUsername;
@@ -403,7 +398,10 @@ class LocalStorageDB {
     return leaderboard.some(entry => entry.username.toLowerCase() === username.toLowerCase());
   }
 
-  public registerUserProfile(username: string) {
+  public registerUserProfile(username: string, passcode?: string) {
+    if (username.toLowerCase() === 'mriga' && passcode !== 'CHOP_ADMIN_99') {
+      throw new Error('Unauthorized admin registration.');
+    }
     const user = this.getUser();
     const oldName = user.username;
     user.username = username;
@@ -730,8 +728,6 @@ class LocalStorageDB {
 
     // Remove duplicates or old usernames of the player to avoid double ranks
     leaderboard = leaderboard.filter(entry => {
-      const isMock = ['LumberKing_99', 'CyberSlicer', 'OlafChops', 'SamuraiWood', 'ForestGump', 'YetiChop', 'LaserNinja', 'CocoNut', 'Valkyrie_9', 'MinerMax'].includes(entry.username);
-      if (isMock) return true;
       if (entry.username === user.username) return false;
       if (oldUsername && entry.username === oldUsername) return false;
       return true;
@@ -762,9 +758,9 @@ class LocalStorageDB {
     const user = this.getUser();
     
     // Aggregate telemetry data for metrics
-    const totalUsers = leaderboard.length + 3; // fake some extra counts
-    const activePlayersToday = Math.ceil(totalUsers * 0.7);
-    const totalRevenueMock = leaderboard.reduce((acc, entry) => acc + (entry.coins * 0.005), 0) + 42.5;
+    const totalUsers = leaderboard.length;
+    const activePlayersToday = leaderboard.length;
+    const totalRevenueMock = leaderboard.reduce((acc, entry) => acc + (entry.coins * 0.005), 0);
 
     return {
       totalRegistrations: totalUsers,
@@ -808,8 +804,11 @@ class LocalStorageDB {
     this.logTelemetry('admin', `Admin RESET all local user and database data to default seed values.`);
   }
 
-  public syncToCloud(): { success: boolean; timestamp: string } {
+  public syncToCloud(): { success: boolean; timestamp?: string; error?: string } {
     const user = this.getUser();
+    if (user.username !== 'mriga') {
+      return { success: false, error: 'Unauthorized: Only the admin can backup to cloud.' };
+    }
     const shop = this.getShop();
     const ach = this.getAchievements();
     const mis = this.getMissions();
@@ -825,6 +824,10 @@ class LocalStorageDB {
   }
 
   public loadFromCloudBackup(): { success: boolean; error?: string } {
+    const user = this.getUser();
+    if (user.username !== 'mriga') {
+      return { success: false, error: 'Unauthorized: Only the admin can restore from cloud.' };
+    }
     const backupStr = localStorage.getItem(this.key('cloud_sync_backup'));
     if (!backupStr) {
       return { success: false, error: 'No cloud backups found on the server!' };

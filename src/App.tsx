@@ -61,7 +61,10 @@ const XpProgressBar: React.FC<{
 
 const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegisterSuccess }) => {
   const [usernameInput, setUsernameInput] = useState('');
+  const [passcodeInput, setPasscodeInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const showPasscodeField = usernameInput.trim().toLowerCase() === 'mriga';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,14 +80,25 @@ const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegis
       return;
     }
 
-    if (db.isUsernameTaken(name)) {
-      setErrorMsg('This username is already taken! Choose another.');
-      return;
+    if (name.toLowerCase() === 'mriga') {
+      if (passcodeInput !== 'CHOP_ADMIN_99') {
+        setErrorMsg('Invalid admin passcode. Only the real admin can register as mriga.');
+        return;
+      }
+    } else {
+      if (db.isUsernameTaken(name)) {
+        setErrorMsg('This username is already taken! Choose another.');
+        return;
+      }
     }
 
     setErrorMsg('');
-    db.registerUserProfile(name);
-    onRegisterSuccess();
+    try {
+      db.registerUserProfile(name, name.toLowerCase() === 'mriga' ? passcodeInput : undefined);
+      onRegisterSuccess();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Registration failed.');
+    }
   };
 
   return (
@@ -115,6 +129,36 @@ const RegistrationForm: React.FC<{ onRegisterSuccess: () => void }> = ({ onRegis
           autoFocus
         />
       </div>
+
+      {showPasscodeField && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
+          <label style={{ fontSize: '0.78rem', color: 'var(--neon-yellow)', fontWeight: 'bold', fontFamily: 'var(--font-retro)' }}>
+            ADMIN ACCESS PASSCODE
+          </label>
+          <input
+            type="password"
+            placeholder="Enter Admin Passcode..."
+            className="form-input"
+            value={passcodeInput}
+            onChange={(e) => {
+              setPasscodeInput(e.target.value);
+              if (errorMsg) setErrorMsg('');
+            }}
+            style={{
+              height: '46px',
+              fontSize: '0.95rem',
+              textAlign: 'center',
+              background: 'var(--bg-color)',
+              border: '2px solid var(--neon-yellow)',
+              color: 'var(--text-primary)',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              outline: 'none',
+            }}
+            required
+          />
+        </div>
+      )}
 
       {errorMsg && (
         <div style={{ color: 'var(--neon-red)', fontSize: '0.78rem', fontWeight: 'bold' }}>
