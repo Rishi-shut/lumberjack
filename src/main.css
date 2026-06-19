@@ -871,3 +871,19 @@ body {
   0%, 100% { box-shadow: 0 0 10px rgba(229,169,59,0.3); }
   50% { box-shadow: 0 0 25px rgba(229,169,59,0.7); }
 }
+
+/* Toast Notification Animations */
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(120%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.toast-slide-in {
+  animation: toastSlideIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}

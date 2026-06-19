@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Home as HomeIcon, User, ShoppingCart, Trophy, Settings as SettingsIcon, ShieldAlert, Coins, Sparkles, LogOut, CheckSquare } from 'lucide-react';
 import { db, UserProfile, ShopItem, Achievement, GameMission, LeaderboardEntry } from './utils/LocalStorageDB';
+import { supabase } from './utils/supabaseClient';
 import { sound } from './utils/AudioEngine';
 import CanvasGame from './components/CanvasGame';
 
@@ -254,6 +255,18 @@ export const App: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>(db.getAchievements());
   const [missions, setMissions] = useState<GameMission[]>(db.getMissions());
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'info' | 'admin' }[]>([]);
+
+  const addToast = (message: string, type: 'success' | 'info' | 'admin' = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    if (type === 'admin') {
+      sound.playChest();
+    }
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4500);
+  };
 
   // Routing State
   const [currentPage, setCurrentPage] = useState<'home' | 'dashboard' | 'shop' | 'leaderboard' | 'missions' | 'settings' | 'admin' | '404'>('home');
@@ -285,6 +298,77 @@ export const App: React.FC = () => {
         .catch(err => console.error("Error loading leaderboard on page switch:", err));
     }
   }, [currentPage]);
+
+  // Listen to profile updates (admin credits/bans) in real-time
+  useEffect(() => {
+    if (!user || user.isGuest) return;
+
+    let channel: any = null;
+
+    const setupRealtime = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) return;
+      const userId = session.user.id;
+
+      channel = supabase
+        .channel(`profile-updates-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${userId}`
+          },
+          (payload) => {
+            const newCoins = payload.new.coins ?? 0;
+            const newDiamonds = payload.new.diamonds ?? 0;
+            const newTickets = payload.new.tickets ?? 0;
+
+            const lastSyncedCoins = Number(localStorage.getItem('infinite_chop_last_synced_coins') ?? user.coins);
+            const lastSyncedDiamonds = Number(localStorage.getItem('infinite_chop_last_synced_diamonds') ?? user.diamonds);
+            const lastSyncedTickets = Number(localStorage.getItem('infinite_chop_last_synced_tickets') ?? (user.tickets || 0));
+
+            const coinDiff = newCoins - lastSyncedCoins;
+            const diamondDiff = newDiamonds - lastSyncedDiamonds;
+            const ticketDiff = newTickets - lastSyncedTickets;
+
+            if (coinDiff > 0 || diamondDiff > 0 || ticketDiff > 0) {
+              const updatedUser = db.getUser();
+              if (coinDiff > 0) {
+                updatedUser.coins += coinDiff;
+                updatedUser.stats.totalCoinsEarned = (updatedUser.stats.totalCoinsEarned || 0) + coinDiff;
+                localStorage.setItem('infinite_chop_last_synced_coins', newCoins.toString());
+                addToast(`🎁 System Admin granted you +${coinDiff.toLocaleString()} Gold Coins!`, 'admin');
+              }
+              if (diamondDiff > 0) {
+                updatedUser.diamonds += diamondDiff;
+                updatedUser.stats.totalDiamondsEarned = (updatedUser.stats.totalDiamondsEarned || 0) + diamondDiff;
+                localStorage.setItem('infinite_chop_last_synced_diamonds', newDiamonds.toString());
+                addToast(`🎁 System Admin granted you +${diamondDiff.toLocaleString()} Crystal Gems!`, 'admin');
+              }
+              if (ticketDiff > 0) {
+                updatedUser.tickets = (updatedUser.tickets || 0) + ticketDiff;
+                localStorage.setItem('infinite_chop_last_synced_tickets', newTickets.toString());
+                addToast(`🎁 System Admin granted you +${ticketDiff.toLocaleString()} Revive Tickets!`, 'admin');
+              }
+
+              localStorage.setItem('infinite_chop_user', JSON.stringify(updatedUser));
+              setUser(updatedUser);
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    setupRealtime();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [user?.username]);
 
   // Mobile dropdown state
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -1164,6 +1248,41 @@ export const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Toast Notification Container */}
+      <div style={{
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        zIndex: 99999,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+        pointerEvents: 'none'
+      }}>
+        {toasts.map(toast => (
+          <div key={toast.id} className="toast-slide-in" style={{
+            background: 'linear-gradient(135deg, #1e2025 0%, #121316 100%)',
+            border: toast.type === 'admin' ? '2px solid var(--neon-yellow)' : '2px solid var(--panel-border)',
+            boxShadow: toast.type === 'admin' ? '0 0 12px rgba(255, 215, 0, 0.25)' : '0 4px 12px rgba(0, 0, 0, 0.4)',
+            color: '#fff',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.8rem',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            pointerEvents: 'auto'
+          }}>
+            <span style={{ fontSize: '1.2rem' }}>
+              {toast.type === 'admin' ? '🎁' : 'ℹ️'}
+            </span>
+            <div>{toast.message}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
