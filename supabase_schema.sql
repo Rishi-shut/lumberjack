@@ -73,3 +73,29 @@ CREATE OR REPLACE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Security Definer function to allow admin 'mriga' to delete user accounts completely
+CREATE OR REPLACE FUNCTION public.delete_user_by_admin(target_username TEXT)
+RETURNS void AS $$
+DECLARE
+  target_user_id UUID;
+BEGIN
+  -- 1. Verify that the caller is indeed the admin 'mriga'
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = auth.uid() AND LOWER(p.username) = 'mriga'
+  ) THEN
+    RAISE EXCEPTION 'Access Denied: Only admin mriga can delete accounts.';
+  END IF;
+
+  -- 2. Find the target user ID
+  SELECT id INTO target_user_id FROM public.profiles WHERE username = target_username;
+  
+  IF target_user_id IS NULL THEN
+    RAISE EXCEPTION 'Player not found.';
+  END IF;
+
+  -- 3. Delete from auth.users (this will cascade and delete the profile too)
+  DELETE FROM auth.users WHERE id = target_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -4249,6 +4249,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     if ('touches' in e) {
       // touch event
       if (e.touches.length === 0) return;
+      e.preventDefault(); // Prevent double action click emulation on mobile
       const rect = canvas.getBoundingClientRect();
       clickX = e.touches[0].clientX - rect.left;
     } else {

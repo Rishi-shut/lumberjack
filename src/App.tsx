@@ -321,6 +321,9 @@ export const App: React.FC = () => {
             filter: `id=eq.${userId}`
           },
           (payload) => {
+            const isSyncing = localStorage.getItem('infinite_chop_sync_in_progress') === 'true';
+            if (isSyncing) return;
+
             const newCoins = payload.new.coins ?? 0;
             const newDiamonds = payload.new.diamonds ?? 0;
             const newTickets = payload.new.tickets ?? 0;

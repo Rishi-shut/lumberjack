@@ -549,97 +549,103 @@ class LocalStorageDB {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !session.user) return;
 
-    // Fetch latest profile from DB to check for admin injections/modifications
-    const { data: dbProfile } = await supabase
-      .from('profiles')
-      .select('coins, diamonds, tickets, is_banned')
-      .eq('id', session.user.id)
-      .maybeSingle();
+    localStorage.setItem('infinite_chop_sync_in_progress', 'true');
 
-    if (dbProfile) {
-      // Check if user has been banned by admin
-      if (dbProfile.is_banned && !user.isBanned) {
-        user.isBanned = true;
-        localStorage.setItem(this.key('user'), JSON.stringify(user));
-        this.logTelemetry('sync', `User has been banned by administrator.`);
-        return; // Stop sync
+    try {
+      // Fetch latest profile from DB to check for admin injections/modifications
+      const { data: dbProfile } = await supabase
+        .from('profiles')
+        .select('coins, diamonds, tickets, is_banned')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (dbProfile) {
+        // Check if user has been banned by admin
+        if (dbProfile.is_banned && !user.isBanned) {
+          user.isBanned = true;
+          localStorage.setItem(this.key('user'), JSON.stringify(user));
+          this.logTelemetry('sync', `User has been banned by administrator.`);
+          return; // Stop sync
+        }
+
+        // Check for coin, diamond, ticket changes from admin
+        const dbCoins = dbProfile.coins ?? 0;
+        const dbDiamonds = dbProfile.diamonds ?? 0;
+        const dbTickets = dbProfile.tickets ?? 0;
+
+        const lastSyncedCoins = Number(localStorage.getItem(this.key('last_synced_coins')) ?? user.coins);
+        const lastSyncedDiamonds = Number(localStorage.getItem(this.key('last_synced_diamonds')) ?? user.diamonds);
+        const lastSyncedTickets = Number(localStorage.getItem(this.key('last_synced_tickets')) ?? (user.tickets || 0));
+
+        const coinDelta = dbCoins - lastSyncedCoins;
+        const diamondDelta = dbDiamonds - lastSyncedDiamonds;
+        const ticketDelta = dbTickets - lastSyncedTickets;
+
+        let merged = false;
+        if (coinDelta !== 0) {
+          user.coins = Math.max(0, user.coins + coinDelta);
+          user.stats.totalCoinsEarned = Math.max(0, (user.stats.totalCoinsEarned || 0) + coinDelta);
+          merged = true;
+        }
+        if (diamondDelta !== 0) {
+          user.diamonds = Math.max(0, user.diamonds + diamondDelta);
+          user.stats.totalDiamondsEarned = Math.max(0, (user.stats.totalDiamondsEarned || 0) + diamondDelta);
+          merged = true;
+        }
+        if (ticketDelta !== 0) {
+          user.tickets = Math.max(0, (user.tickets || 0) + ticketDelta);
+          merged = true;
+        }
+
+        if (merged) {
+          localStorage.setItem(this.key('user'), JSON.stringify(user));
+          this.logTelemetry('sync', `Admin adjustments detected and merged: Coins(${coinDelta}), Diamonds(${diamondDelta}), Tickets(${ticketDelta})`);
+        }
       }
 
-      // Check for coin, diamond, ticket changes from admin
-      const dbCoins = dbProfile.coins ?? 0;
-      const dbDiamonds = dbProfile.diamonds ?? 0;
-      const dbTickets = dbProfile.tickets ?? 0;
+      const updates = {
+        username: user.username,
+        highscore: user.highScore,
+        max_combo: user.maxCombo,
+        coins: user.coins,
+        diamonds: user.diamonds,
+        tickets: user.tickets || 0,
+        level: user.level,
+        xp: user.xp,
+        xp_needed: user.xpNeeded,
+        equipped_character: user.equippedCharacter,
+        equipped_weapon: user.equippedWeapon,
+        equipped_trail: user.equippedTrail,
+        equipped_title: user.equippedTitle,
+        equipped_badge: user.equippedBadge,
+        equipped_frame: user.equippedFrame,
+        last_daily_claim: user.lastDailyClaim,
+        has_premium_pass: user.hasPremiumPass,
+        claimed_free_tiers: user.claimedFreeTiers || [],
+        claimed_premium_tiers: user.claimedPremiumTiers || [],
+        stats_data: user.stats,
+        shop_data: this.getShop(),
+        achievements_data: this.getAchievements(),
+        missions_data: this.getMissions(),
+        settings_data: this.getSettings(),
+        telemetry_data: this.getTelemetry()
+      };
 
-      const lastSyncedCoins = Number(localStorage.getItem(this.key('last_synced_coins')) ?? user.coins);
-      const lastSyncedDiamonds = Number(localStorage.getItem(this.key('last_synced_diamonds')) ?? user.diamonds);
-      const lastSyncedTickets = Number(localStorage.getItem(this.key('last_synced_tickets')) ?? (user.tickets || 0));
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', session.user.id);
 
-      const coinDelta = dbCoins - lastSyncedCoins;
-      const diamondDelta = dbDiamonds - lastSyncedDiamonds;
-      const ticketDelta = dbTickets - lastSyncedTickets;
-
-      let merged = false;
-      if (coinDelta !== 0) {
-        user.coins = Math.max(0, user.coins + coinDelta);
-        user.stats.totalCoinsEarned = Math.max(0, (user.stats.totalCoinsEarned || 0) + coinDelta);
-        merged = true;
+      if (error) {
+        console.error('Error syncing profile to Supabase:', error);
+      } else {
+        localStorage.setItem(this.key('last_synced_coins'), user.coins.toString());
+        localStorage.setItem(this.key('last_synced_diamonds'), user.diamonds.toString());
+        localStorage.setItem(this.key('last_synced_tickets'), (user.tickets || 0).toString());
+        this.logTelemetry('sync', `Successfully synced game state to cloud.`);
       }
-      if (diamondDelta !== 0) {
-        user.diamonds = Math.max(0, user.diamonds + diamondDelta);
-        user.stats.totalDiamondsEarned = Math.max(0, (user.stats.totalDiamondsEarned || 0) + diamondDelta);
-        merged = true;
-      }
-      if (ticketDelta !== 0) {
-        user.tickets = Math.max(0, (user.tickets || 0) + ticketDelta);
-        merged = true;
-      }
-
-      if (merged) {
-        localStorage.setItem(this.key('user'), JSON.stringify(user));
-        this.logTelemetry('sync', `Admin adjustments detected and merged: Coins(${coinDelta}), Diamonds(${diamondDelta}), Tickets(${ticketDelta})`);
-      }
-    }
-
-    const updates = {
-      username: user.username,
-      highscore: user.highScore,
-      max_combo: user.maxCombo,
-      coins: user.coins,
-      diamonds: user.diamonds,
-      tickets: user.tickets || 0,
-      level: user.level,
-      xp: user.xp,
-      xp_needed: user.xpNeeded,
-      equipped_character: user.equippedCharacter,
-      equipped_weapon: user.equippedWeapon,
-      equipped_trail: user.equippedTrail,
-      equipped_title: user.equippedTitle,
-      equipped_badge: user.equippedBadge,
-      equipped_frame: user.equippedFrame,
-      last_daily_claim: user.lastDailyClaim,
-      has_premium_pass: user.hasPremiumPass,
-      claimed_free_tiers: user.claimedFreeTiers || [],
-      claimed_premium_tiers: user.claimedPremiumTiers || [],
-      stats_data: user.stats,
-      shop_data: this.getShop(),
-      achievements_data: this.getAchievements(),
-      missions_data: this.getMissions(),
-      settings_data: this.getSettings(),
-      telemetry_data: this.getTelemetry()
-    };
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', session.user.id);
-
-    if (error) {
-      console.error('Error syncing profile to Supabase:', error);
-    } else {
-      localStorage.setItem(this.key('last_synced_coins'), user.coins.toString());
-      localStorage.setItem(this.key('last_synced_diamonds'), user.diamonds.toString());
-      localStorage.setItem(this.key('last_synced_tickets'), (user.tickets || 0).toString());
-      this.logTelemetry('sync', `Successfully synced game state to cloud.`);
+    } finally {
+      localStorage.setItem('infinite_chop_sync_in_progress', 'false');
     }
   }
 
@@ -1595,6 +1601,25 @@ class LocalStorageDB {
       localStorage.setItem(this.key('shop'), JSON.stringify(DEFAULT_SHOP_ITEMS));
       localStorage.setItem(this.key('achievements'), JSON.stringify(DEFAULT_ACHIEVEMENTS));
       localStorage.setItem(this.key('missions'), JSON.stringify(DEFAULT_MISSIONS));
+    }
+
+    return { success: true };
+  }
+
+  public async adminDeleteUserAccount(targetUsername: string): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase.rpc('delete_user_by_admin', { target_username: targetUsername });
+
+    if (error) {
+      console.error('Error deleting player account:', error);
+      return { success: false, error: error.message };
+    }
+
+    this.logTelemetry('admin', `Admin DELETED account completely for player ${targetUsername}`);
+
+    // If target is active user, log out the current user session
+    const activeUser = this.getUser();
+    if (activeUser.username.toLowerCase() === targetUsername.toLowerCase()) {
+      this.logoutUser();
     }
 
     return { success: true };

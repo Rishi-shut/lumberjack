@@ -113,6 +113,25 @@ export const Admin: React.FC<AdminProps> = ({
     );
   };
 
+  const handleDeletePlayerAccount = () => {
+    if (!selectedPlayerUsername) return;
+    showConfirm(
+      'DANGER: DELETE ACCOUNT COMPLETELY',
+      `This will permanently purge the account of ${selectedPlayerUsername} (both their login credentials and all game data) from the database. This action is irreversible.`,
+      () => {
+        db.adminDeleteUserAccount(selectedPlayerUsername).then(res => {
+          if (res.success) {
+            showAlert('Account Deleted', `Successfully deleted account ${selectedPlayerUsername} completely.`);
+            loadStats();
+            onAdminChange();
+          } else {
+            showAlert('Error', res.error || 'Delete account failed.');
+          }
+        });
+      }
+    );
+  };
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 12px' }}>
       
@@ -286,6 +305,22 @@ export const Admin: React.FC<AdminProps> = ({
                   disabled={!selectedPlayerUsername}
                 >
                   <RefreshCcw size={12} /> SHRED
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#121316', border: '2px solid #383c44', borderRadius: '8px' }}>
+                <div>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0, color: 'var(--neon-red)' }}>Delete Account Completely</h4>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>Permanently purges the player credentials and data from database.</p>
+                </div>
+                
+                <button 
+                  className="neon-btn-magenta"
+                  style={{ padding: '6px 14px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px', borderWidth: '2px', borderColor: 'var(--neon-red)', color: 'var(--neon-red)' }}
+                  onClick={handleDeletePlayerAccount}
+                  disabled={!selectedPlayerUsername}
+                >
+                  DELETE
                 </button>
               </div>
             </div>
