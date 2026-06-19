@@ -1,6 +1,9 @@
 // Local Storage Database & Game State Service for Infinite Chop
 // Emulates a backend server using LocalStorage, including seeding, transactions, and admin controls.
-import { ADMIN_CONFIG } from '../config/adminConfig';
+const ADMIN_CONFIG = {
+  username: import.meta.env.VITE_ADMIN_USERNAME || 'mriga',
+  passcode: import.meta.env.VITE_ADMIN_PASSCODE || 'CHOP_ADMIN_99'
+};
 import { supabase } from './supabaseClient';
 
 export interface UserProfile {
