@@ -128,9 +128,21 @@ export const Shop: React.FC<ShopProps> = ({
         onPurchaseComplete();
       }
     } else {
+      // Pre-check funds before showing confirm dialog
+      const isCoins = item.currency === 'coins';
+      const hasEnough = isCoins ? user.coins >= item.cost : user.diamonds >= item.cost;
+      
+      if (!hasEnough) {
+        showAlert(
+          'Insufficient Funds',
+          `You need ${item.cost} ${isCoins ? 'Coins' : 'Diamonds'} to unlock ${item.name}, but you only have ${isCoins ? user.coins : user.diamonds}.`
+        );
+        return;
+      }
+
       showConfirm(
         'Purchase Item',
-        `Unlock ${item.name} for ${item.cost} ${item.currency === 'coins' ? 'Coins' : 'Gems'}?`,
+        `Unlock ${item.name} for ${item.cost} ${isCoins ? 'Coins' : 'Diamonds'}?`,
         () => {
           const res = db.purchaseShopItem(item.id);
           if (res.success) {

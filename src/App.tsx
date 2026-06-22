@@ -539,8 +539,10 @@ export const App: React.FC = () => {
       message,
       isConfirm: true,
       onConfirm: () => {
-        onConfirm();
         setCustomModal(prev => ({ ...prev, isOpen: false }));
+        setTimeout(() => {
+          onConfirm();
+        }, 0);
       }
     });
   };
