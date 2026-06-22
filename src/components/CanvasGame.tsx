@@ -12,6 +12,7 @@ const getTransparentCanvas = (src: string): HTMLCanvasElement | HTMLImageElement
   let currentSrc = src;
   if (src.includes('.svg')) {
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     transparentImageCache[src] = img;
     img.onload = () => {
       // SVG loaded
@@ -32,6 +33,7 @@ const getTransparentCanvas = (src: string): HTMLCanvasElement | HTMLImageElement
   transparentImageCache[src] = canvas;
 
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.onload = () => {
     canvas.width = img.width || 64;
     canvas.height = img.height || 64;
