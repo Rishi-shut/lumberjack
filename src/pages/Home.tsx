@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, Shield, Globe, Award, Sparkles, ChevronRight, Moon, Wind, Sun } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Globe, Award, ChevronRight, Moon, Wind, Sun } from 'lucide-react';
 import { db, ShopItem, getCharacterEmoji, getCharacterLabel } from '../utils/LocalStorageDB';
 import { sound } from '../utils/AudioEngine';
 import { TransparentImage } from '../components/TransparentImage';
@@ -1327,130 +1327,33 @@ export const Home: React.FC<HomeProps> = ({
 
 
 
-      {/* Info Sections: Updates & Highlights */}
-      <div className="grid-2" style={{ marginBottom: '60px' }}>
-        {/* Updates styled in Parchment Paper */}
-        <div className="material-paper" style={{ padding: '24px', color: 'var(--text-primary)', boxShadow: '0 8px 24px rgba(0,0,0,0.03)' }}>
-          <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '10px', color: 'var(--neon-yellow)', textShadow: 'none' }}>
-            SCROLL OF CHRONICLES (UPDATES)
-          </h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ borderBottom: '1px dashed var(--panel-border)', paddingBottom: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: '850', color: 'var(--text-primary)' }}>The Timber Trials Event</h4>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>Today</span>
-              </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                Chop frosted pines, claim multiplier awards, and unlock rare viking and samurai cosmetics from the merchant!
-              </p>
-            </div>
-            
-            <div style={{ borderBottom: '1px dashed var(--panel-border)', paddingBottom: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: '850', color: 'var(--text-primary)' }}>Update 1.4: Slate Physics</h4>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>Yesterday</span>
-              </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                We've added smooth linear branch slide interpolations to make high-rate chopping feel fluid even at 60fps.
-              </p>
-            </div>
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: '850', color: 'var(--text-primary)' }}>PWA Synchronization</h4>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>3 days ago</span>
-              </div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                Your statistics, shop achievements, and inventory items are cached locally and synchronized instantly.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Feature Highlights styled in textured Canvas */}
-        <div className="material-canvas" style={{ padding: '24px', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '10px', color: 'var(--text-secondary)', textShadow: 'none' }}>
-              REWARDS & INTEGRITY DESK
-            </h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '14px', marginBottom: '18px' }}>
-              <div style={{ color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
-                <Sun size={18} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-primary)' }}>Seasonal Tournaments</h4>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                  Compete with lumberjacks globally on the Rankings tab to secure trophies and copper medals.
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '14px', marginBottom: '18px' }}>
-              <div style={{ color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
-                <Sparkles size={18} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-primary)' }}>Daily Contracts</h4>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                  Complete challenges to earn coins to buy legendary woodcutters and axes.
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '14px' }}>
-              <div style={{ color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
-                <Shield size={18} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.88rem', fontWeight: '800', color: 'var(--text-primary)' }}>Protected Telemetry</h4>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                  Security systems verify client-side chop times to maintain fair competition.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="material-leather" style={{ marginTop: '24px', padding: '10px', textAlign: 'center', color: 'var(--neon-yellow)' }}>
-            <span style={{ fontSize: '0.72rem', fontFamily: 'var(--font-retro)' }}>
-              EQUIPPED HERO: {equippedChar.replace('char_', '').toUpperCase()}
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Illustrated Forest Night Footer with Fireflies */}
-      <footer style={{
-        margin: '80px -12px 0',
-        padding: '60px 24px 80px',
-        background: 'linear-gradient(180deg, transparent 0%, var(--bg-color) 100%)',
-        borderTop: '3px solid var(--panel-border)',
-        position: 'relative',
-        overflow: 'hidden',
-        textAlign: 'center'
-      }}>
+      <footer className="game-footer">
+        {/* Fireflies floating container */}
+        <div className="footer-fireflies">
+          <div className="firefly" style={{ left: '10%', top: '25%', animationDelay: '0s', animationDuration: '6s' }}></div>
+          <div className="firefly" style={{ left: '35%', top: '65%', animationDelay: '1.2s', animationDuration: '7.5s' }}></div>
+          <div className="firefly" style={{ left: '55%', top: '35%', animationDelay: '2.4s', animationDuration: '6.8s' }}></div>
+          <div className="firefly" style={{ left: '75%', top: '75%', animationDelay: '0.6s', animationDuration: '5.2s' }}></div>
+          <div className="firefly" style={{ left: '90%', top: '45%', animationDelay: '1.8s', animationDuration: '8s' }}></div>
+        </div>
+
         {/* Silhouetted Trees illustration */}
-        <div style={{
-          fontSize: '2.5rem',
-          opacity: 0.1,
-          letterSpacing: '12px',
-          marginBottom: '20px',
-          userSelect: 'none',
-          color: '#5c8c5c'
-        }}>
+        <div className="footer-trees">
           🌲🌲🌲🌲🌲🌲🌲🌲🌲🌲🌲
         </div>
         
-        <h3 className="retro-title" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+        <h3 className="footer-title">
           INFINITE CHOP
         </h3>
         
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
+        <p className="footer-desc">
           A premium retro woodcutting ecosystem. Handcrafted by design enthusiasts.
         </p>
         
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '28px' }}>
+        <div className="footer-links-container">
           <a 
             href="#" 
             onClick={(e) => { 
@@ -1460,11 +1363,11 @@ export const Home: React.FC<HomeProps> = ({
                 content: 'Welcome to Antigravity Studios!\n\nWe are a specialized group of developers, designers, and AI models handcrafting premium retro indie games. Our goal is to bring modern performance to pixel art game loops.\n\nDeveloped in cooperation with the DeepMind team.' 
               }); 
             }} 
-            style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}
+            className="footer-link"
           >
             Studio Hub
           </a>
-          <span style={{ opacity: 0.3 }}>|</span>
+          <span className="footer-divider">|</span>
           <a 
             href="#" 
             onClick={(e) => { 
@@ -1474,11 +1377,11 @@ export const Home: React.FC<HomeProps> = ({
                 content: 'Infinite Chop Press Kit.\n\nFor inquiries, media assets, review copy credentials, or developer interviews, contact press@antigravitystudios.io.\n\nAll custom double-bitted axe icons, pixel characters, and retro sound tracks are free to use for streaming and reviews.' 
               }); 
             }} 
-            style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}
+            className="footer-link"
           >
             Press Deck
           </a>
-          <span style={{ opacity: 0.3 }}>|</span>
+          <span className="footer-divider">|</span>
           <a 
             href="#" 
             onClick={(e) => { 
@@ -1488,13 +1391,13 @@ export const Home: React.FC<HomeProps> = ({
                 content: 'Privacy is paramount.\n\nInfinite Chop uses a secure, local-first database caching system integrated with Supabase auth. We do not track or sell player telemetry. Telemetry logs are strictly stored locally for anti-cheat verification. Your data is 100% secure.' 
               }); 
             }} 
-            style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}
+            className="footer-link"
           >
             Privacy Policy
           </a>
         </div>
         
-        <div style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>
+        <div className="footer-version">
           BUILD v1.4.2-STABLE | DB MODE: LOCAL-FIRST
         </div>
       </footer>
@@ -1514,11 +1417,12 @@ export const Home: React.FC<HomeProps> = ({
         }}
         onClick={() => setFooterPopup(null)}
         >
-          <div className="game-card material-wood" style={{
+          <div className="game-card" style={{
             maxWidth: '500px',
             width: '100%',
-            border: '2.5px solid var(--neon-cyan)',
-            boxShadow: '0 0 25px rgba(14, 165, 233, 0.35)',
+            background: 'linear-gradient(135deg, #1b120c 0%, #0f0a06 100%)',
+            border: '3px solid var(--neon-cyan)',
+            boxShadow: '0 0 30px rgba(14, 165, 233, 0.45), inset 0 2px 10px rgba(255,255,255,0.05)',
             padding: '28px',
             borderRadius: '12px',
             textAlign: 'center',
@@ -1529,7 +1433,7 @@ export const Home: React.FC<HomeProps> = ({
             <h2 className="retro-title" style={{ color: 'var(--neon-cyan)', fontSize: '1.1rem', marginBottom: '16px' }}>
               {footerPopup.title}
             </h2>
-            <p style={{ color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: '1.6', marginBottom: '24px', whiteSpace: 'pre-line' }}>
+            <p style={{ color: '#d1c4b9', fontSize: '0.88rem', lineHeight: '1.6', marginBottom: '24px', whiteSpace: 'pre-line', textShadow: '1px 1px 1px rgba(0,0,0,0.5)' }}>
               {footerPopup.content}
             </p>
             <button 
