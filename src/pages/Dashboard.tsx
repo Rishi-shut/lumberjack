@@ -385,24 +385,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {/* Progress & Reward bar */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                      <span>Progress: {ach.current} / {ach.target}</span>
+                      {ach.unlocked ? (
+                        <span style={{ color: 'var(--neon-green)', fontWeight: 'bold' }}>Completed ✓</span>
+                      ) : (
+                        <span>Progress: {ach.current} / {ach.target}</span>
+                      )}
                       <span style={{ fontWeight: 'bold' }}>
                         Reward: {ach.rewardCoins > 0 ? `🪙 ${ach.rewardCoins}` : ''} {ach.rewardDiamonds > 0 ? `💎 ${ach.rewardDiamonds}` : ''}
+                        {ach.unlocked && <span style={{ color: 'var(--neon-green)', marginLeft: '6px' }}>(Claimed)</span>}
                       </span>
                     </div>
                     
-                    <div className="progress-bar-container" style={{ height: '6px', background: 'rgba(0, 0, 0, 0.03)', border: '1px solid var(--panel-border)' }}>
-                      <div 
-                        className="progress-bar-fill" 
-                        style={{ 
-                          width: `${Math.min(100, (ach.current / ach.target) * 100)}%`,
-                          backgroundColor: ach.unlocked ? 'var(--neon-green)' : 'var(--neon-cyan)' 
-                        }}
-                      ></div>
-                    </div>
+                    {!ach.unlocked && (
+                      <div className="progress-bar-container" style={{ height: '6px', background: 'rgba(0, 0, 0, 0.03)', border: '1px solid var(--panel-border)' }}>
+                        <div 
+                          className="progress-bar-fill" 
+                          style={{ 
+                            width: `${Math.min(100, (ach.current / ach.target) * 100)}%`,
+                            backgroundColor: 'var(--neon-cyan)' 
+                          }}
+                        />
+                      </div>
+                    )}
                     
-                    {ach.unlockedAt && (
-                      <span style={{ fontSize: '0.65rem', color: '#7c654e', textAlign: 'right', fontStyle: 'italic' }}>
+                    {ach.unlocked && ach.unlockedAt && (
+                      <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', opacity: 0.6, textAlign: 'right', fontStyle: 'italic', marginTop: '2px' }}>
                         Unlocked: {new Date(ach.unlockedAt).toLocaleDateString()}
                       </span>
                     )}

@@ -31,3 +31,6 @@ src/config/adminConfig.ts
 
 .env
 .vercel
+
+# CDN Images
+public/images/

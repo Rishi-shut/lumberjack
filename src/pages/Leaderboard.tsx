@@ -2,6 +2,19 @@ import React, { useState } from 'react';
 import { Search, Globe, Award, Trophy, Shield } from 'lucide-react';
 import { db, LeaderboardEntry, UserProfile, getCharacterEmoji } from '../utils/LocalStorageDB';
 
+const getFlagEmoji = (countryCode: string) => {
+  if (!countryCode) return '🌐';
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  try {
+    return String.fromCodePoint(...codePoints);
+  } catch (e) {
+    return '🌐';
+  }
+};
+
 interface LeaderboardProps {
   user: UserProfile;
   leaderboard: LeaderboardEntry[];
@@ -83,7 +96,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
           </h4>
           
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', fontSize: '0.62rem', color: 'var(--text-secondary)' }}>
-            <span>{entry.country === 'US' ? '🇺🇸' : (entry.country === 'JP' ? '🇯🇵' : (entry.country === 'NO' ? '🇳🇴' : (entry.country === 'KR' ? '🇰🇷' : (entry.country === 'CA' ? '🇨🇦' : '🌐'))))}</span>
+            <span>{getFlagEmoji(entry.country)} {entry.city || ''}</span>
             <span>•</span>
             <span style={{ textTransform: 'uppercase' }}>{entry.title.split(' ')[0]}</span>
           </div>
@@ -251,16 +264,12 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                       </span>
                     )}
                     <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', display: 'block' }}>
-                      {entry.title}
+                      {getFlagEmoji(entry.country)} {entry.city || ''} • {entry.title}
                     </span>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <span style={{ fontSize: '1.1rem' }}>
-                    {entry.country === 'US' ? '🇺🇸' : (entry.country === 'JP' ? '🇯🇵' : (entry.country === 'NO' ? '🇳🇴' : (entry.country === 'KR' ? '🇰🇷' : (entry.country === 'CA' ? '🇨🇦' : '🌐'))))}
-                  </span>
-                  
                   <span style={{ fontFamily: 'var(--font-retro)', fontSize: '0.72rem', fontWeight: 'bold', color: category === 'score' ? 'var(--text-primary)' : (category === 'coins' ? 'var(--neon-yellow)' : 'var(--neon-magenta)'), minWidth: '80px', textAlign: 'right' }}>
                     {category === 'score' ? entry.score : (category === 'coins' ? `🪙 ${entry.coins.toLocaleString()}` : `${entry.maxCombo}x`)}
                   </span>

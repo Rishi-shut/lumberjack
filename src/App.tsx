@@ -14,6 +14,7 @@ import Admin from './pages/Admin';
 import Missions from './pages/Missions';
 
 import './main.css';
+import { checkCdnReachability } from './utils/AssetManager';
 
 // Animated XP Bar component for post-game details
 const XpProgressBar: React.FC<{
@@ -342,9 +343,28 @@ export const App: React.FC = () => {
               const lastSyncedDiamonds = Number(localStorage.getItem('infinite_chop_last_synced_diamonds') ?? user.diamonds);
               const lastSyncedTickets = Number(localStorage.getItem('infinite_chop_last_synced_tickets') ?? (user.tickets || 0));
 
-              const coinDiff = newCoins - lastSyncedCoins;
-              const diamondDiff = newDiamonds - lastSyncedDiamonds;
-              const ticketDiff = newTickets - lastSyncedTickets;
+              const lastPushedCoins = Number(localStorage.getItem('infinite_chop_last_pushed_coins') ?? lastSyncedCoins);
+              const lastPushedDiamonds = Number(localStorage.getItem('infinite_chop_last_pushed_diamonds') ?? lastSyncedDiamonds);
+              const lastPushedTickets = Number(localStorage.getItem('infinite_chop_last_pushed_tickets') ?? lastSyncedTickets);
+
+              // Update synced tracking if values are lower (due to spending)
+              if (newCoins < lastPushedCoins) {
+                localStorage.setItem('infinite_chop_last_synced_coins', newCoins.toString());
+                localStorage.setItem('infinite_chop_last_pushed_coins', newCoins.toString());
+              }
+              if (newDiamonds < lastPushedDiamonds) {
+                localStorage.setItem('infinite_chop_last_synced_diamonds', newDiamonds.toString());
+                localStorage.setItem('infinite_chop_last_pushed_diamonds', newDiamonds.toString());
+              }
+              if (newTickets < lastPushedTickets) {
+                localStorage.setItem('infinite_chop_last_synced_tickets', newTickets.toString());
+                localStorage.setItem('infinite_chop_last_pushed_tickets', newTickets.toString());
+              }
+
+              // Compute diff relative to what we last pushed to verify if it is an admin credit
+              const coinDiff = newCoins - Math.max(lastSyncedCoins, lastPushedCoins);
+              const diamondDiff = newDiamonds - Math.max(lastSyncedDiamonds, lastPushedDiamonds);
+              const ticketDiff = newTickets - Math.max(lastSyncedTickets, lastPushedTickets);
 
               if (coinDiff > 0 || diamondDiff > 0 || ticketDiff > 0) {
                 const updatedUser = db.getUser();
@@ -352,17 +372,20 @@ export const App: React.FC = () => {
                   updatedUser.coins += coinDiff;
                   updatedUser.stats.totalCoinsEarned = (updatedUser.stats.totalCoinsEarned || 0) + coinDiff;
                   localStorage.setItem('infinite_chop_last_synced_coins', newCoins.toString());
+                  localStorage.setItem('infinite_chop_last_pushed_coins', newCoins.toString());
                   addToast(`🎁 System Admin granted you +${coinDiff.toLocaleString()} Gold Coins!`, 'admin');
                 }
                 if (diamondDiff > 0) {
                   updatedUser.diamonds += diamondDiff;
                   updatedUser.stats.totalDiamondsEarned = (updatedUser.stats.totalDiamondsEarned || 0) + diamondDiff;
                   localStorage.setItem('infinite_chop_last_synced_diamonds', newDiamonds.toString());
+                  localStorage.setItem('infinite_chop_last_pushed_diamonds', newDiamonds.toString());
                   addToast(`🎁 System Admin granted you +${diamondDiff.toLocaleString()} Crystal Gems!`, 'admin');
                 }
                 if (ticketDiff > 0) {
                   updatedUser.tickets = (updatedUser.tickets || 0) + ticketDiff;
                   localStorage.setItem('infinite_chop_last_synced_tickets', newTickets.toString());
+                  localStorage.setItem('infinite_chop_last_pushed_tickets', newTickets.toString());
                   addToast(`🎁 System Admin granted you +${ticketDiff.toLocaleString()} Revive Tickets!`, 'admin');
                 }
 
@@ -424,25 +447,34 @@ export const App: React.FC = () => {
     
     let sessionRestored = false;
     let progressDone = false;
+    let cdnChecked = false;
+
+    const handleAppReady = () => {
+      if (sessionRestored && progressDone && cdnChecked) {
+        setTimeout(() => setIsLoading(false), 300);
+      }
+    };
 
     db.restoreSessionFromCloud()
       .catch(err => console.error("Session restore error:", err))
       .finally(() => {
         sessionRestored = true;
         refreshState();
-        if (progressDone) {
-          setTimeout(() => setIsLoading(false), 300);
-        }
+        handleAppReady();
       });
+
+    // Check CDN in parallel with loading bar progress (max 1000ms timeout)
+    checkCdnReachability(1000).finally(() => {
+      cdnChecked = true;
+      handleAppReady();
+    });
 
     const progressInterval = setInterval(() => {
       setLoadingProgress(prev => {
         if (prev >= 100) {
           clearInterval(progressInterval);
           progressDone = true;
-          if (sessionRestored) {
-            setTimeout(() => setIsLoading(false), 300);
-          }
+          handleAppReady();
           return 100;
         }
         return prev + Math.floor(Math.random() * 15) + 5;
@@ -513,6 +545,107 @@ export const App: React.FC = () => {
     });
   };
 
+  const fetchIpLocation = async () => {
+    try {
+      const res = await fetch('https://freeipapi.com/api/json');
+      if (res.ok) {
+        const data = await res.json();
+        const city = data.cityName || 'New Delhi';
+        const countryCode = (data.countryCode || 'IN').toUpperCase();
+        const countryName = data.countryName || 'India';
+
+        const u = db.getUser();
+        if (u) {
+          if (!u.stats) {
+            u.stats = {
+              totalChops: 0,
+              totalChestsOpened: 0,
+              gamesPlayed: 0,
+              totalCoinsEarned: 0,
+              totalDiamondsEarned: 0,
+              timePlayed: 0,
+              worldRuns: {}
+            };
+          }
+          u.stats.location = {
+            city,
+            countryCode,
+            countryName
+          };
+          db.saveUser(u);
+          await db.syncActiveProfileToCloud();
+          refreshState();
+          addToast(`📍 Location (IP) detected: ${city}, ${countryCode}`, 'success');
+        }
+      }
+    } catch (e) {
+      console.error("IP geocoding error:", e);
+    }
+  };
+
+  const requestLocationAndSync = async () => {
+    if (!navigator.geolocation) {
+      console.warn("Geolocation is not supported by this browser.");
+      await fetchIpLocation();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+          if (res.ok) {
+            const data = await res.json();
+            const address = data.address || {};
+            const city = address.city || address.town || address.village || address.suburb || address.state_district || 'New Delhi';
+            const countryCode = (address.country_code || 'IN').toUpperCase();
+            const countryName = address.country || 'India';
+
+            const u = db.getUser();
+            if (u) {
+              if (!u.stats) {
+                u.stats = {
+                  totalChops: 0,
+                  totalChestsOpened: 0,
+                  gamesPlayed: 0,
+                  totalCoinsEarned: 0,
+                  totalDiamondsEarned: 0,
+                  timePlayed: 0,
+                  worldRuns: {}
+                };
+              }
+              u.stats.location = {
+                city,
+                countryCode,
+                countryName
+              };
+              db.saveUser(u);
+              await db.syncActiveProfileToCloud();
+              refreshState();
+              addToast(`📍 Location synchronized: ${city}, ${countryCode}`, 'success');
+            }
+          } else {
+            await fetchIpLocation();
+          }
+        } catch (err) {
+          console.error("Nominatim reverse geocoding error:", err);
+          await fetchIpLocation();
+        }
+      },
+      async (err) => {
+        console.warn("Geolocation permission error or denied:", err);
+        await fetchIpLocation();
+      }
+    );
+  };
+
+  const handleRegisterSuccess = () => {
+    refreshState();
+    requestLocationAndSync();
+  };
+
   // Sync state from LocalStorage DB helper
   const refreshState = () => {
     setUser(db.getUser());
@@ -521,6 +654,17 @@ export const App: React.FC = () => {
     setMissions(db.getMissions());
     db.getLeaderboard().then(setLeaderboard).catch(err => console.error("Error loading leaderboard:", err));
   };
+
+  useEffect(() => {
+    if (!isLoading && user && !user.isGuest) {
+      const promptKey = `infinite_chop_location_gps_prompted_${user.username}`;
+      const hasPrompted = localStorage.getItem(promptKey);
+      if (!hasPrompted) {
+        localStorage.setItem(promptKey, 'true');
+        requestLocationAndSync();
+      }
+    }
+  }, [isLoading, user]);
 
   // Switch to gameplay
   const handlePlayWorld = (worldId: string) => {
@@ -1258,7 +1402,7 @@ export const App: React.FC = () => {
               Enter your unique challenger username to record your high scores on the global leaderboards and initialize your profile.
             </p>
 
-            <RegistrationForm onRegisterSuccess={refreshState} />
+            <RegistrationForm onRegisterSuccess={handleRegisterSuccess} />
           </div>
         </div>
       )}

@@ -2,6 +2,143 @@ import React, { useEffect, useRef, useState } from 'react';
 import { sound } from '../utils/AudioEngine';
 import { db } from '../utils/LocalStorageDB';
 
+import { getAssetUrl, getLocalFallbackUrl } from '../utils/AssetManager';
+
+const transparentImageCache: Record<string, HTMLCanvasElement | HTMLImageElement> = {};
+
+const getTransparentCanvas = (src: string): HTMLCanvasElement | HTMLImageElement => {
+  if (transparentImageCache[src]) return transparentImageCache[src];
+
+  let currentSrc = src;
+  if (src.includes('.svg')) {
+    const img = new Image();
+    transparentImageCache[src] = img;
+    img.onload = () => {
+      // SVG loaded
+    };
+    img.onerror = () => {
+      const fallback = getLocalFallbackUrl(currentSrc);
+      if (fallback !== currentSrc) {
+        console.warn(`CDN SVG asset load failed, falling back to local: ${fallback}`);
+        currentSrc = fallback;
+        img.src = fallback;
+      }
+    };
+    img.src = src;
+    return img;
+  }
+
+  const canvas = document.createElement('canvas');
+  transparentImageCache[src] = canvas;
+
+  const img = new Image();
+  img.onload = () => {
+    canvas.width = img.width || 64;
+    canvas.height = img.height || 64;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    
+    // Only key out white background for PNGs (since SVGs are already transparent)
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i+1];
+      const b = data[i+2];
+      if (r > 240 && g > 240 && b > 240) {
+        data[i+3] = 0; // Alpha transparent
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  };
+  img.onerror = () => {
+    const fallback = getLocalFallbackUrl(currentSrc);
+    if (fallback !== currentSrc) {
+      console.warn(`CDN PNG asset load failed, falling back to local: ${fallback}`);
+      currentSrc = fallback;
+      img.src = fallback;
+    }
+  };
+  img.src = src;
+
+  return canvas;
+};
+
+
+const CHARACTER_IMAGES: Record<string, { idle: string; chop: string }> = {
+  char_lumberjack: {
+    idle: getAssetUrl('lumberjack_idle.png'),
+    chop: getAssetUrl('lumberjack_chop.png')
+  },
+  char_viking: {
+    idle: getAssetUrl('viking_idle.png'),
+    chop: getAssetUrl('viking_chop.png')
+  },
+  char_knight: {
+    idle: getAssetUrl('knight_idle.png'),
+    chop: getAssetUrl('knight_chop.png')
+  },
+  char_samurai: {
+    idle: getAssetUrl('samurai_idle.png'),
+    chop: getAssetUrl('samurai_chop.png')
+  },
+  char_wizard: {
+    idle: getAssetUrl('wizard_idle.png'),
+    chop: getAssetUrl('wizard_chop.png')
+  },
+  char_ninja: {
+    idle: getAssetUrl('ninja_idle.png'),
+    chop: getAssetUrl('ninja_chop.png')
+  },
+  char_pyro: {
+    idle: getAssetUrl('pyro_idle.png'),
+    chop: getAssetUrl('pyro_chop.png')
+  },
+  char_druid: {
+    idle: getAssetUrl('druid_idle.png'),
+    chop: getAssetUrl('druid_chop.png')
+  },
+  char_valkyrie: {
+    idle: getAssetUrl('valkyrie_idle.png'),
+    chop: getAssetUrl('valkyrie_chop.svg')
+  },
+  char_pharaoh: {
+    idle: getAssetUrl('pharaoh_idle.svg'),
+    chop: getAssetUrl('pharaoh_chop.svg')
+  },
+  char_alien: {
+    idle: getAssetUrl('alien_idle.svg'),
+    chop: getAssetUrl('alien_chop.svg')
+  },
+  char_robot: {
+    idle: getAssetUrl('robot_idle.svg'),
+    chop: getAssetUrl('robot_chop.svg')
+  },
+  char_lawyer: {
+    idle: getAssetUrl('lawyer_idle.svg'),
+    chop: getAssetUrl('lawyer_chop.svg')
+  },
+  char_doctor: {
+    idle: getAssetUrl('doctor_idle.svg'),
+    chop: getAssetUrl('doctor_chop.svg')
+  }
+};
+
+const WEAPON_IMAGES: Record<string, string> = {
+  weap_axe_wood: getAssetUrl('weap_axe_wood.svg'),
+  weap_axe_golden: getAssetUrl('weap_axe_golden.svg'),
+  weap_hammer: getAssetUrl('weap_hammer.svg'),
+  weap_axe_fire: getAssetUrl('weap_axe_fire.svg'),
+  weap_chainsaw: getAssetUrl('weap_chainsaw.svg'),
+  weap_broadaxe: getAssetUrl('weap_broadaxe.svg'),
+  weap_scythe: getAssetUrl('weap_scythe.svg'),
+  weap_candy_cane: getAssetUrl('weap_candy_cane.svg'),
+  weap_laser: getAssetUrl('weap_laser.svg'),
+  weap_energy_halberd: getAssetUrl('weap_energy_halberd.svg'),
+  weap_blade: getAssetUrl('weap_blade.svg'),
+};
+
 interface CanvasGameProps {
   worldId: string;
   characterId: string;
@@ -422,21 +559,89 @@ const SPRITES: Record<string, { idle: string[]; attack: string[] }> = {
       ".....KBB...BBK..",
       ".....KKK...KKK.."
     ]
+  },
+  char_lawyer: {
+    idle: [
+      "....KKKKK.......",
+      "...KDDDDDK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSNNNSK.....",
+      "...KKKKKKKK.....",
+      "..KKKWRWKKKK....",
+      "..KKKWRWKKKK....",
+      "..KKKKKKKKKK....",
+      "...KKK...KKK....",
+      "...KKK...KKK...."
+    ],
+    attack: [
+      "....KKKKK.......",
+      "...KDDDDDK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSNNNSK.....",
+      "....KKKKKKKK....",
+      ".....KKKWRWKK...",
+      ".....KKKWRWKKK..",
+      ".....KKKKKKKKK..",
+      ".....KKK...KKK..",
+      ".....KKK...KKK.."
+    ]
+  },
+  char_doctor: {
+    idle: [
+      "....KKKKK.......",
+      "...KLLLLLK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSNNNSK.....",
+      "...KWWWWWWWK....",
+      "..KWWCCCWWWK....",
+      "..KWWCCCWWWK....",
+      "..KDDDDDDDDDK...",
+      "...KDD...DDK....",
+      "...KKK...KKK...."
+    ],
+    attack: [
+      "....KKKKK.......",
+      "...KLLLLLK......",
+      "...KSSSSSsK.....",
+      "..KSSSSSSSSK....",
+      "..KSKKSSKKsK....",
+      "..KSSKKSSKKK....",
+      "..KSSSSSSSSK....",
+      "...KSSNNNSK.....",
+      "....KWWWWWWK....",
+      ".....KWWCCCWW...",
+      ".....KWWCCCWWW..",
+      ".....KDDDDDDDK..",
+      ".....KDD...DDK..",
+      ".....KKK...KKK.."
+    ]
   }
 };
 
 const WEAPONS: Record<string, { color: string; width: number; height: number; shape: 'axe' | 'hammer' | 'chainsaw' | 'laser' }> = {
-  weap_axe_wood: { color: '#8B5A2B', width: 6, height: 35, shape: 'axe' },
-  weap_axe_golden: { color: '#FFD700', width: 6, height: 35, shape: 'axe' },
-  weap_hammer: { color: '#808080', width: 8, height: 32, shape: 'hammer' },
-  weap_axe_fire: { color: '#FF4500', width: 6, height: 35, shape: 'axe' },
-  weap_chainsaw: { color: '#FF8C00', width: 10, height: 42, shape: 'chainsaw' },
-  weap_laser: { color: '#00FFFF', width: 4, height: 45, shape: 'laser' },
-  weap_blade: { color: '#FF00FF', width: 4, height: 48, shape: 'laser' },
-  weap_broadaxe: { color: '#334155', width: 9, height: 38, shape: 'axe' },
-  weap_scythe: { color: '#475569', width: 7, height: 42, shape: 'chainsaw' },
-  weap_candy_cane: { color: '#ef4444', width: 8, height: 34, shape: 'hammer' },
-  weap_energy_halberd: { color: '#a855f7', width: 5, height: 46, shape: 'laser' },
+  weap_axe_wood: { color: '#facc15', width: 6, height: 35, shape: 'axe' },
+  weap_axe_golden: { color: '#eab308', width: 6, height: 35, shape: 'axe' },
+  weap_hammer: { color: '#22c55e', width: 8, height: 32, shape: 'hammer' },
+  weap_axe_fire: { color: '#f97316', width: 6, height: 35, shape: 'axe' },
+  weap_chainsaw: { color: '#ca8a04', width: 10, height: 42, shape: 'chainsaw' },
+  weap_laser: { color: '#facc15', width: 4, height: 45, shape: 'laser' },
+  weap_blade: { color: '#eab308', width: 4, height: 48, shape: 'laser' },
+  weap_broadaxe: { color: '#a855f7', width: 9, height: 38, shape: 'axe' },
+  weap_scythe: { color: '#ca8a04', width: 7, height: 42, shape: 'chainsaw' },
+  weap_candy_cane: { color: '#fda4af', width: 8, height: 34, shape: 'hammer' },
+  weap_energy_halberd: { color: '#c084fc', width: 5, height: 46, shape: 'laser' },
 };
 
 interface Particle {
@@ -481,6 +686,14 @@ interface GameBlock {
   isSourCandy?: boolean;
 }
 
+const disableShadows = typeof window !== 'undefined' && window.innerWidth <= 768;
+
+const setShadow = (ctx: CanvasRenderingContext2D, color: string, blur: number) => {
+  if (disableShadows) return;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = blur;
+};
+
 export const CanvasGame: React.FC<CanvasGameProps> = ({
   worldId,
   characterId,
@@ -497,16 +710,19 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
   const [reviveCountdown, setReviveCountdown] = useState(5);
 
   const handleRevive = () => {
-    const res = db.useReviveTicket();
+    const state = stateRef.current;
+    const res = db.useReviveTicket(state.reviveTicketCost);
     if (res.success) {
       sound.playChest();
       sound.startMusic(worldId.replace('world_', ''));
       
-      const state = stateRef.current;
       state.isDead = false;
       state.isReviving = false;
       state.hasRevived = true;
       state.timeRemaining = state.maxTime; // refill time bar
+
+      // Double the ticket cost for next revival in this run
+      state.reviveTicketCost *= 2;
 
       // Clear immediate obstacles so player is not instantly squashed
       for (let i = 0; i < Math.min(3, state.blocks.length); i++) {
@@ -570,6 +786,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     diamondsCollected: 0,
     ticketsCollected: 0,
     hasRevived: false,
+    reviveTicketCost: 1,
     isReviving: false,
     treeOffset: 0, // for sliding animation
     targetTreeOffset: 0,
@@ -1463,10 +1680,10 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       if (state.deathTimer <= 0) {
         state.deathTimer = 0;
         
-        // Check if player has tickets and hasn't revived yet
+        // Check if player has tickets and can afford the current revive cost
         const userProfile = db.getUser();
         const tickets = userProfile.tickets || 0;
-        if (tickets > 0 && !state.hasRevived) {
+        if (tickets >= state.reviveTicketCost) {
           state.isReviving = true;
           setShowReviveConfirm(true);
           setReviveCountdown(5);
@@ -1543,7 +1760,10 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     if (!canvas) return;
 
     // Spawn weather
-    const maxWeather = config.weather === 'snow' ? 120 : (config.weather === 'rain' ? 150 : (config.weather === 'matrix' ? 80 : (config.weather === 'fog' ? 40 : (config.weather === 'candy_confetti' ? 50 : (config.weather === 'bubbles' ? 60 : (config.weather === 'neon_rain' ? 100 : (config.weather === 'zen_blossoms' ? 60 : (config.weather === 'arcade_glitches' ? 50 : 60))))))));
+    let maxWeather = config.weather === 'snow' ? 120 : (config.weather === 'rain' ? 150 : (config.weather === 'matrix' ? 80 : (config.weather === 'fog' ? 40 : (config.weather === 'candy_confetti' ? 50 : (config.weather === 'bubbles' ? 60 : (config.weather === 'neon_rain' ? 100 : (config.weather === 'zen_blossoms' ? 60 : (config.weather === 'arcade_glitches' ? 50 : 60))))))));
+    if (disableShadows) {
+      maxWeather = Math.min(30, Math.floor(maxWeather / 3));
+    }
     
     if (state.weatherParticles.length < maxWeather) {
       if (config.weather === 'snow') {
@@ -1826,12 +2046,14 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
-    // Screen Shake apply
+    // Screen Shake disabled by request
+    /*
     if (state.screenShake > 0) {
       const dx = (Math.random() * 2 - 1) * state.screenShake;
       const dy = (Math.random() * 2 - 1) * state.screenShake;
       ctx.translate(dx, dy);
     }
+    */
 
     // 1. Draw Background
     drawBackground(ctx, canvas);
@@ -2925,7 +3147,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     const treeWidth = 80;
     const blockHeight = 80;
     const startY = canvas.height - 180;
-    const centerX = canvas.width / 2;
+    const centerX = Math.round(canvas.width / 2);
 
     ctx.save();
     
@@ -2936,7 +3158,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     for (let i = 0; i < blocksCount; i++) {
       const block = state.blocks[i];
       // Apply sliding offset on lowest block only to create drop effect
-      const currentY = startY - i * blockHeight + (i === 0 ? 0 : state.treeOffset);
+      const currentY = Math.round(startY - i * blockHeight + (i === 0 ? 0 : state.treeOffset));
 
       // Draw Main trunk segment
       drawBlockSegment(ctx, centerX - treeWidth / 2, currentY, treeWidth, blockHeight, block);
@@ -3949,7 +4171,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     
     state.flyingSegments.forEach(fs => {
       ctx.save();
-      ctx.translate(canvasRef.current!.width / 2 + (fs.side === 'left' ? -40 : 40), fs.y);
+      ctx.translate(Math.round(canvasRef.current!.width / 2 + (fs.side === 'left' ? -40 : 40)), Math.round(fs.y));
       ctx.rotate(fs.rotation);
       drawBlockSegment(ctx, -40, -40, 80, 80);
       ctx.restore();
@@ -3989,6 +4211,654 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     });
   };
 
+  const drawVectorPlayer = (
+    ctx: CanvasRenderingContext2D,
+    px: number,
+    py: number,
+    charId: string,
+    isChopping: boolean
+  ) => {
+    const cx = px + 32;
+    const cy = py + 32;
+
+    ctx.save();
+
+    const imgSet = CHARACTER_IMAGES[charId];
+    if (imgSet) {
+      const src = isChopping ? imgSet.chop : imgSet.idle;
+      const cvs = getTransparentCanvas(src);
+      if (cvs && cvs.width > 0) {
+        ctx.drawImage(cvs, px, py, 64, 64);
+        ctx.restore();
+        return;
+      }
+    }
+
+    // Helper: Rounded Rect
+    const fillRoundedRect = (x: number, y: number, w: number, h: number, r: number) => {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    // 1. Draw Body
+    switch (charId) {
+      case 'char_lumberjack':
+        ctx.fillStyle = '#cf2c2c'; // Red flannel
+        fillRoundedRect(cx - 16, cy + 4, 32, 26, 6);
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Flannel stripes
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, cy + 4); ctx.lineTo(cx - 8, cy + 30);
+        ctx.moveTo(cx + 8, cy + 4); ctx.lineTo(cx + 8, cy + 30);
+        ctx.moveTo(cx - 16, cy + 12); ctx.lineTo(cx + 16, cy + 12);
+        ctx.moveTo(cx - 16, cy + 22); ctx.lineTo(cx + 16, cy + 22);
+        ctx.stroke();
+        break;
+
+      case 'char_viking':
+        ctx.fillStyle = '#4b5563'; // Grey fur tunic
+        fillRoundedRect(cx - 18, cy + 4, 36, 26, 6);
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Gold belt
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(cx - 18, cy + 16, 36, 4);
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(cx - 4, cy + 14, 8, 8); // Buckle
+        break;
+
+      case 'char_knight':
+        ctx.fillStyle = '#94a3b8'; // Silver armor
+        fillRoundedRect(cx - 18, cy + 4, 36, 26, 6);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Gold cross
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(cx - 3, cy + 8, 6, 16);
+        ctx.fillRect(cx - 10, cy + 13, 20, 4);
+        break;
+
+      case 'char_samurai':
+        ctx.fillStyle = '#991b1b'; // Red armor plates
+        fillRoundedRect(cx - 18, cy + 4, 36, 26, 5);
+        ctx.strokeStyle = '#450a0a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Gold plate details
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, cy + 8); ctx.lineTo(cx + 12, cy + 20);
+        ctx.moveTo(cx + 12, cy + 8); ctx.lineTo(cx - 12, cy + 20);
+        ctx.stroke();
+        break;
+
+      case 'char_wizard':
+        ctx.fillStyle = '#5b21b6'; // Purple wizard robes
+        fillRoundedRect(cx - 18, cy + 2, 36, 28, 8);
+        ctx.strokeStyle = '#311052';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Gold collar amulet
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(cx, cy + 8, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        break;
+
+      case 'char_ninja':
+        ctx.fillStyle = '#1e293b'; // Stealth suit
+        fillRoundedRect(cx - 16, cy + 4, 32, 26, 8);
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Scarf
+        ctx.fillStyle = '#8b5cf6';
+        ctx.beginPath();
+        ctx.ellipse(cx - 4, cy + 6, 12, 4, Math.PI / 12, 0, Math.PI * 2);
+        ctx.fill();
+        // Scarf tail flowing
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, cy + 6);
+        ctx.quadraticCurveTo(cx - 24, cy + 12, cx - 20, cy + 24);
+        ctx.quadraticCurveTo(cx - 12, cy + 14, cx - 8, cy + 8);
+        ctx.closePath();
+        ctx.fill();
+        break;
+
+      case 'char_pyro':
+        ctx.fillStyle = '#ea580c'; // Fire suit
+        fillRoundedRect(cx - 16, cy + 4, 32, 26, 6);
+        ctx.strokeStyle = '#7c2d12';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Yellow safety stripes
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(cx - 16, cy + 10, 32, 3);
+        ctx.fillRect(cx - 16, cy + 20, 32, 3);
+        break;
+
+      case 'char_druid':
+        ctx.fillStyle = '#065f46'; // Forest green cloak
+        fillRoundedRect(cx - 18, cy + 4, 36, 26, 8);
+        ctx.strokeStyle = '#022c22';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Leaf emblem
+        ctx.fillStyle = '#34d399';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 12, 5, 8, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+
+      case 'char_valkyrie':
+        ctx.fillStyle = '#2563eb'; // Blue tunic
+        fillRoundedRect(cx - 16, cy + 4, 32, 26, 6);
+        ctx.strokeStyle = '#1e3a8a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Silver armor details
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath();
+        ctx.arc(cx - 6, cy + 12, 5, 0, Math.PI * 2);
+        ctx.arc(cx + 6, cy + 12, 5, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+
+      case 'char_pharaoh':
+        ctx.fillStyle = '#d97706'; // Gold robes
+        fillRoundedRect(cx - 18, cy + 4, 36, 26, 6);
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Blue stripes
+        ctx.fillStyle = '#1d4ed8';
+        ctx.fillRect(cx - 18, cy + 10, 36, 3);
+        ctx.fillRect(cx - 18, cy + 18, 36, 3);
+        break;
+
+      case 'char_alien':
+        ctx.fillStyle = '#cbd5e1'; // Silver suit
+        fillRoundedRect(cx - 16, cy + 4, 32, 26, 8);
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Green dial logo
+        ctx.fillStyle = '#22c55e';
+        ctx.beginPath();
+        ctx.arc(cx, cy + 14, 4, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+
+      case 'char_robot':
+        ctx.fillStyle = '#475569'; // Grey metal
+        fillRoundedRect(cx - 18, cy + 4, 36, 26, 4);
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Blue glowing core
+        ctx.fillStyle = '#06b6d4';
+        setShadow(ctx, '#06b6d4', 8);
+        ctx.beginPath();
+        ctx.arc(cx, cy + 14, 6, 0, Math.PI * 2);
+        ctx.fill();
+        setShadow(ctx, 'transparent', 0);
+        break;
+
+      case 'char_lawyer':
+        ctx.fillStyle = '#0f172a'; // Black suit
+        fillRoundedRect(cx - 18, cy + 4, 36, 26, 6);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // White shirt triangle
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(cx - 6, cy + 4);
+        ctx.lineTo(cx + 6, cy + 4);
+        ctx.lineTo(cx, cy + 14);
+        ctx.closePath();
+        ctx.fill();
+        // Red tie
+        ctx.fillStyle = '#b91c1c';
+        ctx.beginPath();
+        ctx.moveTo(cx - 2, cy + 6);
+        ctx.lineTo(cx + 2, cy + 6);
+        ctx.lineTo(cx + 3, cy + 20);
+        ctx.lineTo(cx, cy + 24);
+        ctx.lineTo(cx - 3, cy + 20);
+        ctx.closePath();
+        ctx.fill();
+        break;
+
+      case 'char_doctor':
+        ctx.fillStyle = '#0d9488'; // Teal scrubs
+        fillRoundedRect(cx - 16, cy + 4, 32, 26, 6);
+        ctx.strokeStyle = '#115e59';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Stethoscope
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy + 4, 8, 0, Math.PI);
+        ctx.stroke();
+        ctx.fillStyle = '#f1f5f9';
+        ctx.beginPath();
+        ctx.arc(cx + 8, cy + 12, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+
+      default:
+        ctx.fillStyle = '#cf2c2c';
+        fillRoundedRect(cx - 16, cy + 4, 32, 26, 6);
+        break;
+    }
+
+    // 2. Draw Head/Face Skin
+    let skinColor = '#f5c697';
+    if (charId === 'char_alien') skinColor = '#4ade80';
+    else if (charId === 'char_robot') skinColor = '#94a3b8';
+    else if (charId === 'char_pyro') skinColor = '#334155';
+    else if (charId === 'char_ninja') skinColor = '#1e293b';
+
+    ctx.fillStyle = skinColor;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 10, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 3. Draw Eyes / Visors / Face Details
+    if (charId === 'char_robot') {
+      ctx.fillStyle = '#22d3ee';
+      setShadow(ctx, '#22d3ee', 8);
+      ctx.beginPath();
+      ctx.arc(cx - 5, cy - 11, 2.5, 0, Math.PI * 2);
+      ctx.arc(cx + 5, cy - 11, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      setShadow(ctx, 'transparent', 0);
+      // Bolt ears
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(cx - 15, cy - 13, 2, 4);
+      ctx.fillRect(cx + 13, cy - 13, 2, 4);
+    } else if (charId === 'char_alien') {
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath();
+      ctx.ellipse(cx - 5, cy - 10, 4, 6, Math.PI / 10, 0, Math.PI * 2);
+      ctx.ellipse(cx + 5, cy - 10, 4, 6, -Math.PI / 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(cx - 4, cy - 12, 1, 0, Math.PI * 2);
+      ctx.arc(cx + 6, cy - 12, 1, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (charId === 'char_pyro') {
+      ctx.fillStyle = '#ea580c';
+      setShadow(ctx, '#ea580c', 8);
+      ctx.beginPath();
+      ctx.arc(cx - 5, cy - 10, 3.5, 0, Math.PI * 2);
+      ctx.arc(cx + 5, cy - 10, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      setShadow(ctx, 'transparent', 0);
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(cx, cy - 4, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (charId === 'char_ninja') {
+      ctx.fillStyle = '#c084fc';
+      setShadow(ctx, '#c084fc', 8);
+      ctx.fillRect(cx - 9, cy - 12, 18, 3);
+      setShadow(ctx, 'transparent', 0);
+    } else {
+      // Standard face details
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(cx - 4, cy - 11, 1.5, 0, Math.PI * 2);
+      ctx.arc(cx + 4, cy - 11, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (charId === 'char_lawyer') {
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(cx - 8, cy - 14, 6, 5);
+        ctx.strokeRect(cx + 2, cy - 14, 6, 5);
+        ctx.beginPath();
+        ctx.moveTo(cx - 2, cy - 11);
+        ctx.lineTo(cx + 2, cy - 11);
+        ctx.stroke();
+      }
+
+      if (charId === 'char_doctor') {
+        ctx.fillStyle = '#99f6e4'; // Teal surgical mask
+        ctx.fillRect(cx - 8, cy - 8, 16, 9);
+        ctx.strokeStyle = '#0f766e';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cx - 8, cy - 8, 16, 9);
+      }
+    }
+
+    // 4. Draw Beards / Facial Hair
+    if (charId === 'char_lumberjack') {
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.arc(cx, cy - 6, 10, 0, Math.PI);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 7, 7, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (charId === 'char_viking') {
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.arc(cx, cy - 6, 9, 0, Math.PI);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillRect(cx - 6, cy + 2, 4, 10);
+      ctx.fillRect(cx + 2, cy + 2, 4, 10);
+      ctx.strokeRect(cx - 6, cy + 2, 4, 10);
+      ctx.strokeRect(cx + 2, cy + 2, 4, 10);
+    } else if (charId === 'char_wizard') {
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.moveTo(cx - 9, cy - 6);
+      ctx.lineTo(cx + 9, cy - 6);
+      ctx.lineTo(cx + 4, cy + 18);
+      ctx.lineTo(cx - 4, cy + 18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (charId === 'char_druid') {
+      ctx.fillStyle = '#451a03';
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, cy - 6);
+      ctx.lineTo(cx + 8, cy - 6);
+      ctx.lineTo(cx + 3, cy + 14);
+      ctx.lineTo(cx - 3, cy + 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else if (charId === 'char_pharaoh') {
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(cx - 2, cy + 2, 4, 10);
+      ctx.fillStyle = '#1d4ed8';
+      ctx.fillRect(cx - 2, cy + 5, 4, 2);
+    }
+
+    // 5. Draw Hats / Hair
+    switch (charId) {
+      case 'char_lumberjack':
+        ctx.fillStyle = '#ef4444'; // Red beanie
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 12, 7, 0, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillRect(cx - 13, cy - 21, 26, 3);
+        ctx.strokeRect(cx - 13, cy - 21, 26, 3);
+        // Beanie pompom
+        ctx.beginPath();
+        ctx.arc(cx, cy - 27, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        break;
+
+      case 'char_viking':
+        ctx.fillStyle = '#94a3b8'; // Horned helmet
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 12, 7, 0, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(cx - 2, cy - 27, 4, 8);
+        ctx.strokeRect(cx - 2, cy - 27, 4, 8);
+        // Horns
+        ctx.fillStyle = '#f8fafc';
+        // Left horn
+        ctx.beginPath();
+        ctx.moveTo(cx - 9, cy - 20);
+        ctx.quadraticCurveTo(cx - 18, cy - 25, cx - 18, cy - 30);
+        ctx.quadraticCurveTo(cx - 12, cy - 25, cx - 7, cy - 19);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Right horn
+        ctx.beginPath();
+        ctx.moveTo(cx + 9, cy - 20);
+        ctx.quadraticCurveTo(cx + 18, cy - 25, cx + 18, cy - 30);
+        ctx.quadraticCurveTo(cx + 12, cy - 25, cx + 7, cy - 19);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+
+      case 'char_knight':
+        // Feather plume
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 26);
+        ctx.quadraticCurveTo(cx - 8, cy - 36, cx - 16, cy - 30);
+        ctx.quadraticCurveTo(cx - 6, cy - 28, cx, cy - 22);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Helmet visor
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 13, 8, 0, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(cx - 9, cy - 20, 18, 2);
+        break;
+
+      case 'char_samurai':
+        ctx.fillStyle = '#1e293b'; // Helmet bowl
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 13, 8, 0, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        // Gold crescent
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 22);
+        ctx.quadraticCurveTo(cx - 10, cy - 30, cx - 12, cy - 28);
+        ctx.quadraticCurveTo(cx - 4, cy - 24, cx, cy - 20);
+        ctx.quadraticCurveTo(cx + 4, cy - 24, cx + 12, cy - 28);
+        ctx.quadraticCurveTo(cx + 10, cy - 30, cx, cy - 22);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+
+      case 'char_wizard':
+        ctx.fillStyle = '#2563eb'; // Pointy Wizard Hat
+        ctx.beginPath();
+        ctx.moveTo(cx - 15, cy - 20);
+        ctx.lineTo(cx, cy - 38);
+        ctx.lineTo(cx + 15, cy - 20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 16, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Yellow star
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(cx, cy - 28, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+
+      case 'char_ninja':
+        // Hood
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(cx, cy - 11, 13.5, Math.PI, 0);
+        ctx.fill();
+        ctx.stroke();
+        break;
+
+      case 'char_pyro':
+        // Gas mask hood
+        ctx.fillStyle = '#475569';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 13, 7, 0, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        break;
+
+      case 'char_druid':
+        // Antlers
+        ctx.fillStyle = '#7c2d12';
+        // Left
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, cy - 21);
+        ctx.lineTo(cx - 14, cy - 32);
+        ctx.lineTo(cx - 10, cy - 32);
+        ctx.lineTo(cx - 6, cy - 21);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Right
+        ctx.beginPath();
+        ctx.moveTo(cx + 8, cy - 21);
+        ctx.lineTo(cx + 14, cy - 32);
+        ctx.lineTo(cx + 10, cy - 32);
+        ctx.lineTo(cx + 6, cy - 21);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+
+      case 'char_valkyrie':
+        ctx.fillStyle = '#fbbf24'; // Wings
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 12, 7, 0, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        // Left Wing
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.moveTo(cx - 9, cy - 20);
+        ctx.lineTo(cx - 17, cy - 32);
+        ctx.lineTo(cx - 11, cy - 26);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Right Wing
+        ctx.beginPath();
+        ctx.moveTo(cx + 9, cy - 20);
+        ctx.lineTo(cx + 17, cy - 32);
+        ctx.lineTo(cx + 11, cy - 26);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Hair framing
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(cx - 13, cy - 13, 3, 16);
+        ctx.fillRect(cx + 10, cy - 13, 3, 16);
+        ctx.strokeRect(cx - 13, cy - 13, 3, 16);
+        ctx.strokeRect(cx + 10, cy - 13, 3, 16);
+        break;
+
+      case 'char_pharaoh':
+        // Nemes crown
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.moveTo(cx - 16, cy - 12);
+        ctx.quadraticCurveTo(cx - 16, cy - 28, cx, cy - 28);
+        ctx.quadraticCurveTo(cx + 16, cy - 28, cx + 16, cy - 12);
+        ctx.lineTo(cx + 14, cy - 12);
+        ctx.lineTo(cx + 14, cy - 24);
+        ctx.lineTo(cx - 14, cy - 24);
+        ctx.lineTo(cx - 14, cy - 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Stripes
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, cy - 26); ctx.lineTo(cx - 10, cy - 15);
+        ctx.moveTo(cx - 5, cy - 28); ctx.lineTo(cx - 5, cy - 15);
+        ctx.moveTo(cx, cy - 28); ctx.lineTo(cx, cy - 15);
+        ctx.moveTo(cx + 5, cy - 28); ctx.lineTo(cx + 5, cy - 15);
+        ctx.moveTo(cx + 10, cy - 26); ctx.lineTo(cx + 10, cy - 15);
+        ctx.stroke();
+        break;
+
+      case 'char_robot':
+        // Antenna
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 23);
+        ctx.lineTo(cx, cy - 30);
+        ctx.stroke();
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(cx, cy - 32, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        break;
+
+      case 'char_lawyer':
+        // Dark combed hair
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 12, 6, 0, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillRect(cx - 12, cy - 20, 3, 10);
+        ctx.fillRect(cx + 9, cy - 20, 3, 10);
+        ctx.strokeRect(cx - 12, cy - 20, 3, 10);
+        ctx.strokeRect(cx + 9, cy - 20, 3, 10);
+        break;
+
+      case 'char_doctor':
+        // Teal doc cap
+        ctx.fillStyle = '#0d9488';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 12, 7, 0, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillRect(cx - 12, cy - 21, 24, 2);
+        ctx.strokeRect(cx - 12, cy - 21, 24, 2);
+        break;
+
+      default:
+        ctx.fillStyle = '#451a03';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 20, 12, 6, 0, Math.PI, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        break;
+    }
+
+    ctx.restore();
+  };
+
   const drawPlayer = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     const state = stateRef.current;
     const playerSide = state.playerSide;
@@ -3996,8 +4866,8 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     
     // Position
     const pSize = 4; // Pixel size multiplier
-    const px = canvas.width / 2 + (isLeft ? -130 : 90);
-    const py = canvas.height - 180;
+    const px = Math.round(canvas.width / 2 + (isLeft ? -130 : 90));
+    const py = Math.round(canvas.height - 180);
 
     ctx.save();
     
@@ -4008,6 +4878,11 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.translate(-(px + 32), -py);
     }
 
+    // Scale up character & weapon by 35% from the ground anchor point
+    ctx.translate(px + 32, py + 64);
+    ctx.scale(1.35, 1.35);
+    ctx.translate(-(px + 32), -(py + 64));
+
     // Load Character Matrix
     const animSet = SPRITES[characterId] || SPRITES.char_lumberjack;
     const frame = state.isChopping ? animSet.attack : animSet.idle;
@@ -4015,10 +4890,15 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     // Idle bounce
     let bounceY = 0;
     if (!state.isChopping) {
-      bounceY = Math.sin(Date.now() / 150) * 2;
+      bounceY = Math.round(Math.sin(Date.now() / 150) * 2);
     }
 
-    drawPixelSprite(ctx, px, py + bounceY, frame, pSize);
+    const gameSettings = db.getSettings();
+    if (gameSettings.characterStyle === 'vector') {
+      drawVectorPlayer(ctx, px, py + bounceY, characterId, state.isChopping);
+    } else {
+      drawPixelSprite(ctx, px, py + bounceY, frame, pSize);
+    }
 
     // Draw swing trail if active
     if (state.trailFade > 0 && trailId !== 'trail_none') {
@@ -4039,13 +4919,11 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
         grad.addColorStop(0.5, '#ff4500');
         grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
         strokeStyle = grad;
-        ctx.shadowColor = '#ff4500';
-        ctx.shadowBlur = 12;
+        setShadow(ctx, '#ff4500', 12);
         ctx.lineWidth = 18;
       } else if (trailId === 'trail_spark') {
         strokeStyle = '#00ffff';
-        ctx.shadowColor = '#00ffff';
-        ctx.shadowBlur = 16;
+        setShadow(ctx, '#00ffff', 16);
         ctx.lineWidth = 8;
       } else if (trailId === 'trail_rainbow') {
         const grad = ctx.createLinearGradient(pivotX - 30, pivotY - 30, pivotX + 30, pivotY + 30);
@@ -4062,23 +4940,19 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
         ctx.lineWidth = 16;
       } else if (trailId === 'trail_leaves') {
         strokeStyle = '#10b981';
-        ctx.shadowColor = '#059669';
-        ctx.shadowBlur = 10;
+        setShadow(ctx, '#059669', 10);
         ctx.lineWidth = 16;
       } else if (trailId === 'trail_void') {
         strokeStyle = '#7c3aed';
-        ctx.shadowColor = '#6d28d9';
-        ctx.shadowBlur = 20;
+        setShadow(ctx, '#6d28d9', 20);
         ctx.lineWidth = 14;
       } else if (trailId === 'trail_sakura') {
         strokeStyle = '#f472b6';
-        ctx.shadowColor = '#db2777';
-        ctx.shadowBlur = 12;
+        setShadow(ctx, '#db2777', 12);
         ctx.lineWidth = 14;
       } else if (trailId === 'trail_gold') {
         strokeStyle = '#f59e0b';
-        ctx.shadowColor = '#d97706';
-        ctx.shadowBlur = 18;
+        setShadow(ctx, '#d97706', 18);
         ctx.lineWidth = 15;
       }
       
@@ -4089,7 +4963,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.restore();
     }
 
-    // Draw Weapon
+    // Draw Weapon using loaded SVG images
     const weapon = WEAPONS[weaponId] || WEAPONS.weap_axe_wood;
     
     ctx.save();
@@ -4102,45 +4976,10 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.rotate(-Math.PI / 6); // resting back
     }
 
-    ctx.fillStyle = weapon.color;
-    
-    if (weapon.shape === 'axe') {
-      // Shaft
-      ctx.fillRect(-2, -weapon.height + 10, 4, weapon.height);
-      // Axe Blade
-      ctx.fillStyle = weapon.color === '#8B5A2B' ? '#a5adb8' : weapon.color;
-      ctx.fillRect(-12, -weapon.height + 10, 10, 12);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(-12, -weapon.height + 10, 10, 12);
-    } else if (weapon.shape === 'hammer') {
-      // Handle
-      ctx.fillRect(-2, -weapon.height + 10, 4, weapon.height);
-      // Hammer Head
-      ctx.fillStyle = '#b0b5be';
-      ctx.fillRect(-15, -weapon.height + 10, 30, 15);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(-15, -weapon.height + 10, 30, 15);
-    } else if (weapon.shape === 'chainsaw') {
-      // Chainsaw motor box
-      ctx.fillRect(-8, -10, 16, 20);
-      // Bar
-      ctx.fillStyle = '#adb8c7';
-      ctx.fillRect(-3, -weapon.height + 10, 6, weapon.height - 15);
-      // Teeth details
-      ctx.fillStyle = '#ff0000';
-      ctx.fillRect(-5, -weapon.height + 12, 10, 4);
-    } else {
-      // Laser / saber blade
-      // hilt
-      ctx.fillStyle = '#6b7280';
-      ctx.fillRect(-3, -8, 6, 12);
-      // beam
-      ctx.fillStyle = weapon.color;
-      ctx.shadowColor = weapon.color;
-      ctx.shadowBlur = 10;
-      ctx.fillRect(-2, -weapon.height + 4, 4, weapon.height - 8);
+    const src = WEAPON_IMAGES[weaponId] || WEAPON_IMAGES.weap_axe_wood;
+    const cvs = getTransparentCanvas(src);
+    if (cvs && cvs.width > 0) {
+      ctx.drawImage(cvs, -20, -weapon.height + 10, 40, weapon.height);
     }
 
     ctx.restore();
@@ -4163,8 +5002,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
       ctx.globalAlpha = t.alpha;
       ctx.fillStyle = t.color;
       ctx.font = '12px "Press Start 2P", monospace, sans-serif';
-      ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 4;
+      setShadow(ctx, '#000000', 4);
       ctx.fillText(t.text, t.x, t.y);
       ctx.restore();
     });
@@ -4197,8 +5035,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
     ctx.fillStyle = '#ffffff';
     ctx.font = '28px "Press Start 2P", monospace, sans-serif';
     ctx.textAlign = 'center';
-    ctx.shadowColor = '#000';
-    ctx.shadowBlur = 6;
+    setShadow(ctx, '#000', 6);
     ctx.fillText(state.score.toString(), canvas.width / 2, 120);
 
     // 3. Combo Display
@@ -4314,7 +5151,7 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
               REVIVE AVAILABLE?
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '20px', lineHeight: '1.5' }}>
-              You were crushed! Spend 1 Revive Ticket to keep your score of <strong style={{ color: 'var(--neon-green)' }}>{stateRef.current.score}</strong> and continue the run.
+              You were crushed! Spend <strong style={{ color: 'var(--neon-yellow)' }}>{stateRef.current.reviveTicketCost}</strong> Revive Ticket{stateRef.current.reviveTicketCost > 1 ? 's' : ''} to keep your score of <strong style={{ color: 'var(--neon-green)' }}>{stateRef.current.score}</strong> and continue the run.
             </p>
 
             <div style={{
@@ -4349,14 +5186,14 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
                 style={{ width: '100%', padding: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}
                 onClick={handleRevive}
               >
-                USE TICKET 🎫
+                USE TICKET ({stateRef.current.reviveTicketCost}x) 🎫
               </button>
               <button 
-                className="retro-btn" 
-                style={{ width: '100%', padding: '8px', fontSize: '0.72rem', color: 'var(--text-secondary)', borderColor: 'var(--panel-border)' }}
+                className="neon-btn-yellow" 
+                style={{ width: '100%', padding: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}
                 onClick={handleGiveUp}
               >
-                GIVE UP & COLLECT
+                GIVE UP & COLLECT 🏃
               </button>
             </div>
           </div>

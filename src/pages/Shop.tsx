@@ -2,7 +2,100 @@ import React, { useState } from 'react';
 import { ShoppingBag, Star, RefreshCw, Key, Award, Shield } from 'lucide-react';
 import { db, ShopItem, UserProfile, getCharacterEmoji } from '../utils/LocalStorageDB';
 import { sound } from '../utils/AudioEngine';
-import geminiBananaImg from '../assets/gemini_banana.png';
+import { TransparentImage } from '../components/TransparentImage';
+import { getAssetUrl, getLocalFallbackUrl } from '../utils/AssetManager';
+
+const geminiBananaImg = getAssetUrl('gemini_banana.png');
+
+const CHARACTER_ICONS: Record<string, string> = {
+  char_lumberjack: getAssetUrl('lumberjack_idle.png'),
+  char_viking: getAssetUrl('viking_idle.png'),
+  char_knight: getAssetUrl('knight_idle.png'),
+  char_samurai: getAssetUrl('samurai_idle.png'),
+  char_wizard: getAssetUrl('wizard_idle.png'),
+  char_ninja: getAssetUrl('ninja_idle.png'),
+  char_pyro: getAssetUrl('pyro_idle.png'),
+  char_druid: getAssetUrl('druid_idle.png'),
+  char_valkyrie: getAssetUrl('valkyrie_idle.png'),
+  char_pharaoh: getAssetUrl('pharaoh_idle.svg'),
+  char_alien: getAssetUrl('alien_idle.svg'),
+  char_robot: getAssetUrl('robot_idle.svg'),
+  char_lawyer: getAssetUrl('lawyer_idle.svg'),
+  char_doctor: getAssetUrl('doctor_idle.svg')
+};
+
+export const CHARACTER_COLORS: Record<string, { gradient: string; border: string; glow: string }> = {
+  char_lumberjack: {
+    gradient: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+    border: '3px solid #f87171',
+    glow: '0 4px 14px rgba(239, 68, 68, 0.4)'
+  },
+  char_viking: {
+    gradient: 'linear-gradient(135deg, #4b5563 0%, #1f2937 100%)',
+    border: '3px solid #9ca3af',
+    glow: '0 4px 14px rgba(75, 85, 99, 0.4)'
+  },
+  char_knight: {
+    gradient: 'linear-gradient(135deg, #60a5fa 0%, #2563eb 100%)',
+    border: '3px solid #93c5fd',
+    glow: '0 4px 14px rgba(37, 99, 235, 0.4)'
+  },
+  char_samurai: {
+    gradient: 'linear-gradient(135deg, #991b1b 0%, #450a0a 100%)',
+    border: '3px solid #f87171',
+    glow: '0 4px 14px rgba(153, 27, 27, 0.4)'
+  },
+  char_wizard: {
+    gradient: 'linear-gradient(135deg, #a78bfa 0%, #6d28d9 100%)',
+    border: '3px solid #c084fc',
+    glow: '0 4px 14px rgba(109, 40, 217, 0.4)'
+  },
+  char_ninja: {
+    gradient: 'linear-gradient(135deg, #10b981 0%, #064e3b 100%)',
+    border: '3px solid #34d399',
+    glow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+  },
+  char_pyro: {
+    gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+    border: '3px solid #fb923c',
+    glow: '0 4px 14px rgba(249, 115, 22, 0.4)'
+  },
+  char_druid: {
+    gradient: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+    border: '3px solid #6ee7b7',
+    glow: '0 4px 14px rgba(5, 150, 105, 0.4)'
+  },
+  char_valkyrie: {
+    gradient: 'linear-gradient(135deg, #fef08a 0%, #eab308 100%)',
+    border: '3px solid #fde047',
+    glow: '0 4px 14px rgba(234, 179, 8, 0.5)'
+  },
+  char_pharaoh: {
+    gradient: 'linear-gradient(135deg, #fbbf24 0%, #b45309 100%)',
+    border: '3px solid #fcd34d',
+    glow: '0 4px 14px rgba(217, 119, 6, 0.5)'
+  },
+  char_alien: {
+    gradient: 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)',
+    border: '3px solid #4ade80',
+    glow: '0 4px 14px rgba(34, 197, 94, 0.4)'
+  },
+  char_robot: {
+    gradient: 'linear-gradient(135deg, #94a3b8 0%, #475569 100%)',
+    border: '3px solid #cbd5e1',
+    glow: '0 4px 14px rgba(148, 163, 184, 0.4)'
+  },
+  char_lawyer: {
+    gradient: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+    border: '3px solid #64748b',
+    glow: '0 4px 14px rgba(30, 41, 59, 0.4)'
+  },
+  char_doctor: {
+    gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+    border: '3px solid #22d3ee',
+    glow: '0 4px 14px rgba(6, 182, 212, 0.4)'
+  }
+};
 
 interface ShopProps {
   user: UserProfile;
@@ -280,6 +373,13 @@ export const Shop: React.FC<ShopProps> = ({
                     <img 
                       src={geminiBananaImg} 
                       alt="Gemini Banana" 
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        const fallback = getLocalFallbackUrl(target.src);
+                        if (target.src !== fallback) {
+                          target.src = fallback;
+                        }
+                      }}
                       style={{ 
                         position: 'absolute', 
                         width: '75px', 
@@ -291,31 +391,57 @@ export const Shop: React.FC<ShopProps> = ({
                     />
 
                     {item.type === 'character' ? (
-                      <span style={{ fontSize: '2.8rem', zIndex: 2 }} className="character-breath">
-                        {getCharacterEmoji(item.id)}
-                      </span>
+                      CHARACTER_ICONS[item.id] ? (
+                        <div style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '50%',
+                          background: (CHARACTER_COLORS[item.id] || CHARACTER_COLORS.char_lumberjack).gradient,
+                          border: (CHARACTER_COLORS[item.id] || CHARACTER_COLORS.char_lumberjack).border,
+                          boxShadow: (CHARACTER_COLORS[item.id] || CHARACTER_COLORS.char_lumberjack).glow,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          overflow: 'hidden',
+                          zIndex: 2,
+                          padding: '2px'
+                        }} className="character-breath">
+                          <TransparentImage 
+                            src={CHARACTER_ICONS[item.id]} 
+                            alt={item.name} 
+                            style={{ 
+                              width: '50px', 
+                              height: '50px', 
+                              objectFit: 'contain'
+                            }} 
+                          />
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '2.8rem', zIndex: 2 }} className="character-breath">
+                          {getCharacterEmoji(item.id)}
+                        </span>
+                      )
                     ) : item.type === 'weapon' ? (
-                      <div style={{ 
-                        width: '44px', 
-                        height: '44px', 
-                        borderRadius: '50%', 
-                        backgroundColor: boxColor, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        fontWeight: 'bold', 
-                        color: '#fff', 
-                        fontSize: '1.2rem',
-                        border: '2px solid #fff',
-                        boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
-                        zIndex: 2
-                      }}>
-                        {item.id === 'weap_axe_wood' ? '🪵' : 
-                         item.id === 'weap_axe_golden' ? '🪙' :
-                         item.id === 'weap_axe_fire' ? '🔥' :
-                         item.id === 'weap_chainsaw' ? '⚙️' :
-                         item.id === 'weap_laser' ? '⚡' : '🪓'}
-                      </div>
+                      <img 
+                        src={getAssetUrl(`${item.id}.svg`)} 
+                        alt={item.name} 
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const fallback = getLocalFallbackUrl(target.src);
+                          if (target.src !== fallback) {
+                            target.src = fallback;
+                          }
+                        }}
+                        style={{ 
+                          width: '56px', 
+                          height: '56px', 
+                          objectFit: 'contain',
+                          filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.3))',
+                          zIndex: 2,
+                          transform: 'rotate(-15deg)',
+                          animation: 'breathAnim 3s infinite ease-in-out'
+                        }}
+                      />
                     ) : item.type === 'trail' ? (
                       <span style={{ fontSize: '1.8rem', zIndex: 2 }} className="character-breath">✨ {item.name.split(' ')[0]}</span>
                     ) : (
@@ -326,7 +452,7 @@ export const Shop: React.FC<ShopProps> = ({
                   {/* Modern Separator */}
                   <div style={{ height: '1px', background: 'var(--panel-border)', margin: '0 -20px 14px' }} />
 
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: '1.4', marginBottom: '20px' }}>
+                  <p style={{ color: 'var(--text-primary)', opacity: 0.8, fontSize: '0.8rem', lineHeight: '1.4', marginBottom: '20px' }}>
                     {item.description}
                   </p>
                 </div>

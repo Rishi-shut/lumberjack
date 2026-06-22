@@ -2,6 +2,26 @@ import React, { useState } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Shield, Globe, Award, Sparkles, ChevronRight, Moon, Wind, Sun } from 'lucide-react';
 import { db, ShopItem, getCharacterEmoji, getCharacterLabel } from '../utils/LocalStorageDB';
 import { sound } from '../utils/AudioEngine';
+import { TransparentImage } from '../components/TransparentImage';
+import { CHARACTER_COLORS } from './Shop';
+import { getAssetUrl } from '../utils/AssetManager';
+
+const CHARACTER_ICONS: Record<string, string> = {
+  char_lumberjack: getAssetUrl('lumberjack_idle.png'),
+  char_viking: getAssetUrl('viking_idle.png'),
+  char_knight: getAssetUrl('knight_idle.png'),
+  char_samurai: getAssetUrl('samurai_idle.png'),
+  char_wizard: getAssetUrl('wizard_idle.png'),
+  char_ninja: getAssetUrl('ninja_idle.png'),
+  char_pyro: getAssetUrl('pyro_idle.png'),
+  char_druid: getAssetUrl('druid_idle.png'),
+  char_valkyrie: getAssetUrl('valkyrie_idle.png'),
+  char_pharaoh: getAssetUrl('pharaoh_idle.svg'),
+  char_alien: getAssetUrl('alien_idle.svg'),
+  char_robot: getAssetUrl('robot_idle.svg'),
+  char_lawyer: getAssetUrl('lawyer_idle.svg'),
+  char_doctor: getAssetUrl('doctor_idle.svg')
+};
 
 // Custom Interactive Cinematic HTML5 Video Player
 const fallbackSlides = [
@@ -396,6 +416,7 @@ export const Home: React.FC<HomeProps> = ({
   const [showAtlas, setShowAtlas] = useState(false);
   const [atlasFilter, setAtlasFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
   const [atlasSearch, setAtlasSearch] = useState('');
+  const [footerPopup, setFooterPopup] = useState<{ title: string; content: string } | null>(null);
 
   const getSectorForWorld = (worldId: string): 'nature' | 'urban' | 'hazard' | 'special' => {
     if (['world_forest', 'world_autumn', 'world_desert', 'world_zen', 'world_coral'].includes(worldId)) return 'nature';
@@ -653,14 +674,43 @@ export const Home: React.FC<HomeProps> = ({
           <div 
             className="character-breath"
             style={{
-              fontSize: '3.5rem',
-              lineHeight: 1,
-              filter: 'drop-shadow(0 6px 4px rgba(0,0,0,0.5))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               position: 'relative',
               bottom: '0px'
             }}
           >
-            {getCharacterEmoji(equippedChar)}
+            {CHARACTER_ICONS[equippedChar] ? (
+              <div style={{
+                width: '68px',
+                height: '68px',
+                borderRadius: '50%',
+                background: (CHARACTER_COLORS[equippedChar] || CHARACTER_COLORS.char_lumberjack).gradient,
+                border: (CHARACTER_COLORS[equippedChar] || CHARACTER_COLORS.char_lumberjack).border,
+                boxShadow: (CHARACTER_COLORS[equippedChar] || CHARACTER_COLORS.char_lumberjack).glow,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                padding: '2px',
+                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))'
+              }}>
+                <TransparentImage 
+                  src={CHARACTER_ICONS[equippedChar]} 
+                  alt={getCharacterLabel(equippedChar)} 
+                  style={{ 
+                    width: '58px', 
+                    height: '58px', 
+                    objectFit: 'contain'
+                  }} 
+                />
+              </div>
+            ) : (
+              <span style={{ fontSize: '3.5rem', lineHeight: 1, filter: 'drop-shadow(0 6px 4px rgba(0,0,0,0.5))' }}>
+                {getCharacterEmoji(equippedChar)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -799,19 +849,30 @@ export const Home: React.FC<HomeProps> = ({
             </div>
 
             <button 
-              className="neon-btn-yellow" 
+              className={activeDaily && activeDaily.current >= activeDaily.target ? "neon-btn-green" : "neon-btn-yellow"} 
               style={{ padding: '8px 20px', fontSize: '0.75rem', borderWidth: '2px' }}
               onClick={() => {
-                setSelectedWorldId(dailyDetails.worldId);
-                const targetSector = getSectorForWorld(dailyDetails.worldId);
-                setSelectedSector(targetSector);
-                setTimeout(() => {
-                  const deck = document.getElementById('departure-deck');
-                  if (deck) deck.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
+                if (activeDaily && activeDaily.current >= activeDaily.target) {
+                  const res = db.claimMissionReward(activeDaily.id);
+                  if (res.success) {
+                    sound.playChest();
+                    showAlert('Contract Fulfilled', `Claimed: +🪙 ${res.coins} Coins, +💎 ${res.diamonds} Gems!`);
+                    onPurchaseComplete();
+                  } else {
+                    showAlert('Claim Failed', `Failed to claim: ${res.reason}`);
+                  }
+                } else {
+                  setSelectedWorldId(dailyDetails.worldId);
+                  const targetSector = getSectorForWorld(dailyDetails.worldId);
+                  setSelectedSector(targetSector);
+                  setTimeout(() => {
+                    const deck = document.getElementById('departure-deck');
+                    if (deck) deck.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 100);
+                }
               }}
             >
-              {dailyDetails.buttonText}
+              {activeDaily && activeDaily.current >= activeDaily.target ? "CLAIM CONTRACT 🎁" : dailyDetails.buttonText}
             </button>
           </div>
         </div>
@@ -1390,17 +1451,97 @@ export const Home: React.FC<HomeProps> = ({
         </p>
         
         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '28px' }}>
-          <a href="#" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}>Studio Hub</a>
+          <a 
+            href="#" 
+            onClick={(e) => { 
+              e.preventDefault(); 
+              setFooterPopup({ 
+                title: 'STUDIO HUB', 
+                content: 'Welcome to Antigravity Studios!\n\nWe are a specialized group of developers, designers, and AI models handcrafting premium retro indie games. Our goal is to bring modern performance to pixel art game loops.\n\nDeveloped in cooperation with the DeepMind team.' 
+              }); 
+            }} 
+            style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}
+          >
+            Studio Hub
+          </a>
           <span style={{ opacity: 0.3 }}>|</span>
-          <a href="#" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}>Press Deck</a>
+          <a 
+            href="#" 
+            onClick={(e) => { 
+              e.preventDefault(); 
+              setFooterPopup({ 
+                title: 'PRESS DECK', 
+                content: 'Infinite Chop Press Kit.\n\nFor inquiries, media assets, review copy credentials, or developer interviews, contact press@antigravitystudios.io.\n\nAll custom double-bitted axe icons, pixel characters, and retro sound tracks are free to use for streaming and reviews.' 
+              }); 
+            }} 
+            style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}
+          >
+            Press Deck
+          </a>
           <span style={{ opacity: 0.3 }}>|</span>
-          <a href="#" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}>Privacy Policy</a>
+          <a 
+            href="#" 
+            onClick={(e) => { 
+              e.preventDefault(); 
+              setFooterPopup({ 
+                title: 'PRIVACY POLICY', 
+                content: 'Privacy is paramount.\n\nInfinite Chop uses a secure, local-first database caching system integrated with Supabase auth. We do not track or sell player telemetry. Telemetry logs are strictly stored locally for anti-cheat verification. Your data is 100% secure.' 
+              }); 
+            }} 
+            style={{ color: 'inherit', textDecoration: 'none', fontWeight: 'bold' }}
+          >
+            Privacy Policy
+          </a>
         </div>
         
         <div style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-retro)' }}>
           BUILD v1.4.2-STABLE | DB MODE: LOCAL-FIRST
         </div>
       </footer>
+
+      {/* Generic Footer Info Modal */}
+      {footerPopup && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}
+        onClick={() => setFooterPopup(null)}
+        >
+          <div className="game-card material-wood" style={{
+            maxWidth: '500px',
+            width: '100%',
+            border: '2.5px solid var(--neon-cyan)',
+            boxShadow: '0 0 25px rgba(14, 165, 233, 0.35)',
+            padding: '28px',
+            borderRadius: '12px',
+            textAlign: 'center',
+            position: 'relative'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="retro-title" style={{ color: 'var(--neon-cyan)', fontSize: '1.1rem', marginBottom: '16px' }}>
+              {footerPopup.title}
+            </h2>
+            <p style={{ color: 'var(--text-primary)', fontSize: '0.88rem', lineHeight: '1.6', marginBottom: '24px', whiteSpace: 'pre-line' }}>
+              {footerPopup.content}
+            </p>
+            <button 
+              className="neon-btn-cyan" 
+              style={{ padding: '10px 24px', fontSize: '0.8rem', fontWeight: '900' }}
+              onClick={() => setFooterPopup(null)}
+            >
+              CLOSE WINDOW
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Cinematic Trailer Modal */}
       {showTrailer && (

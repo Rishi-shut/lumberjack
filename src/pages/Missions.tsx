@@ -17,6 +17,7 @@ export const Missions: React.FC<MissionsProps> = ({
 }) => {
   const dailyMissions = missions.filter(m => m.type === 'daily');
   const weeklyMissions = missions.filter(m => m.type === 'weekly');
+  const legendaryMissions = missions.filter(m => m.type === 'legendary');
 
   const handleClaim = (missionId: string) => {
     const res = db.claimMissionReward(missionId);
@@ -31,10 +32,16 @@ export const Missions: React.FC<MissionsProps> = ({
   const renderMissionCard = (mission: GameMission) => {
     const isCompleted = mission.current >= mission.target;
     const progressPct = Math.min(100, (mission.current / mission.target) * 100);
+    const isLegendary = mission.type === 'legendary';
     
     // Handcrafted alternating micro-rotation for the pinned look
     const charCodeSum = mission.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const rotation = (charCodeSum % 2 === 0) ? 'rotate(-1deg)' : 'rotate(1.2deg)';
+
+    const cardShadow = isLegendary ? '0 8px 24px rgba(245, 158, 11, 0.15)' : '0 6px 12px rgba(0,0,0,0.02)';
+    const pinColor = isLegendary ? '#d97706' : '#3a3a3a';
+    const pinGradient = isLegendary ? 'radial-gradient(circle at 4px 4px, #fbbf24 0%, #b45309 80%)' : 'radial-gradient(circle at 4px 4px, #5c5c5c 0%, #1a1a1a 80%)';
+    const pinBorder = isLegendary ? '2px solid #b45309' : '2px solid #1c1c1c';
 
     return (
       <div 
@@ -51,14 +58,14 @@ export const Missions: React.FC<MissionsProps> = ({
           transform: rotation,
           opacity: mission.claimed ? 0.72 : 1,
           color: 'var(--text-primary)',
-          borderWidth: '1px',
-          borderColor: 'var(--panel-border)',
-          boxShadow: '0 6px 12px rgba(0,0,0,0.02)',
+          borderWidth: isLegendary ? '2px' : '1px',
+          borderColor: isLegendary ? 'var(--neon-yellow)' : 'var(--panel-border)',
+          boxShadow: cardShadow,
           transition: 'transform 0.2s ease',
           marginBottom: '8px'
         }}
       >
-        {/* Iron pushpin at the top center */}
+        {/* pushpin at the top center */}
         <div style={{
           position: 'absolute',
           top: '-6px',
@@ -67,16 +74,17 @@ export const Missions: React.FC<MissionsProps> = ({
           width: '12px',
           height: '12px',
           borderRadius: '50%',
-          backgroundColor: '#3a3a3a',
-          backgroundImage: 'radial-gradient(circle at 4px 4px, #5c5c5c 0%, #1a1a1a 80%)',
-          border: '2px solid #1c1c1c',
+          backgroundColor: pinColor,
+          backgroundImage: pinGradient,
+          border: pinBorder,
           boxShadow: '0 3px 4px rgba(0,0,0,0.1)',
           zIndex: 10
         }} />
 
         <div style={{ flex: 1, minWidth: '280px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <h4 className="retro-title" style={{ fontSize: '0.8rem', color: 'var(--text-primary)', textShadow: 'none', margin: 0 }}>
+            {isLegendary && <span style={{ fontSize: '0.88rem' }}>🏆</span>}
+            <h4 className="retro-title" style={{ fontSize: '0.8rem', color: isLegendary ? 'var(--neon-yellow)' : 'var(--text-primary)', textShadow: 'none', margin: 0 }}>
               {mission.title}
             </h4>
             {mission.claimed ? (
@@ -87,22 +95,31 @@ export const Missions: React.FC<MissionsProps> = ({
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '6px', fontFamily: 'var(--font-sans)' }}>
-            <span>Progress: {mission.current} / {mission.target}</span>
+            {mission.claimed ? (
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 'bold' }}>Claimed ✓</span>
+            ) : isCompleted ? (
+              <span style={{ color: 'var(--neon-green)', fontWeight: 'bold' }}>Completed ✓</span>
+            ) : (
+              <span>Progress: {mission.current} / {mission.target}</span>
+            )}
             <span style={{ fontWeight: 'bold', color: 'var(--neon-yellow)' }}>
               Reward: {mission.rewardCoins > 0 ? `🪙 ${mission.rewardCoins}` : ''} {mission.rewardDiamonds > 0 ? `💎 ${mission.rewardDiamonds}` : ''}
+              {mission.claimed && <span style={{ color: 'var(--text-secondary)', marginLeft: '6px' }}>(Received)</span>}
             </span>
           </div>
 
           {/* Elegant progress slot */}
-          <div className="progress-bar-container" style={{ height: '8px', background: 'var(--bg-color)', border: '1px solid var(--panel-border)' }}>
-            <div 
-              className="progress-bar-fill" 
-              style={{ 
-                width: `${progressPct}%`,
-                backgroundColor: mission.claimed ? 'var(--text-secondary)' : (isCompleted ? 'var(--neon-green)' : 'var(--neon-cyan)')
-              }}
-            ></div>
-          </div>
+          {!mission.claimed && (
+            <div className="progress-bar-container" style={{ height: '8px', background: 'var(--bg-color)', border: '1px solid var(--panel-border)' }}>
+              <div 
+                className="progress-bar-fill" 
+                style={{ 
+                  width: `${progressPct}%`,
+                  backgroundColor: isCompleted ? 'var(--neon-green)' : 'var(--neon-cyan)'
+                }}
+              ></div>
+            </div>
+          )}
         </div>
 
         <div style={{ minWidth: '120px', textAlign: 'right' }}>
@@ -172,7 +189,7 @@ export const Missions: React.FC<MissionsProps> = ({
         </div>
 
         {/* Weekly Challenges */}
-        <div>
+        <div style={{ marginBottom: '40px' }}>
           <h3 className="retro-title" style={{ fontSize: '0.78rem', textAlign: 'left', marginBottom: '16px', color: 'var(--neon-magenta)', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '6px' }}>
             📜 WEEKLY CONTRACTS
           </h3>
@@ -180,6 +197,18 @@ export const Missions: React.FC<MissionsProps> = ({
             {weeklyMissions.map(renderMissionCard)}
           </div>
         </div>
+
+        {/* Legendary Bounties */}
+        {legendaryMissions.length > 0 && (
+          <div>
+            <h3 className="retro-title" style={{ fontSize: '0.78rem', textAlign: 'left', marginBottom: '16px', color: 'var(--neon-yellow)', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '6px' }}>
+              🏆 ELDER'S LEGENDARY CONTRACTS
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {legendaryMissions.map(renderMissionCard)}
+            </div>
+          </div>
+        )}
       </div>
 
     </div>

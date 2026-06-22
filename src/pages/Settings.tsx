@@ -22,6 +22,50 @@ export const Settings: React.FC<SettingsProps> = ({
   const [emailInput, setEmailInput] = useState('');
   const [usernameInput, setUsernameInput] = useState(user.username);
   const [rebinding, setRebinding] = useState<'left' | 'right' | null>(null);
+  const [cityInput, setCityInput] = useState(user.stats?.location?.city || '');
+  const [countryCodeInput, setCountryCodeInput] = useState(user.stats?.location?.countryCode || '');
+
+  useEffect(() => {
+    setCityInput(user.stats?.location?.city || '');
+    setCountryCodeInput(user.stats?.location?.countryCode || '');
+  }, [user]);
+
+  const handleSaveLocation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cityInput.trim() || !countryCodeInput.trim()) {
+      showAlert('Error', 'Please fill out both fields.');
+      return;
+    }
+    const cleanCity = cityInput.trim();
+    const cleanCode = countryCodeInput.trim().toUpperCase();
+    if (cleanCode.length !== 2) {
+      showAlert('Invalid Country Code', 'Country code must be exactly 2 letters (e.g. IN, US).');
+      return;
+    }
+
+    const updatedUser = { ...user };
+    if (!updatedUser.stats) {
+      updatedUser.stats = {
+        totalChops: 0,
+        gamesPlayed: 0,
+        timePlayed: 0,
+        totalCoinsEarned: 0,
+        totalChestsOpened: 0,
+        totalDiamondsEarned: 0,
+        worldRuns: {}
+      };
+    }
+    updatedUser.stats.location = {
+      city: cleanCity,
+      countryCode: cleanCode,
+      countryName: cleanCode === 'IN' ? 'India' : 'Other'
+    };
+
+    db.saveUser(updatedUser);
+    db.syncActiveProfileToCloud();
+    showAlert('Location Updated', `Location updated to ${cleanCity} (${cleanCode})! Synced to leaderboard.`);
+    onSettingsChange();
+  };
 
   useEffect(() => {
     sound.setMute(settings.muted);
@@ -91,7 +135,7 @@ export const Settings: React.FC<SettingsProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '12px' }}>
             <Sliders size={18} style={{ color: 'var(--neon-yellow)' }} />
             <h3 className="retro-title" style={{ fontSize: '0.85rem', color: 'var(--neon-yellow)', margin: 0 }}>
-              CABIN AUDIO PANEL
+              CABIN SYSTEM CONTROLS
             </h3>
           </div>
 
@@ -109,6 +153,27 @@ export const Settings: React.FC<SettingsProps> = ({
                 onClick={handleToggleMute}
               >
                 {settings.muted ? 'MUTED' : 'ACTIVE'}
+              </button>
+            </div>
+
+            {/* Visual Style Selector */}
+            <div className="material-leather" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+              <span style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
+                🎨 RENDER STYLE
+              </span>
+              <button 
+                className={(settings.characterStyle || 'pixel') === 'vector' ? 'neon-btn-cyan' : 'neon-btn-yellow'} 
+                style={{ padding: '6px 14px', fontSize: '0.65rem', borderWidth: '2px' }}
+                onClick={() => {
+                  const currentStyle = settings.characterStyle || 'pixel';
+                  const nextStyle = currentStyle === 'vector' ? 'pixel' : 'vector';
+                  const newSets = { ...settings, characterStyle: nextStyle };
+                  setSettings(newSets);
+                  db.saveSettings(newSets);
+                  onSettingsChange();
+                }}
+              >
+                {(settings.characterStyle || 'pixel') === 'vector' ? '2D VECTOR (SMOOTH)' : 'RETRO PIXEL ART'}
               </button>
             </div>
 
@@ -258,6 +323,49 @@ export const Settings: React.FC<SettingsProps> = ({
           </div>
         </div>
       )}
+
+      {/* City/Location Settings Section */}
+      <div 
+        className="material-wood" 
+        style={{ 
+          marginTop: '32px', 
+          padding: '24px 28px',
+          color: 'var(--text-primary)',
+          background: 'var(--panel-bg)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.03)'
+        }}
+      >
+        <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--neon-cyan)', textShadow: 'none' }}>
+          📍 LEADERBOARD CITY & COUNTRY LOCATION
+        </h3>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', marginBottom: '16px' }}>
+          Set your real city and country so it displays correctly next to your name on the global leaderboards.
+        </p>
+
+        <form onSubmit={handleSaveLocation} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>City Name</label>
+            <input 
+              type="text" required placeholder="e.g. Mumbai, New Delhi, Bengaluru" className="form-input" 
+              style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+              value={cityInput} onChange={(e) => setCityInput(e.target.value)}
+            />
+          </div>
+          
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Country Code (2 Letters)</label>
+            <input 
+              type="text" required maxLength={2} placeholder="e.g. IN, US, GB" className="form-input" 
+              style={{ background: 'var(--bg-color)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', fontSize: '0.85rem', textTransform: 'uppercase' }}
+              value={countryCodeInput} onChange={(e) => setCountryCodeInput(e.target.value)}
+            />
+          </div>
+
+          <button type="submit" className="neon-btn-yellow" style={{ height: '40px', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem' }}>
+            UPDATE LOCATION
+          </button>
+        </form>
+      </div>
 
       {/* Cloud Sync account binding (Aged Parchment) */}
       {user.username === 'mriga' && (

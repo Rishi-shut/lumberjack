@@ -37,6 +37,11 @@ export interface UserProfile {
     totalDiamondsEarned: number;
     timePlayed: number; // in seconds
     worldRuns: Record<string, number>;
+    location?: {
+      city: string;
+      countryCode: string;
+      countryName: string;
+    };
   };
 }
 
@@ -56,7 +61,7 @@ export interface Achievement {
 export interface GameMission {
   id: string;
   title: string;
-  type: 'daily' | 'weekly';
+  type: 'daily' | 'weekly' | 'legendary';
   target: number;
   current: number;
   rewardCoins: number;
@@ -74,6 +79,7 @@ export interface LeaderboardEntry {
   avatar: string;
   title: string;
   frame: string;
+  city?: string;
 }
 
 export interface ShopItem {
@@ -101,6 +107,8 @@ export const getCharacterEmoji = (charId: string): string => {
     case 'char_druid': return '🌿';
     case 'char_valkyrie': return '⚡';
     case 'char_pharaoh': return '👑';
+    case 'char_lawyer': return '💼';
+    case 'char_doctor': return '🥼';
     default: return '👤';
   }
 };
@@ -119,6 +127,8 @@ export const getCharacterLabel = (charId: string): string => {
     case 'char_druid': return '🌿 Druid';
     case 'char_valkyrie': return '⚡ Valkyrie';
     case 'char_pharaoh': return '👑 Pharaoh';
+    case 'char_lawyer': return '💼 Attorney';
+    case 'char_doctor': return '🥼 Doctor';
     default: return '👤 Challenger';
   }
 };
@@ -133,23 +143,25 @@ const DEFAULT_SHOP_ITEMS: ShopItem[] = [
   { id: 'char_ninja', name: 'Cyber Ninja', description: 'Synthesized movements. Light-speed cuts.', type: 'character', cost: 5000, currency: 'coins', unlocked: false, rarity: 'epic' },
   { id: 'char_pyro', name: 'Pyro Ranger', description: 'Fires up his swing with heated gauntlets.', type: 'character', cost: 6000, currency: 'coins', unlocked: false, rarity: 'rare' },
   { id: 'char_druid', name: 'Archdruid Elidon', description: 'Commands nature itself to fell the trees.', type: 'character', cost: 8000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'char_lawyer', name: 'Attorney Suit', description: 'Chops down cases and logs with legal fury.', type: 'character', cost: 1000, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'char_doctor', name: 'Surgeon White', description: 'Diagnoses trunks and slices with surgical precision.', type: 'character', cost: 2500, currency: 'coins', unlocked: false, rarity: 'epic' },
   { id: 'char_valkyrie', name: 'Brunhilde', description: 'Descends from Valhalla to chop wood.', type: 'character', cost: 30, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
   { id: 'char_pharaoh', name: 'Egypt Pharaoh', description: 'Awakened from eternal slumber to chop pyramids.', type: 'character', cost: 60, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
   { id: 'char_alien', name: 'Zorgon', description: 'An alien lumberjack from Sector 9.', type: 'character', cost: 15, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
   { id: 'char_robot', name: 'Mecha Chop', description: 'Iron limbs fueled by steam power.', type: 'character', cost: 40, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
 
   // Weapons
-  { id: 'weap_axe_wood', name: 'Steel Axe', description: 'Your trusty iron companion.', type: 'weapon', cost: 0, currency: 'coins', unlocked: true, rarity: 'common' },
-  { id: 'weap_axe_golden', name: 'Golden Axe', description: 'Shines bright, chips soft.', type: 'weapon', cost: 1000, currency: 'coins', unlocked: false, rarity: 'rare' },
-  { id: 'weap_hammer', name: 'Mjolnir Jr.', description: 'Crush blocks instead of cutting them.', type: 'weapon', cost: 2000, currency: 'coins', unlocked: false, rarity: 'rare' },
-  { id: 'weap_axe_fire', name: 'Magma Cleaver', description: 'Heated edge that cauterizes trunks.', type: 'weapon', cost: 3000, currency: 'coins', unlocked: false, rarity: 'epic' },
-  { id: 'weap_chainsaw', name: 'Lumbermatic-3000', description: 'Vroom vroom! Automatic wood grinding.', type: 'weapon', cost: 4500, currency: 'coins', unlocked: false, rarity: 'epic' },
-  { id: 'weap_broadaxe', name: 'Obsidian Great-Axe', description: 'Forged in lava pools, heavy and razor-sharp.', type: 'weapon', cost: 5000, currency: 'coins', unlocked: false, rarity: 'epic' },
-  { id: 'weap_scythe', name: 'Reaper Scythe', description: 'Harvests logs like souls.', type: 'weapon', cost: 7000, currency: 'coins', unlocked: false, rarity: 'epic' },
-  { id: 'weap_candy_cane', name: 'Candy Cane Chopper', description: 'Sweet but lethal holiday hammer.', type: 'weapon', cost: 15, currency: 'diamonds', unlocked: false, rarity: 'rare' },
-  { id: 'weap_laser', name: 'Plasma Cutter', description: 'Energy beam that slices effortlessly.', type: 'weapon', cost: 20, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
-  { id: 'weap_energy_halberd', name: 'Quantum Halberd', description: 'Glows with subatomic energy particles.', type: 'weapon', cost: 35, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
-  { id: 'weap_blade', name: 'Cyber Saber', description: 'An elegant weapon from a neon age.', type: 'weapon', cost: 50, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
+  { id: 'weap_axe_wood', name: 'Banana Splitter', description: 'A crude carved wooden banana pick. Smells like banana oil.', type: 'weapon', cost: 0, currency: 'coins', unlocked: true, rarity: 'common' },
+  { id: 'weap_axe_golden', name: 'Golden Bananarang', description: 'A solid gold curved banana blade that glints in the sunlight.', type: 'weapon', cost: 1000, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'weap_hammer', name: 'Bananabreaker Hammer', description: 'A massive, heavy mallet shaped like a cluster of green plantains.', type: 'weapon', cost: 2000, currency: 'coins', unlocked: false, rarity: 'rare' },
+  { id: 'weap_axe_fire', name: 'Flamin\' Plantain Slicer', description: 'A hot, glowing caramelized plantain cleaver that sizzles as it cuts.', type: 'weapon', cost: 3000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'weap_chainsaw', name: 'Gemini Banana Saw', description: 'Vroom vroom! Motorized chainsaw spinning double-sided banana blades.', type: 'weapon', cost: 4500, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'weap_broadaxe', name: 'Dark Matter Plantain', description: 'A massive broadaxe forged from deep cosmic banana peel composite.', type: 'weapon', cost: 5000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'weap_scythe', name: 'Crescent Banana Reaper', description: 'A giant reaping scythe with a crescent-curved yellow banana edge.', type: 'weapon', cost: 7000, currency: 'coins', unlocked: false, rarity: 'epic' },
+  { id: 'weap_candy_cane', name: 'Frosted Banana Candy', description: 'A candy-coated peppermint banana club that packs a sweet punch.', type: 'weapon', cost: 15, currency: 'diamonds', unlocked: false, rarity: 'rare' },
+  { id: 'weap_laser', name: 'Gemini Banana Laser', description: 'An advanced plasma emitter that focuses energy into a banana-shaped cutting beam.', type: 'weapon', cost: 20, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
+  { id: 'weap_energy_halberd', name: 'Quantum Banana Lance', description: 'A legendary polearm that hums with subatomic glowing banana energy.', type: 'weapon', cost: 35, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
+  { id: 'weap_blade', name: 'Glitch Banana Saber', description: 'An elegant neon cyber-sword that flickers between yellow and cyan pixel glitches.', type: 'weapon', cost: 50, currency: 'diamonds', unlocked: false, rarity: 'legendary' },
 
   // Trails
   { id: 'trail_none', name: 'No Trail', description: 'Simple chop motion.', type: 'trail', cost: 0, currency: 'coins', unlocked: true, rarity: 'common' },
@@ -223,6 +235,10 @@ const DEFAULT_MISSIONS: GameMission[] = [
   { id: 'mis_w_score_1000', title: 'Reach 1,000 high score', type: 'weekly', target: 1000, current: 0, rewardCoins: 500, rewardDiamonds: 4, claimed: false },
   { id: 'mis_w_chests_3', title: 'Open 3 shop chests', type: 'weekly', target: 3, current: 0, rewardCoins: 400, rewardDiamonds: 3, claimed: false },
   { id: 'mis_w_gold_2000', title: 'Collect 2,000 coins in games', type: 'weekly', target: 2000, current: 0, rewardCoins: 600, rewardDiamonds: 6, claimed: false },
+
+  { id: 'mis_l_chop_10k', title: 'Chop 10,000 blocks total', type: 'legendary', target: 10000, current: 0, rewardCoins: 2000, rewardDiamonds: 20, claimed: false },
+  { id: 'mis_l_combo_80', title: 'Reach an 80x Combo', type: 'legendary', target: 80, current: 0, rewardCoins: 1500, rewardDiamonds: 15, claimed: false },
+  { id: 'mis_l_level_20', title: 'Achieve Player Level 20', type: 'legendary', target: 20, current: 1, rewardCoins: 2500, rewardDiamonds: 25, claimed: false },
 ];
 
 const SEED_LEADERBOARD: LeaderboardEntry[] = [];
@@ -258,9 +274,12 @@ export interface CloudRegistryEntry {
 
 class LocalStorageDB {
   private prefix = 'infinite_chop_';
+  private syncTimeout: any = null;
+  private currentSyncPromise: Promise<void> = Promise.resolve();
 
   constructor() {
     this.initDatabase();
+    this.fetchAndStoreLocation();
   }
 
   public async isUsernameRegistered(username: string): Promise<boolean> {
@@ -343,6 +362,7 @@ class LocalStorageDB {
       keyRight: 'ArrowRight',
       keyLeftAlt: 'a',
       keyRightAlt: 'd',
+      characterStyle: 'pixel',
     };
 
     const defaultTelemetry = [
@@ -476,6 +496,9 @@ class LocalStorageDB {
     localStorage.setItem(this.key('last_synced_coins'), profile.coins.toString());
     localStorage.setItem(this.key('last_synced_diamonds'), profile.diamonds.toString());
     localStorage.setItem(this.key('last_synced_tickets'), (profile.tickets || 0).toString());
+    localStorage.setItem('infinite_chop_last_pushed_coins', profile.coins.toString());
+    localStorage.setItem('infinite_chop_last_pushed_diamonds', profile.diamonds.toString());
+    localStorage.setItem('infinite_chop_last_pushed_tickets', (profile.tickets || 0).toString());
     if (profile.shop_data) localStorage.setItem(this.key('shop'), JSON.stringify(profile.shop_data));
     if (profile.achievements_data) localStorage.setItem(this.key('achievements'), JSON.stringify(profile.achievements_data));
     if (profile.missions_data) localStorage.setItem(this.key('missions'), JSON.stringify(profile.missions_data));
@@ -542,7 +565,38 @@ class LocalStorageDB {
     localStorage.setItem(this.key('missions'), JSON.stringify(DEFAULT_MISSIONS));
   }
 
-  public async syncActiveProfileToCloud(oldUsername?: string) {
+  public syncActiveProfileToCloud(oldUsername?: string, force = false): Promise<void> {
+    const user = this.getUser();
+    if (user.isGuest) return Promise.resolve();
+
+    if (this.syncTimeout) {
+      clearTimeout(this.syncTimeout);
+      this.syncTimeout = null;
+    }
+
+    if (force) {
+      this.currentSyncPromise = this.currentSyncPromise
+        .then(() => this.doSyncActiveProfileToCloud(oldUsername))
+        .catch((err) => {
+          console.error("Sync error:", err);
+        });
+      return this.currentSyncPromise;
+    }
+
+    return new Promise<void>((resolve) => {
+      this.syncTimeout = setTimeout(() => {
+        this.currentSyncPromise = this.currentSyncPromise
+          .then(() => this.doSyncActiveProfileToCloud(oldUsername))
+          .then(resolve)
+          .catch((err) => {
+            console.error("Sync error:", err);
+            resolve();
+          });
+      }, 150);
+    });
+  }
+
+  private async doSyncActiveProfileToCloud(oldUsername?: string) {
     const user = this.getUser();
     if (user.isGuest) return;
 
@@ -639,6 +693,10 @@ class LocalStorageDB {
         telemetry_data: this.getTelemetry()
       };
 
+      localStorage.setItem('infinite_chop_last_pushed_coins', updates.coins.toString());
+      localStorage.setItem('infinite_chop_last_pushed_diamonds', updates.diamonds.toString());
+      localStorage.setItem('infinite_chop_last_pushed_tickets', updates.tickets.toString());
+
       const { error } = await supabase
         .from('profiles')
         .update(updates)
@@ -650,6 +708,9 @@ class LocalStorageDB {
         localStorage.setItem(this.key('last_synced_coins'), user.coins.toString());
         localStorage.setItem(this.key('last_synced_diamonds'), user.diamonds.toString());
         localStorage.setItem(this.key('last_synced_tickets'), (user.tickets || 0).toString());
+        localStorage.setItem('infinite_chop_last_pushed_coins', user.coins.toString());
+        localStorage.setItem('infinite_chop_last_pushed_diamonds', user.diamonds.toString());
+        localStorage.setItem('infinite_chop_last_pushed_tickets', (user.tickets || 0).toString());
         this.logTelemetry('sync', `Successfully synced game state to cloud.`);
       }
     } finally {
@@ -710,6 +771,9 @@ class LocalStorageDB {
         localStorage.setItem(this.key('last_synced_coins'), profile.coins.toString());
         localStorage.setItem(this.key('last_synced_diamonds'), profile.diamonds.toString());
         localStorage.setItem(this.key('last_synced_tickets'), (profile.tickets || 0).toString());
+        localStorage.setItem('infinite_chop_last_pushed_coins', profile.coins.toString());
+        localStorage.setItem('infinite_chop_last_pushed_diamonds', profile.diamonds.toString());
+        localStorage.setItem('infinite_chop_last_pushed_tickets', (profile.tickets || 0).toString());
         if (profile.shop_data) localStorage.setItem(this.key('shop'), JSON.stringify(profile.shop_data));
         if (profile.achievements_data) localStorage.setItem(this.key('achievements'), JSON.stringify(profile.achievements_data));
         if (profile.missions_data) localStorage.setItem(this.key('missions'), JSON.stringify(profile.missions_data));
@@ -807,6 +871,7 @@ class LocalStorageDB {
         keyRight: 'ArrowRight',
         keyLeftAlt: 'a',
         keyRightAlt: 'd',
+        characterStyle: 'pixel',
       }));
       localStorage.setItem(this.key('telemetry'), JSON.stringify([
         { timestamp: new Date().toISOString(), type: 'system', message: 'Database initialized successfully.' }
@@ -830,7 +895,17 @@ class LocalStorageDB {
     try {
       const stored = JSON.parse(raw) as ShopItem[];
       let changed = false;
-      const merged = [...stored];
+      const merged = stored.map(item => {
+        const defItem = DEFAULT_SHOP_ITEMS.find(def => def.id === item.id);
+        if (defItem) {
+          if (item.name !== defItem.name || item.description !== defItem.description) {
+            item.name = defItem.name;
+            item.description = defItem.description;
+            changed = true;
+          }
+        }
+        return item;
+      });
       DEFAULT_SHOP_ITEMS.forEach(defItem => {
         if (!merged.some(item => item.id === defItem.id)) {
           merged.push(defItem);
@@ -922,7 +997,14 @@ class LocalStorageDB {
       { id: 'mis_w_gold_2000', title: 'Collect 2,000 coins in games', type: 'weekly', target: 2000, current: 0, rewardCoins: 600, rewardDiamonds: 6, claimed: false },
     ];
 
-    const allMissions = [...dailyMissions, ...finalWeeklyMissions];
+    const legendaryMissions = currentMissions.filter((m: any) => m.type === 'legendary');
+    const finalLegendaryMissions = legendaryMissions.length > 0 ? legendaryMissions : [
+      { id: 'mis_l_chop_10k', title: 'Chop 10,000 blocks total', type: 'legendary', target: 10000, current: 0, rewardCoins: 2000, rewardDiamonds: 20, claimed: false },
+      { id: 'mis_l_combo_80', title: 'Reach an 80x Combo', type: 'legendary', target: 80, current: 0, rewardCoins: 1500, rewardDiamonds: 15, claimed: false },
+      { id: 'mis_l_level_20', title: 'Achieve Player Level 20', type: 'legendary', target: 20, current: 1, rewardCoins: 2500, rewardDiamonds: 25, claimed: false },
+    ];
+
+    const allMissions = [...dailyMissions, ...finalWeeklyMissions, ...finalLegendaryMissions];
     localStorage.setItem(this.key('missions'), JSON.stringify(allMissions));
   }
 
@@ -944,24 +1026,64 @@ class LocalStorageDB {
       return [];
     }
 
+    const indianCities = [
+      'Mumbai', 'New Delhi', 'Bengaluru', 'Hyderabad', 'Pune', 
+      'Chennai', 'Kolkata', 'Noida', 'Gurgaon', 'Ahmedabad', 
+      'Jaipur', 'Lucknow', 'Indore', 'Bhopal', 'Nagpur', 
+      'Chandigarh', 'Kochi', 'Coimbatore', 'Surat', 'Patna'
+    ];
+
     return (data || []).map(p => {
       const stats = p.stats_data || {};
       const totalCoinsEarned = stats.totalCoinsEarned || p.coins || 0;
+      
+      let city = 'Mumbai';
+      let countryCode = 'IN';
+
+      if (stats.location && stats.location.city && stats.location.countryCode) {
+        city = stats.location.city;
+        countryCode = stats.location.countryCode;
+      } else {
+        const charCodeSum = p.username.split('').reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
+        city = indianCities[charCodeSum % indianCities.length];
+        countryCode = 'IN';
+      }
+
       return {
         username: p.username,
-        country: p.username === 'mriga' ? 'US' : 'US',
+        country: countryCode,
         score: p.highscore || 0,
         maxCombo: p.max_combo || 0,
         coins: totalCoinsEarned,
         avatar: p.equipped_character || 'char_lumberjack',
         title: p.equipped_title || 'Chop Cadet',
-        frame: p.equipped_frame || 'Standard'
+        frame: p.equipped_frame || 'Standard',
+        city: city
       };
     });
   }
 
   public getSettings() {
-    return JSON.parse(localStorage.getItem(this.key('settings'))!);
+    const raw = localStorage.getItem(this.key('settings'));
+    if (!raw) {
+      return {
+        sfxVolume: 0.6,
+        musicVolume: 0.4,
+        masterVolume: 0.5,
+        muted: false,
+        graphics: 'high',
+        keyLeft: 'ArrowLeft',
+        keyRight: 'ArrowRight',
+        keyLeftAlt: 'a',
+        keyRightAlt: 'd',
+        characterStyle: 'pixel'
+      };
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed.characterStyle) {
+      parsed.characterStyle = 'pixel';
+    }
+    return parsed;
   }
 
   public getTelemetry(): any[] {
@@ -1146,6 +1268,14 @@ class LocalStorageDB {
         } else if (m.id === 'mis_w_gold_2000') {
           m.current = Math.min(m.target, m.current + coinsEarned);
         }
+      } else if (m.type === 'legendary') {
+        if (m.id === 'mis_l_chop_10k') {
+          m.current = Math.min(m.target, user.stats.totalChops);
+        } else if (m.id === 'mis_l_combo_80') {
+          m.current = Math.min(m.target, Math.max(m.current, maxCombo));
+        } else if (m.id === 'mis_l_level_20') {
+          m.current = Math.min(m.target, user.level);
+        }
       }
     });
     this.saveMissions(activeMissions);
@@ -1188,6 +1318,7 @@ class LocalStorageDB {
     this.saveShop(shop);
     this.saveUser(user);
     this.logTelemetry('shop', `Purchased ${item.name} for ${item.cost} ${item.currency}.`);
+    this.syncActiveProfileToCloud();
     
     return { success: true };
   }
@@ -1324,6 +1455,7 @@ class LocalStorageDB {
 
     this.saveUser(user);
     this.logTelemetry('daily', `Claimed daily reward: +${coins} coins, +${diamonds} diamonds.`);
+    this.syncActiveProfileToCloud();
     return { success: true, coins, diamonds };
   }
 
@@ -1348,6 +1480,7 @@ class LocalStorageDB {
     this.saveMissions(missions);
     this.saveUser(user);
     this.logTelemetry('mission', `Claimed reward for mission "${mission.title}": +${mission.rewardCoins} coins, +${mission.rewardDiamonds} diamonds.`);
+    this.syncActiveProfileToCloud();
 
     return { success: true, coins: mission.rewardCoins, diamonds: mission.rewardDiamonds };
   }
@@ -1709,6 +1842,7 @@ class LocalStorageDB {
     user.hasPremiumPass = true;
     this.saveUser(user);
     this.logTelemetry('shop', 'Unlocked Season Pass Premium track.');
+    this.syncActiveProfileToCloud();
     return { success: true };
   }
 
@@ -1738,6 +1872,7 @@ class LocalStorageDB {
     }
 
     this.saveUser(user);
+    this.syncActiveProfileToCloud();
     return { success: true };
   }
 
@@ -1813,16 +1948,45 @@ class LocalStorageDB {
     }
   }
 
-  public useReviveTicket(): { success: boolean; ticketsLeft?: number; error?: string } {
+  public useReviveTicket(amount: number = 1): { success: boolean; ticketsLeft?: number; error?: string } {
     const user = this.getUser();
-    if (!user.tickets || user.tickets <= 0) {
-      return { success: false, error: 'No tickets available' };
+    if (!user.tickets || user.tickets < amount) {
+      return { success: false, error: 'Not enough tickets available' };
     }
-    user.tickets -= 1;
+    user.tickets -= amount;
     this.saveUser(user);
-    this.logTelemetry('game', 'Used 1 Revive Ticket.');
+    this.logTelemetry('game', `Used ${amount} Revive Ticket(s).`);
     this.syncActiveProfileToCloud();
     return { success: true, ticketsLeft: user.tickets };
+  }
+
+  public async fetchAndStoreLocation() {
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (res.ok) {
+        const data = await res.json();
+        const city = data.city || 'Mumbai';
+        const countryCode = data.country_code || 'IN';
+        const countryName = data.country_name || 'India';
+
+        const user = this.getUser();
+        if (user && user.stats) {
+          const currentLoc = (user.stats as any).location || {};
+          if (currentLoc.city !== city || currentLoc.countryCode !== countryCode) {
+            (user.stats as any).location = { city, countryCode, countryName };
+            this.saveUser(user);
+            this.syncActiveProfileToCloud(undefined, true);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching geo IP location:", e);
+      const user = this.getUser();
+      if (user && user.stats && !(user.stats as any).location) {
+        (user.stats as any).location = { city: 'Mumbai', countryCode: 'IN', countryName: 'India' };
+        this.saveUser(user);
+      }
+    }
   }
 }
 
