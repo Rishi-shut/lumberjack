@@ -28,29 +28,134 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
   const [timeframe, setTimeframe] = useState<'daily' | 'weekly' | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Get sorted list based on category
-  const getSortedEntries = () => {
-    let list = [...leaderboard];
+  // Get mapped entries based on timeframe
+  const getMappedEntries = () => {
+    if (timeframe === 'all') {
+      return leaderboard;
+    }
+
+    const now = new Date();
+    // Calculate calendar info
+    const startOfYear = new Date(now.getFullYear(), 0, 0);
+    const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+    
+    const oneJan = new Date(now.getFullYear(), 0, 1);
+    const weekNumber = Math.ceil((Math.floor((now.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000)) + oneJan.getDay() + 1) / 7);
+    
+    const seed = timeframe === 'weekly' 
+      ? weekNumber + now.getFullYear() * 100 
+      : dayOfYear + now.getFullYear() * 1000;
+
+    // Simple deterministic hash function
+    const getDeterministicHash = (str: string, seedVal: number) => {
+      let hash = seedVal;
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    };
+
+    return leaderboard.map(entry => {
+      const isMe = entry.username === user.username;
+      
+      // Multiplier logic
+      const hashVal = getDeterministicHash(entry.username, seed);
+      const minMult = timeframe === 'weekly' ? 0.45 : 0.15;
+      const maxMultRange = timeframe === 'weekly' ? 40 : 40;
+      const multiplier = minMult + (hashVal % maxMultRange) / 100;
+      
+      // Calculate scores
+      let score = Math.round(entry.score * multiplier);
+      let coins = Math.round(entry.coins * multiplier);
+      let maxCombo = Math.round(entry.maxCombo * multiplier);
+
+      // If it's me, and we have daily/weekly stats in localStorage, we can use them!
+      if (isMe) {
+        const stats = user.stats || {};
+        const todayKey = `${now.getFullYear()}-${dayOfYear}`;
+        const weekKey = `${now.getFullYear()}-${weekNumber}`;
+
+        let userBaseScore = score;
+        let userBaseCoins = coins;
+        let userBaseCombo = maxCombo;
+
+        if (timeframe === 'daily' && stats.lastDailyKey === todayKey && stats.dailyScores) {
+          userBaseScore = Math.max(userBaseScore, stats.dailyScores.score || 0);
+          userBaseCoins = Math.max(userBaseCoins, stats.dailyScores.coins || 0);
+          userBaseCombo = Math.max(userBaseCombo, stats.dailyScores.combo || 0);
+        } else if (timeframe === 'weekly' && stats.lastWeeklyKey === weekKey && stats.weeklyScores) {
+          userBaseScore = Math.max(userBaseScore, stats.weeklyScores.score || 0);
+          userBaseCoins = Math.max(userBaseCoins, stats.weeklyScores.coins || 0);
+          userBaseCombo = Math.max(userBaseCombo, stats.weeklyScores.combo || 0);
+        }
+
+        score = userBaseScore;
+        coins = userBaseCoins;
+        maxCombo = userBaseCombo;
+      }
+
+      return {
+        ...entry,
+        score,
+        coins,
+        maxCombo
+      };
+    });
+  };
+
+  const getSortedEntries = (list: LeaderboardEntry[]) => {
+    let sorted = [...list];
     if (category === 'score') {
-      list.sort((a, b) => b.score - a.score);
+      sorted.sort((a, b) => b.score - a.score);
     } else if (category === 'coins') {
-      list.sort((a, b) => b.coins - a.coins);
+      sorted.sort((a, b) => b.coins - a.coins);
     } else {
-      list.sort((a, b) => b.maxCombo - a.maxCombo);
+      sorted.sort((a, b) => b.maxCombo - a.maxCombo);
     }
 
     if (searchQuery.trim() !== '') {
-      list = list.filter(entry => 
+      sorted = sorted.filter(entry => 
         entry.username.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    return list;
+    return sorted;
   };
 
-  const sortedList = getSortedEntries();
-  const playerRankIndex = leaderboard.findIndex(entry => entry.username === user.username);
-  const playerRankNum = playerRankIndex >= 0 ? playerRankIndex + 1 : '10+';
+  const getSortedEntriesUnfiltered = (list: LeaderboardEntry[]) => {
+    let sorted = [...list];
+    if (category === 'score') {
+      sorted.sort((a, b) => b.score - a.score);
+    } else if (category === 'coins') {
+      sorted.sort((a, b) => b.coins - a.coins);
+    } else {
+      sorted.sort((a, b) => b.maxCombo - a.maxCombo);
+    }
+    return sorted;
+  };
+
+  const mappedList = getMappedEntries();
+  const sortedList = getSortedEntries(mappedList);
+  const unfilteredSortedList = getSortedEntriesUnfiltered(mappedList);
+  const playerRankIndex = unfilteredSortedList.findIndex(entry => entry.username === user.username);
+  const playerRankNum = playerRankIndex >= 0 ? playerRankIndex + 1 : '100+';
+  const myEntry = playerRankIndex >= 0 ? unfilteredSortedList[playerRankIndex] : null;
+
+  const getRecordTitle = () => {
+    const prefix = timeframe === 'all' ? 'RECORD' : (timeframe === 'weekly' ? 'WEEKLY' : 'DAILY');
+    if (category === 'score') return `${prefix} SCORE`;
+    if (category === 'coins') return `${prefix} GOLD`;
+    return `${prefix} COMBO`;
+  };
+
+  const getRecordValue = () => {
+    if (!myEntry) return '0';
+    if (category === 'score') return myEntry.score.toLocaleString();
+    if (category === 'coins') return `🪙 ${myEntry.coins.toLocaleString()}`;
+    return `${myEntry.maxCombo}x`;
+  };
+
 
   const renderPodiumCard = (entry: LeaderboardEntry, rank: 1 | 2 | 3) => {
     const isMe = entry.username === user.username;
@@ -309,9 +414,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
             </h4>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>HIGH SCORE RECORD</span>
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{getRecordTitle()}</span>
             <div style={{ fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'var(--font-retro)', color: 'var(--neon-yellow)' }}>
-              {user.highScore}
+              {getRecordValue()}
             </div>
           </div>
         </div>

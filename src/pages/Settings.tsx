@@ -277,53 +277,6 @@ export const Settings: React.FC<SettingsProps> = ({
         </div>
       </div>
 
-      {/* Challenger Profile & Account Switching Section */}
-      {!user.isGuest && (
-        <div 
-          className="material-wood" 
-          style={{ 
-            marginTop: '32px', 
-            padding: '24px 28px',
-            color: 'var(--text-primary)',
-            background: 'var(--panel-bg)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.03)'
-          }}
-        >
-          <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--neon-cyan)', textShadow: 'none' }}>
-            👤 CHALLENGER PROFILE SESSION
-          </h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-            <div>
-              <h4 style={{ fontWeight: '900', fontSize: '1.05rem', margin: 0, color: 'var(--neon-cyan)' }}>
-                Active Challenger: {user.username}
-              </h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', marginBottom: 0 }}>
-                Your progress, scores, coins, and unlocks are synchronized with your account details.
-              </p>
-            </div>
-            <button
-              className="neon-btn-magenta"
-              style={{ fontSize: '0.75rem', padding: '10px 24px', borderWidth: '2px' }}
-              onClick={() => {
-                showConfirm(
-                  'Switch Account',
-                  'Are you sure you want to log out and switch accounts? Your current progress is saved in the simulated cloud registry.',
-                  () => {
-                    db.logoutUser();
-                    if (setCurrentPage) {
-                      setCurrentPage('home');
-                    }
-                    onSettingsChange();
-                  }
-                );
-              }}
-            >
-              LOG OUT & SWITCH ACCOUNT
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* City/Location Settings Section */}
       <div 
         className="material-wood" 
@@ -479,6 +432,53 @@ export const Settings: React.FC<SettingsProps> = ({
                 </span>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Challenger Profile & Account Switching Section */}
+      {!user.isGuest && (
+        <div 
+          className="material-wood" 
+          style={{ 
+            marginTop: '32px', 
+            padding: '24px 28px',
+            color: 'var(--text-primary)',
+            background: 'var(--panel-bg)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.03)'
+          }}
+        >
+          <h3 className="retro-title" style={{ fontSize: '0.85rem', marginBottom: '20px', borderBottom: '1px dashed var(--panel-border)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--neon-cyan)', textShadow: 'none' }}>
+            👤 CHALLENGER PROFILE SESSION
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+            <div>
+              <h4 style={{ fontWeight: '900', fontSize: '1.05rem', margin: 0, color: 'var(--neon-cyan)' }}>
+                Active Challenger: {user.username}
+              </h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px', marginBottom: 0 }}>
+                Your progress, scores, coins, and unlocks are synchronized with your account details.
+              </p>
+            </div>
+            <button
+              className="neon-btn-magenta"
+              style={{ fontSize: '0.75rem', padding: '10px 24px', borderWidth: '2px' }}
+              onClick={() => {
+                showConfirm(
+                  'Switch Account',
+                  'Are you sure you want to log out and switch accounts? Your current progress is saved in the simulated cloud registry.',
+                  () => {
+                    db.logoutUser();
+                    if (setCurrentPage) {
+                      setCurrentPage('home');
+                    }
+                    onSettingsChange();
+                  }
+                );
+              }}
+            >
+              LOG OUT & SWITCH ACCOUNT
+            </button>
           </div>
         </div>
       )}

@@ -42,6 +42,10 @@ export interface UserProfile {
       countryCode: string;
       countryName: string;
     };
+    dailyScores?: { score: number; coins: number; combo: number };
+    weeklyScores?: { score: number; coins: number; combo: number };
+    lastDailyKey?: string;
+    lastWeeklyKey?: string;
   };
 }
 
@@ -1219,6 +1223,32 @@ class LocalStorageDB {
     if (maxCombo > user.maxCombo) {
       user.maxCombo = maxCombo;
     }
+
+    // Track daily and weekly scores
+    const dateObj = new Date();
+    const startOfYear = new Date(dateObj.getFullYear(), 0, 0);
+    const dayOfYear = Math.floor((dateObj.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+    const oneJan = new Date(dateObj.getFullYear(), 0, 1);
+    const weekNumber = Math.ceil((Math.floor((dateObj.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000)) + oneJan.getDay() + 1) / 7);
+    const todayKey = `${dateObj.getFullYear()}-${dayOfYear}`;
+    const weekKey = `${dateObj.getFullYear()}-${weekNumber}`;
+
+    if (!user.stats.dailyScores || user.stats.lastDailyKey !== todayKey) {
+      user.stats.dailyScores = { score: 0, coins: 0, combo: 0 };
+      user.stats.lastDailyKey = todayKey;
+    }
+    if (!user.stats.weeklyScores || user.stats.lastWeeklyKey !== weekKey) {
+      user.stats.weeklyScores = { score: 0, coins: 0, combo: 0 };
+      user.stats.lastWeeklyKey = weekKey;
+    }
+
+    if (score > user.stats.dailyScores.score) user.stats.dailyScores.score = score;
+    if (coinsEarned > user.stats.dailyScores.coins) user.stats.dailyScores.coins = coinsEarned;
+    if (maxCombo > user.stats.dailyScores.combo) user.stats.dailyScores.combo = maxCombo;
+
+    if (score > user.stats.weeklyScores.score) user.stats.weeklyScores.score = score;
+    if (coinsEarned > user.stats.weeklyScores.coins) user.stats.weeklyScores.coins = coinsEarned;
+    if (maxCombo > user.stats.weeklyScores.combo) user.stats.weeklyScores.combo = maxCombo;
 
     // 3. XP Leveling (1 chop = 1 XP, survival time boosts XP)
     const xpEarned = score + Math.floor(timeSpentSeconds * 2);
