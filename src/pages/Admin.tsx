@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Users, DollarSign, Database, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { db, UserProfile } from '../utils/LocalStorageDB';
+import { sound } from '../utils/AudioEngine';
 
 interface AdminProps {
   user: UserProfile;
@@ -29,7 +30,7 @@ export const Admin: React.FC<AdminProps> = ({
     playerBanned: user.isBanned
   });
 
-  const [allPlayers, setAllPlayers] = useState<{ username: string; level: number; coins: number; diamonds: number; isBanned: boolean }[]>([]);
+  const [allPlayers, setAllPlayers] = useState<{ username: string; level: number; coins: number; diamonds: number; isBanned: boolean; createdAt?: string }[]>([]);
   const [selectedPlayerUsername, setSelectedPlayerUsername] = useState<string>('');
 
   const loadStats = () => {
@@ -61,6 +62,12 @@ export const Admin: React.FC<AdminProps> = ({
   const targetPlayer = allPlayers.find(p => p.username === selectedPlayerUsername);
   const isTargetBanned = targetPlayer ? targetPlayer.isBanned : false;
   const targetLevel = targetPlayer ? targetPlayer.level : 1;
+
+  const sortedPlayersBySignup = [...allPlayers].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
 
   const handleBanToggle = () => {
     if (!selectedPlayerUsername) return;
@@ -180,28 +187,108 @@ export const Admin: React.FC<AdminProps> = ({
         {/* Right Side: Injection and restriction services */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* Target Challenger Selector */}
+          {/* Chronological Guild Registry Logs */}
           <div className="material-stone" style={{ padding: '24px', background: 'linear-gradient(180deg, #23252a, #16181b)' }}>
-            <h3 className="retro-title" style={{ fontSize: '0.82rem', color: 'var(--neon-cyan)', marginBottom: '16px', borderBottom: '2px dashed #383c44', paddingBottom: '10px', marginTop: 0 }}>
-              🎯 TARGET CHALLENGER SELECTOR
+            <h3 className="retro-title" style={{ fontSize: '0.82rem', color: 'var(--neon-green)', marginBottom: '16px', borderBottom: '2px dashed #383c44', paddingBottom: '10px', marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>👥 GUILD SIGN-UP REGISTRY</span>
+              <span style={{ fontSize: '0.6rem', background: 'var(--neon-green)', color: '#000', padding: '2px 6px', borderRadius: '4px', fontFamily: 'var(--font-retro)', fontWeight: 'bold', marginLeft: 'auto' }}>
+                LATEST FIRST
+              </span>
             </h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>Choose Challenger Profile</label>
-                <select 
-                  className="form-input" 
-                  value={selectedPlayerUsername}
-                  onChange={(e) => setSelectedPlayerUsername(e.target.value)}
-                  style={{ background: '#121316', border: '2px solid #383c44', color: '#fff', height: '40px', fontSize: '0.85rem' }}
-                >
-                  {allPlayers.map(p => (
-                    <option key={p.username} value={p.username}>
-                      {p.username} (Lv {p.level}) {p.isBanned ? '🚫 BANNED' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '-8px', marginBottom: '16px' }}>
+              Whenever a new challenger signs up, they appear below. Click any row to target the profile.
+            </p>
+
+            <div style={{ 
+              maxHeight: '260px', 
+              overflowY: 'auto', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '8px',
+              paddingRight: '6px',
+              border: '1px solid #2d3139',
+              borderRadius: '8px',
+              background: '#121316',
+              padding: '8px'
+            }}>
+              {sortedPlayersBySignup.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0', fontSize: '0.8rem' }}>
+                  No guild members registered in scroll registry.
+                </div>
+              ) : (
+                sortedPlayersBySignup.map((player) => {
+                  const isSelected = player.username === selectedPlayerUsername;
+                  const dateStr = player.createdAt 
+                    ? new Date(player.createdAt).toLocaleString(undefined, { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      }) 
+                    : 'Ages ago';
+
+                  return (
+                    <div 
+                      key={player.username}
+                      onClick={() => {
+                        setSelectedPlayerUsername(player.username);
+                        sound.playCoin();
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        background: isSelected ? 'rgba(16, 185, 129, 0.1)' : '#191b1f',
+                        border: isSelected ? '1px solid var(--neon-green)' : '1px solid #2d3139',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                      className="guild-log-row"
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '1.1rem' }}>
+                          {player.isBanned ? '🚫' : '🛡️'}
+                        </span>
+                        <div>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.82rem', color: isSelected ? 'var(--neon-green)' : '#fff' }}>
+                            {player.username}
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            Registered: {dateStr}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ 
+                          fontSize: '0.62rem', 
+                          background: '#2d3139', 
+                          color: 'var(--text-secondary)', 
+                          padding: '2px 6px', 
+                          borderRadius: '4px',
+                          fontWeight: 'bold'
+                        }}>
+                          Lv {player.level}
+                        </span>
+                        <span style={{ 
+                          fontSize: '0.62rem', 
+                          background: 'rgba(245, 158, 11, 0.1)', 
+                          color: 'var(--neon-yellow)', 
+                          padding: '2px 6px', 
+                          borderRadius: '4px',
+                          fontWeight: 'bold'
+                        }}>
+                          🪙 {player.coins}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

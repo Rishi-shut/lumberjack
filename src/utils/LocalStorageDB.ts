@@ -1574,10 +1574,10 @@ class LocalStorageDB {
 
   // --- Admin Methods ---
 
-  public async getAllPlayers(): Promise<{ username: string; level: number; coins: number; diamonds: number; isBanned: boolean }[]> {
+  public async getAllPlayers(): Promise<{ username: string; level: number; coins: number; diamonds: number; isBanned: boolean; createdAt?: string }[]> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('username, level, coins, diamonds, is_banned')
+      .select('username, level, coins, diamonds, is_banned, created_at')
       .order('username', { ascending: true });
 
     if (error) {
@@ -1590,7 +1590,8 @@ class LocalStorageDB {
       level: p.level || 1,
       coins: p.coins || 0,
       diamonds: p.diamonds || 0,
-      isBanned: p.is_banned || false
+      isBanned: p.is_banned || false,
+      createdAt: p.created_at
     }));
   }
 

@@ -1029,3 +1029,10 @@ input, select, textarea {
   z-index: 1;
 }
 
+/* Admin Guild Logs row hover style */
+.guild-log-row:hover {
+  background: #23262c !important;
+  border-color: var(--neon-cyan) !important;
+}
+
+
