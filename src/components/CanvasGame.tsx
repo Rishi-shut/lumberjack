@@ -1562,6 +1562,14 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
   const update = (dt: number) => {
     const state = stateRef.current;
 
+    // Decay opponent attack animation timer
+    if (opponentStateRef.current && opponentStateRef.current.attackTimer > 0) {
+      opponentStateRef.current.attackTimer -= dt;
+      if (opponentStateRef.current.attackTimer < 0) {
+        opponentStateRef.current.attackTimer = 0;
+      }
+    }
+
     if (state.isReviving) {
       // Update particles
       for (let i = state.particles.length - 1; i >= 0; i--) {
@@ -2164,6 +2172,9 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     // 6. Draw Player
     if (!state.isDead) {
       drawPlayer(ctx, canvas);
+    }
+    if (multiplayerRoomId) {
+      drawOpponent(ctx, canvas);
     }
 
     // 7. Draw Particles
@@ -5074,6 +5085,88 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     }
 
     ctx.restore();
+    ctx.restore();
+  };
+
+  const drawOpponent = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
+    const opponent = opponentStateRef.current;
+    if (!opponent || opponent.isDead) return;
+
+    const isLeft = opponent.side === 'left';
+    const px = Math.round(canvas.width / 2 + (isLeft ? -130 : 90));
+    const py = Math.round(canvas.height - 180);
+
+    ctx.save();
+    ctx.globalAlpha = 0.55; // Render transparently
+
+    // Mirror sprite if on right side
+    if (!isLeft) {
+      ctx.translate(px + 32, py);
+      ctx.scale(-1, 1);
+      ctx.translate(-(px + 32), -py);
+    }
+
+    // Scale up character & weapon by 35% from the ground anchor point
+    ctx.translate(px + 32, py + 64);
+    ctx.scale(1.35, 1.35);
+    ctx.translate(-(px + 32), -(py + 64));
+
+    // Load Character Matrix
+    const pSize = 4; // Pixel size multiplier
+    const characterId = opponent.avatar || 'char_lumberjack';
+    const animSet = SPRITES[characterId] || SPRITES.char_lumberjack;
+    const isChopping = opponent.attackTimer > 0;
+    const frame = isChopping ? animSet.attack : animSet.idle;
+    
+    // Idle bounce
+    let bounceY = 0;
+    if (!isChopping) {
+      bounceY = Math.round(Math.sin(Date.now() / 150) * 2);
+    }
+
+    const gameSettings = db.getSettings();
+    if (gameSettings.characterStyle === 'vector') {
+      drawVectorPlayer(ctx, px, py + bounceY, characterId, isChopping);
+    } else {
+      drawPixelSprite(ctx, px, py + bounceY, frame, pSize);
+    }
+
+    // Draw standard axe for opponent
+    ctx.save();
+    ctx.translate(px + (isChopping ? 40 : 15), py + 25 + bounceY);
+    if (isChopping) {
+      ctx.rotate(Math.PI / 3);
+    } else {
+      ctx.rotate(-Math.PI / 6);
+    }
+    const src = WEAPON_IMAGES.weap_axe_wood;
+    const cvs = getTransparentCanvas(src);
+    if (cvs && cvs.width > 0) {
+      ctx.drawImage(cvs, -20, -45, 40, 50); // standard wooden axe size
+    }
+    ctx.restore();
+
+    ctx.restore(); // Restore scaling / translation
+
+    // Draw Opponent Username and Score Overhead
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = '10px "Press Start 2P", monospace, sans-serif';
+    
+    // Draw background label box
+    const labelText = `${opponent.username}: ${opponent.score}`;
+    const textWidth = ctx.measureText(labelText).width;
+    const labelX = px + 32;
+    const labelY = py - 30;
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(labelX - textWidth / 2 - 6, labelY - 12, textWidth + 12, 18);
+    ctx.strokeStyle = 'var(--neon-magenta)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(labelX - textWidth / 2 - 6, labelY - 12, textWidth + 12, 18);
+    
+    ctx.fillStyle = '#ff00ff'; // Neon Magenta
+    ctx.fillText(labelText, labelX, labelY);
     ctx.restore();
   };
 
