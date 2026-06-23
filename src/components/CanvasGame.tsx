@@ -860,7 +860,14 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     setShowReviveConfirm(false);
     const state = stateRef.current;
     state.isReviving = false;
-    onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
+    
+    // Check if teammate is still alive in Coop Boss mode
+    const teammateAlive = !!(multiplayerRoomId && mode === 'boss' && opponentStateRef.current && !opponentStateRef.current.isDead);
+    if (teammateAlive) {
+      state.isSpectating = true;
+    } else {
+      onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
+    }
   };
 
   useEffect(() => {
@@ -2072,8 +2079,15 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
           setShowReviveConfirm(true);
           setReviveCountdown(5);
         } else {
-          // Stop and call React Game Over callback
-          onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
+          // Check if teammate is still alive in Coop Boss mode
+          const teammateAlive = !!(multiplayerRoomId && mode === 'boss' && opponentStateRef.current && !opponentStateRef.current.isDead);
+          if (teammateAlive) {
+            state.isSpectating = true;
+            state.isReviving = false;
+            setShowReviveConfirm(false);
+          } else {
+            onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
+          }
         }
       }
     }
