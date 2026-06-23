@@ -178,8 +178,50 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
     // Podium sizes & medal colors
     const height = rank === 1 ? '220px' : (rank === 2 ? '190px' : '175px');
     const medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : '🥉');
-    const borderTheme = rank === 1 ? 'var(--neon-yellow)' : (rank === 2 ? '#b5b5b5' : '#cd7f32');
     const scale = rank === 1 ? 'scale(1.05) translateY(-6px)' : 'none';
+
+    // Premium Metallic Styling Options
+    let bgGradient = '';
+    let borderTheme = '';
+    let cardShadow = '';
+    let textTheme = '';
+    let subtextTheme = '';
+    let scoreFooterBg = '';
+    let scoreColor = '';
+
+    if (rank === 1) {
+      bgGradient = 'linear-gradient(135deg, #FFFDF0 0%, #FFEFC4 25%, #FFDF7A 60%, #FFCC33 85%, #FFB300 100%)';
+      borderTheme = '#F59E0B';
+      cardShadow = '0 12px 28px rgba(245, 158, 11, 0.25), inset 0 0 18px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0,0,0,0.05)';
+      textTheme = '#78350F';
+      subtextTheme = '#92400E';
+      scoreFooterBg = 'rgba(251, 191, 36, 0.2)';
+      scoreColor = '#B45309';
+    } else if (rank === 2) {
+      bgGradient = 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 25%, #E5E7EB 60%, #D1D5DB 85%, #9CA3AF 100%)';
+      borderTheme = '#9CA3AF';
+      cardShadow = '0 10px 22px rgba(156, 163, 175, 0.2), inset 0 0 15px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0,0,0,0.05)';
+      textTheme = '#374151';
+      subtextTheme = '#4B5563';
+      scoreFooterBg = 'rgba(156, 163, 175, 0.25)';
+      scoreColor = '#374151';
+    } else {
+      bgGradient = 'linear-gradient(135deg, #FFFBF9 0%, #FEEFDF 25%, #FED7AA 60%, #FDBA74 85%, #EA580C 100%)';
+      borderTheme = '#D97706';
+      cardShadow = '0 8px 18px rgba(217, 119, 6, 0.18), inset 0 0 12px rgba(255, 255, 255, 0.5), 0 2px 4px rgba(0,0,0,0.05)';
+      textTheme = '#9A3412';
+      subtextTheme = '#B45309';
+      scoreFooterBg = 'rgba(249, 115, 22, 0.15)';
+      scoreColor = '#9A3412';
+    }
+
+    const finalShadow = isMe 
+      ? `${cardShadow}, 0 0 15px rgba(14, 165, 233, 0.6)`
+      : cardShadow;
+
+    const finalBorder = isMe 
+      ? `3px solid var(--neon-cyan)` 
+      : `3px solid ${borderTheme}`;
 
     return (
       <div
@@ -187,16 +229,15 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         style={{
           width: '210px',
           height: height,
-          background: 'var(--panel-bg)',
-          borderWidth: '2px',
-          borderColor: borderTheme,
+          background: bgGradient,
+          border: finalBorder,
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           padding: '16px',
           transform: scale,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.03)',
+          boxShadow: finalShadow,
           position: 'relative'
         }}
       >
@@ -211,11 +252,19 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
             {getCharacterEmoji(entry.avatar)}
           </div>
           
-          <h4 className="retro-title" style={{ fontSize: '0.72rem', margin: '0 0 2px', textShadow: 'none', color: isMe ? 'var(--neon-cyan)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <h4 className="retro-title" style={{ 
+            fontSize: '0.72rem', 
+            margin: '0 0 2px', 
+            textShadow: isMe ? '0 1px 2px rgba(0,0,0,0.5)' : 'none', 
+            color: isMe ? 'var(--neon-cyan)' : textTheme, 
+            whiteSpace: 'nowrap', 
+            overflow: 'hidden', 
+            textOverflow: 'ellipsis' 
+          }}>
             {entry.username}
           </h4>
           
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', fontSize: '0.62rem', color: 'var(--text-secondary)' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', fontSize: '0.62rem', color: subtextTheme }}>
             <span>{getFlagEmoji(entry.country)} {entry.city || ''}</span>
             <span>•</span>
             <span style={{ textTransform: 'uppercase' }}>{entry.title.split(' ')[0]}</span>
@@ -223,7 +272,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         </div>
 
         {/* Podium score footer */}
-        <div style={{ background: 'rgba(0,0,0,0.03)', borderRadius: '4px', padding: '6px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem', color: category === 'score' ? 'var(--text-primary)' : (category === 'coins' ? 'var(--neon-yellow)' : 'var(--neon-magenta)') }}>
+        <div style={{ background: scoreFooterBg, borderRadius: '4px', padding: '6px', fontFamily: 'var(--font-retro)', fontSize: '0.65rem', color: scoreColor, fontWeight: 'bold' }}>
           {category === 'score' ? entry.score : (category === 'coins' ? `🪙 ${entry.coins}` : `${entry.maxCombo}x`)}
         </div>
       </div>
