@@ -1144,10 +1144,10 @@ export const App: React.FC = () => {
             color: 'var(--neon-yellow)',
             cursor: 'pointer',
             textShadow: '2px 2px 0px rgba(0,0,0,0.8)',
-            fontSize: '1.2rem',
+            fontSize: '1.05rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '6px',
             userSelect: 'none'
           }}
         >
@@ -1156,21 +1156,21 @@ export const App: React.FC = () => {
         </div>
 
         {/* Center: Desktop Navigation Links */}
-        <nav className="desktop-only-nav" style={{ display: 'flex', gap: '4px' }}>
+        <nav className="desktop-only-nav" style={{ display: 'flex', gap: '3px' }}>
           {navItems.map(item => (
             <button
               key={item.id}
               onClick={() => { sound.playCoin(); setCurrentPage(item.id as any); }}
               className={`sidebar-item-btn ${currentPage === item.id ? 'active' : ''}`}
               style={{
-                padding: '6px 12px',
-                fontSize: '0.75rem',
+                padding: '5px 8px',
+                fontSize: '0.7rem',
                 fontFamily: 'var(--font-display)',
                 fontWeight: 800,
                 border: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '4px',
                 boxShadow: 'none',
                 borderRadius: '6px',
                 width: 'auto'
@@ -1185,14 +1185,14 @@ export const App: React.FC = () => {
         {/* Right Side: Treasury & Hamburger (Mobile) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Treasury details (Desktop only) */}
-          <div className="desktop-only-nav" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div className="stat-chip" style={{ color: 'var(--neon-yellow)', padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--neon-yellow)', background: 'rgba(245, 158, 11, 0.08)', borderRadius: '6px' }}>
+          <div className="desktop-only-nav" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <div className="stat-chip" style={{ color: 'var(--neon-yellow)', padding: '5px 8px', fontSize: '0.75rem', border: '1px solid var(--neon-yellow)', background: 'rgba(245, 158, 11, 0.08)', borderRadius: '6px' }}>
               <span>🪙 {user.coins.toLocaleString()}</span>
             </div>
-            <div className="stat-chip" style={{ color: 'var(--neon-cyan)', padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--neon-cyan)', background: 'rgba(14, 165, 233, 0.08)', borderRadius: '6px' }}>
+            <div className="stat-chip" style={{ color: 'var(--neon-cyan)', padding: '5px 8px', fontSize: '0.75rem', border: '1px solid var(--neon-cyan)', background: 'rgba(14, 165, 233, 0.08)', borderRadius: '6px' }}>
               <span>💎 {user.diamonds}</span>
             </div>
-            <div className="stat-chip" style={{ color: 'var(--neon-magenta)', padding: '6px 12px', fontSize: '0.8rem', border: '1px solid var(--neon-magenta)', background: 'rgba(236, 72, 153, 0.08)', borderRadius: '6px' }}>
+            <div className="stat-chip" style={{ color: 'var(--neon-magenta)', padding: '5px 8px', fontSize: '0.75rem', border: '1px solid var(--neon-magenta)', background: 'rgba(236, 72, 153, 0.08)', borderRadius: '6px' }}>
               <span>🎫 {user.tickets || 0}</span>
             </div>
           </div>
