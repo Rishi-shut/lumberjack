@@ -3599,6 +3599,46 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
 
     ctx.save();
     
+    if (mode === 'boss') {
+      // Draw a glowing high-tech energy shield core at the center instead of a normal tree trunk
+      ctx.save();
+      const coreW = 60;
+      const coreH = canvas.height - startY + 240; // tall pillar
+      const coreX = centerX - coreW / 2;
+      const coreY = startY - 240;
+
+      // Outer glow
+      ctx.shadowColor = '#d946ef'; // Magenta neon glow
+      ctx.shadowBlur = 20;
+
+      // Linear Gradient for energy pillar
+      const grad = ctx.createLinearGradient(coreX, coreY, coreX + coreW, coreY);
+      grad.addColorStop(0, '#f43f5e'); // rose
+      grad.addColorStop(0.5, '#ef4444'); // red core
+      grad.addColorStop(1, '#d946ef'); // magenta edge
+      ctx.fillStyle = grad;
+      
+      // Draw pillar shape
+      ctx.fillRect(coreX, coreY, coreW, coreH);
+
+      // Draw horizontal energy rings climbing up the pillar
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#00ffff';
+      ctx.shadowBlur = 10;
+      const pulseY = Math.floor(Date.now() / 15) % 120;
+      for (let y = coreY + 20; y < startY + 100; y += 80) {
+        const ringY = y + (pulseY % 80);
+        if (ringY > startY + 100) continue;
+        ctx.beginPath();
+        ctx.ellipse(centerX, ringY, coreW / 2 + 10, 8, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+      return; // Skip standard block drawing
+    }
+
     // Draw the infinite blocks climbing upwards
     // Limit drawing to on-screen blocks (approx 12 segments)
     const blocksCount = Math.min(state.blocks.length, Math.ceil(canvas.height / blockHeight) + 2);
