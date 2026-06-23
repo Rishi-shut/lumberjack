@@ -1224,7 +1224,7 @@ export const App: React.FC = () => {
               setMultiplayerMode(mode);
               setActiveWorld('world_forest'); // default forest world for vs match
               setRunId(prev => prev + 1);
-              setCurrentPage('play');
+              setCurrentPage('multiplayer');
             }}
             showAlert={showAlert}
           />
