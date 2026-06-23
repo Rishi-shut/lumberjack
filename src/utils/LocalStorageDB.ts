@@ -1255,8 +1255,14 @@ class LocalStorageDB {
     // 3. XP Leveling (1 chop = 1 XP, survival time boosts XP)
     const xpEarned = score + Math.floor(timeSpentSeconds * 2);
     user.xp += xpEarned;
+    
+    // Safety check for corrupt or zero xpNeeded
+    if (!user.xpNeeded || user.xpNeeded < 10) {
+      user.xpNeeded = 100;
+    }
+
     let levelsGained = 0;
-    while (user.xp >= user.xpNeeded) {
+    while (user.xp >= user.xpNeeded && user.xpNeeded >= 10) {
       user.xp -= user.xpNeeded;
       user.level += 1;
       levelsGained += 1;
