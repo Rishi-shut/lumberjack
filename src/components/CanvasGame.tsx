@@ -831,10 +831,16 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
                      difficulty === 'nightmare' ? 10.0 :
                      difficulty === 'impossible' ? 8.0 : 30.0;
 
-  // Game Variables Ref (to avoid closures in animation frame)
   const stateRef = useRef({
     isPlaying: false,
     isDead: false,
+    isSpectating: false,
+    countdown: 0,
+    isCountdownActive: false,
+    bossFireballActive: false,
+    bossFireballSide: 'none' as 'left' | 'right' | 'none',
+    bossFireballY: 0,
+    bossFireballWarningTimer: 0,
     score: 0,
     combo: 0,
     maxCombo: 0,
@@ -1117,29 +1123,32 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
   // Initialize blocks procedurally
   const generateInitialTree = () => {
     const list: GameBlock[] = [];
+    
+    // Setup countdown timer for all multiplayer matches
+    if (multiplayerRoomId) {
+      stateRef.current.isCountdownActive = true;
+      stateRef.current.countdown = 3.0;
+    } else {
+      stateRef.current.isCountdownActive = false;
+      stateRef.current.countdown = 0;
+    }
+    stateRef.current.isSpectating = false;
+
     if (mode === 'boss') {
-      // Finite 40-segment tree for boss fight
-      for (let i = 0; i < 4; i++) {
-        list.push({ obstacle: 'none', coin: 'none', chest: 'none', diamond: 'none', ticket: 'none' });
-      }
-      for (let i = 0; i < 36; i++) {
-        const block = generateNewSegment(list[list.length - 1]);
-        if (Math.random() < 0.22) { // easier obstacles
-          block.obstacle = Math.random() < 0.5 ? 'left' : 'right';
-        } else {
-          block.obstacle = 'none';
-        }
-        list.push(block);
-      }
-      list[list.length - 1].obstacle = 'none'; // safe top segment
+      // Determine boss HP based on difficulty
+      let hp = 500;
+      if (difficulty === 'hard') hp = 1500;
+      else if (['extreme', 'nightmare', 'impossible'].includes(difficulty)) hp = 5000;
       
-      stateRef.current.bossHp = 100;
-      stateRef.current.bossMaxHp = 100;
-      stateRef.current.bossPhase = 'tree';
-      stateRef.current.bossActionTimer = 0;
+      stateRef.current.bossHp = hp;
+      stateRef.current.bossMaxHp = hp;
+      stateRef.current.bossPhase = 'fight';
+      stateRef.current.bossActionTimer = 2.0; // Boss attacks after 2 seconds
       stateRef.current.bossAttackSide = 'none';
       stateRef.current.bossAttackWarningTimer = 0;
       stateRef.current.bossFlashRedTimer = 0;
+      stateRef.current.bossFireballActive = false;
+      stateRef.current.bossFireballSide = 'none';
     } else {
       // Normal infinite tree
       for (let i = 0; i < 5; i++) {
