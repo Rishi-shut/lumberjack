@@ -6,7 +6,16 @@ import { sound } from '../utils/AudioEngine';
 
 interface MultiplayerProps {
   user: UserProfile;
-  onStartMatch: (roomId: string, opponentUsername: string, isHost: boolean, wagerType: 'free' | 'coins' | 'diamonds', wagerAmount: number, mode: 'vs' | 'boss') => void;
+  onStartMatch: (
+    roomId: string,
+    opponentUsername: string,
+    isHost: boolean,
+    wagerType: 'free' | 'coins' | 'diamonds',
+    wagerAmount: number,
+    mode: 'vs' | 'boss',
+    worldId?: string,
+    difficulty?: string
+  ) => void;
   showAlert: (title: string, message: string) => void;
 }
 
@@ -34,6 +43,21 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
   const [wagerAmount, setWagerAmount] = useState<number>(0);
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [activeRooms, setActiveRooms] = useState<ActiveRoom[]>([]);
+  const [friendlyWorldId, setFriendlyWorldId] = useState<string>('world_forest');
+  const [friendlyDifficulty, setFriendlyDifficulty] = useState<string>('normal');
+
+  const broadcastRoomConfig = (wId: string, diff: string) => {
+    if (roomChannelRef.current) {
+      roomChannelRef.current.send({
+        type: 'broadcast',
+        event: 'room-config-change',
+        payload: {
+          worldId: wId,
+          difficulty: diff
+        }
+      });
+    }
+  };
   
   // Active Room state (when inside a room)
   const [currentRoom, setCurrentRoom] = useState<ActiveRoom | null>(null);
@@ -191,7 +215,9 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
             hostCountry: user.stats.location?.countryCode || 'IN',
             wagerType: wagerType,
             wagerAmount: wagerAmount,
-            opponentReady: myReady
+            opponentReady: myReady,
+            friendlyWorldId: friendlyWorldId,
+            friendlyDifficulty: friendlyDifficulty
           }
         });
         
@@ -267,6 +293,16 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
           country: payload.payload.hostCountry
         });
         setOpponentReady(payload.payload.opponentReady);
+        if (payload.payload.friendlyWorldId) {
+          setFriendlyWorldId(payload.payload.friendlyWorldId);
+        }
+        if (payload.payload.friendlyDifficulty) {
+          setFriendlyDifficulty(payload.payload.friendlyDifficulty);
+        }
+      })
+      .on('broadcast', { event: 'room-config-change' }, (payload: any) => {
+        setFriendlyWorldId(payload.payload.worldId);
+        setFriendlyDifficulty(payload.payload.difficulty);
       })
       .on('broadcast', { event: 'state-change' }, (payload: any) => {
         if (payload.payload.username !== user.username) {
@@ -287,7 +323,16 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
           db.addDiamonds(-roomWagerAmount);
         }
 
-        onStartMatch(formattedCode, payload.payload.opponentUsername, false, roomWagerType, roomWagerAmount, 'vs');
+        onStartMatch(
+          formattedCode,
+          payload.payload.opponentUsername,
+          false,
+          roomWagerType,
+          roomWagerAmount,
+          'vs',
+          payload.payload.worldId || friendlyWorldId,
+          payload.payload.difficulty || friendlyDifficulty
+        );
       })
       .on('broadcast', { event: 'leave-lobby' }, (payload: any) => {
         if (payload.payload.isHost) {
@@ -380,7 +425,9 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
         type: 'broadcast',
         event: 'start-match',
         payload: {
-          opponentUsername: user.username
+          opponentUsername: user.username,
+          worldId: friendlyWorldId,
+          difficulty: friendlyDifficulty
         }
       });
     }
@@ -390,7 +437,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
       lobbyChannelRef.current.untrack();
     }
 
-    onStartMatch(currentRoom.roomCode, opponentInfo.username, true, currentRoom.wagerType, currentRoom.wagerAmount, 'vs');
+    onStartMatch(currentRoom.roomCode, opponentInfo.username, true, currentRoom.wagerType, currentRoom.wagerAmount, 'vs', friendlyWorldId, friendlyDifficulty);
   };
 
   // Send lobby chat message
@@ -517,6 +564,73 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
             </div>
 
           </div>
+
+          {/* Friendly Match Customizations */}
+          {currentRoom.wagerType === 'free' && (
+            <div style={{ margin: '12px auto', padding: '12px 20px', background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--panel-border)', borderRadius: '8px', width: '100%', maxWidth: '520px', display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', alignItems: 'center' }}>
+              {isHost ? (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 'bold' }}>Choose Map</label>
+                    <select 
+                      value={friendlyWorldId} 
+                      onChange={e => {
+                        sound.playCoin();
+                        setFriendlyWorldId(e.target.value);
+                        broadcastRoomConfig(e.target.value, friendlyDifficulty);
+                      }}
+                      className="form-input"
+                      style={{ width: '170px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: 'var(--bg-color)' }}
+                    >
+                      <option value="world_forest">Pine Forest</option>
+                      <option value="world_city">Metro Heights</option>
+                      <option value="world_ice">Glacial Spires</option>
+                      <option value="world_cyber">Vector Core</option>
+                      <option value="world_volcano">Magma Core</option>
+                      <option value="world_autumn">Autumn Canopy</option>
+                      <option value="world_desert">Sand Dune Oasis</option>
+                      <option value="world_haunted">Haunted Graveyard</option>
+                      <option value="world_space">Space Station</option>
+                      <option value="world_wasteland">Toxic Wasteland</option>
+                      <option value="world_steampunk">Steampunk Workshop</option>
+                      <option value="world_candy">Candy Land</option>
+                      <option value="world_zen">Zen Garden</option>
+                      <option value="world_coral">Coral Reef</option>
+                      <option value="world_cyberpunk">Cyberpunk Grid</option>
+                      <option value="world_prehistoric">Prehistoric Jungle</option>
+                      <option value="world_sky">Sky Sanctuary</option>
+                      <option value="world_arcade">Retro Arcade</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 'bold' }}>Choose Difficulty</label>
+                    <select 
+                      value={friendlyDifficulty} 
+                      onChange={e => {
+                        sound.playCoin();
+                        setFriendlyDifficulty(e.target.value);
+                        broadcastRoomConfig(friendlyWorldId, e.target.value);
+                      }}
+                      className="form-input"
+                      style={{ width: '150px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: 'var(--bg-color)' }}
+                    >
+                      <option value="easy">Easy (0.5x)</option>
+                      <option value="normal">Normal (1.0x)</option>
+                      <option value="hard">Hard (1.5x)</option>
+                      <option value="extreme">Extreme (2.0x)</option>
+                      <option value="nightmare">Nightmare (3.0x)</option>
+                      <option value="impossible">Impossible (5.0x)</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: 'flex', gap: '24px', fontSize: '0.82rem', color: 'var(--text-primary)', justifySelf: 'center' }}>
+                  <span>🗺️ Map: <strong style={{ color: 'var(--neon-cyan)' }}>{friendlyWorldId.replace('world_', '').toUpperCase()}</strong></span>
+                  <span>⚔️ Difficulty: <strong style={{ color: 'var(--neon-yellow)' }}>{friendlyDifficulty.toUpperCase()}</strong></span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Trigger Buttons */}
           <div style={{ display: 'flex', gap: '16px', margin: '10px 0' }}>
