@@ -34,10 +34,6 @@ export const Missions: React.FC<MissionsProps> = ({
     const progressPct = Math.min(100, (mission.current / mission.target) * 100);
     const isLegendary = mission.type === 'legendary';
     
-    // Handcrafted alternating micro-rotation for the pinned look
-    const charCodeSum = mission.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const rotation = (charCodeSum % 2 === 0) ? 'rotate(-1deg)' : 'rotate(1.2deg)';
-
     const cardShadow = isLegendary ? '0 8px 24px rgba(245, 158, 11, 0.15)' : '0 6px 12px rgba(0,0,0,0.02)';
     const pinColor = isLegendary ? '#d97706' : '#3a3a3a';
     const pinGradient = isLegendary ? 'radial-gradient(circle at 4px 4px, #fbbf24 0%, #b45309 80%)' : 'radial-gradient(circle at 4px 4px, #5c5c5c 0%, #1a1a1a 80%)';
@@ -55,7 +51,6 @@ export const Missions: React.FC<MissionsProps> = ({
           gap: '20px',
           padding: '24px 20px 20px',
           position: 'relative',
-          transform: rotation,
           opacity: mission.claimed ? 0.72 : 1,
           color: 'var(--text-primary)',
           borderWidth: isLegendary ? '2px' : '1px',
