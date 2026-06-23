@@ -149,6 +149,14 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
   const playerRankNum = playerRankIndex >= 0 ? playerRankIndex + 1 : '100+';
   const myEntry = playerRankIndex >= 0 ? unfilteredSortedList[playerRankIndex] : null;
 
+  const getRealRank = (username: string) => {
+    const index = unfilteredSortedList.findIndex(entry => entry.username === username);
+    return index >= 0 ? index + 1 : '-';
+  };
+
+  const showPodium = searchQuery.trim() === '';
+  const listToRender = showPodium ? sortedList.slice(3) : sortedList;
+
   const getRecordTitle = () => {
     const prefix = timeframe === 'all' ? 'RECORD' : (timeframe === 'weekly' ? 'WEEKLY' : 'DAILY');
     if (category === 'score') return `${prefix} SCORE`;
@@ -320,27 +328,29 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
       </div>
 
       {/* Top 3 Podium Cards */}
-      <div 
-        style={{ 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          justifyContent: 'center', 
-          alignItems: 'flex-end', 
-          gap: '16px', 
-          marginBottom: '32px',
-          marginTop: '20px'
-        }}
-      >
-        {sortedList[1] && renderPodiumCard(sortedList[1], 2)}
-        {sortedList[0] && renderPodiumCard(sortedList[0], 1)}
-        {sortedList[2] && renderPodiumCard(sortedList[2], 3)}
-      </div>
+      {showPodium && (
+        <div 
+          style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            justifyContent: 'center', 
+            alignItems: 'flex-end', 
+            gap: '16px', 
+            marginBottom: '32px',
+            marginTop: '20px'
+          }}
+        >
+          {sortedList[1] && renderPodiumCard(sortedList[1], 2)}
+          {sortedList[0] && renderPodiumCard(sortedList[0], 1)}
+          {sortedList[2] && renderPodiumCard(sortedList[2], 3)}
+        </div>
+      )}
 
       {/* Sub-podium players list (Parchment Scrolls) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '40px' }}>
-        {sortedList.length > 3 ? (
-          sortedList.slice(3).map((entry, index) => {
-            const rankNum = index + 4;
+        {listToRender.length > 0 ? (
+          listToRender.map((entry) => {
+            const rankNum = getRealRank(entry.username);
             const isMe = entry.username === user.username;
             return (
               <div 
@@ -390,11 +400,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
             );
           })
         ) : (
-          sortedList.length <= 3 && (
-            <div className="material-paper" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-              No further logs available on the scroll.
-            </div>
-          )
+          <div className="material-paper" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            {showPodium ? "No further logs available on the scroll." : "No matching players found."}
+          </div>
         )}
       </div>
 
