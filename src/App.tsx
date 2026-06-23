@@ -734,11 +734,13 @@ export const App: React.FC = () => {
                  difficulty === 'nightmare' ? 3.0 :
                  difficulty === 'impossible' ? 5.0 : 1.0;
 
-    const finalCoins = Math.floor(coinsCollected * mult);
-    const finalDiamonds = Math.floor(diamondsCollected * mult);
-    const finalTickets = ticketsCollected; // Tickets are not multiplied by difficulty
+    const isFriendlyVS = !!(multiplayerRoomId && multiplayerWagerType === 'free' && multiplayerMode === 'vs');
 
-    const xpEarned = Math.floor((score + Math.floor(timeSpent * 2)) * mult);
+    const finalCoins = isFriendlyVS ? 0 : Math.floor(coinsCollected * mult);
+    const finalDiamonds = isFriendlyVS ? 0 : Math.floor(diamondsCollected * mult);
+    const finalTickets = isFriendlyVS ? 0 : ticketsCollected; // Tickets are not multiplied by difficulty
+
+    const xpEarned = isFriendlyVS ? 0 : Math.floor((score + Math.floor(timeSpent * 2)) * mult);
 
     const oldLevel = user.level;
     const oldXp = user.xp;
@@ -752,7 +754,8 @@ export const App: React.FC = () => {
       finalDiamonds,
       worldName,
       timeSpent,
-      finalTickets
+      finalTickets,
+      xpEarned
     );
 
     // Save summary details
@@ -1303,7 +1306,7 @@ export const App: React.FC = () => {
         {currentPage === 'multiplayer' && (
           <Multiplayer
             user={user}
-            onStartMatch={(roomId, opponentName, isHost, wType, wAmount, mode) => {
+            onStartMatch={(roomId, opponentName, isHost, wType, wAmount, mode, wId, diff) => {
               setMultiplayerRoomId(roomId);
               setOpponentUsername(opponentName);
               setIsMultiplayerHost(isHost);
@@ -1314,7 +1317,15 @@ export const App: React.FC = () => {
               setOpponentDead(false);
               setWagerResolved(false);
               playerFinalScoreRef.current = -1;
-              setActiveWorld('world_forest'); // default forest world for vs match
+              if (wType === 'free' && wId) {
+                setActiveWorld(wId);
+              } else {
+                setActiveWorld('world_forest');
+              }
+              if (wType === 'free' && diff) {
+                setDifficulty(diff as any);
+              }
+              setGameStartTime(Date.now());
               setRunId(prev => prev + 1);
               setCurrentPage('multiplayer');
             }}
