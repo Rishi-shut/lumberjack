@@ -1440,8 +1440,20 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     sound.playHit();
     sound.playGameOver();
     sound.stopMusic();
-    
+
     const state = stateRef.current;
+    
+    if (multiplayerRoomId) {
+      const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
+      chan.send({
+        type: 'broadcast',
+        event: 'death',
+        payload: {
+          score: state.score
+        }
+      });
+    }
+
     state.deathTimer = 1; // 1 seconds delay
     state.combo = 0;
     state.comboLevel = 0;
