@@ -1897,11 +1897,17 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       }
 
       if (state.bossPhase === 'fight') {
+        // Adjust timers based on difficulty
+        const actionInterval = difficulty === 'hard' ? 1.8 : 
+                               ['extreme', 'nightmare', 'impossible'].includes(difficulty) ? 1.3 : 2.4;
+        const warningDuration = difficulty === 'hard' ? 0.75 : 
+                                ['extreme', 'nightmare', 'impossible'].includes(difficulty) ? 0.50 : 0.95;
+
         state.bossActionTimer -= dt;
         if (state.bossActionTimer <= 0) {
           state.bossAttackSide = Math.random() < 0.5 ? 'left' : 'right';
-          state.bossAttackWarningTimer = 0.95;
-          state.bossActionTimer = 2.4;
+          state.bossAttackWarningTimer = warningDuration;
+          state.bossActionTimer = actionInterval;
         }
 
         if (state.bossAttackSide !== 'none') {
@@ -1932,6 +1938,57 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
 
             if (state.playerSide === side) {
               triggerDeath('crushed');
+            }
+          }
+        }
+
+        // --- Falling Fireball Hazard ---
+        if (difficulty !== 'easy' && difficulty !== 'normal') {
+          // If no fireball is currently active, roll to spawn one
+          if (!state.bossFireballActive) {
+            const spawnChance = difficulty === 'hard' ? 0.35 : 0.6; // chance per second
+            if (Math.random() < dt * spawnChance) {
+              state.bossFireballActive = true;
+              state.bossFireballSide = Math.random() < 0.5 ? 'left' : 'right';
+              state.bossFireballY = -50;
+              state.bossFireballWarningTimer = difficulty === 'hard' ? 1.0 : 0.65;
+            }
+          } else {
+            // Update active fireball
+            if (state.bossFireballWarningTimer > 0) {
+              state.bossFireballWarningTimer -= dt;
+            } else {
+              // Fall downwards
+              state.bossFireballY += 800 * dt; // speed
+              if (state.bossFireballY >= canvasRef.current!.height - 180) {
+                // Explode!
+                const fbX = canvasRef.current!.width / 2 + (state.bossFireballSide === 'left' ? -100 : 100);
+                const fbY = canvasRef.current!.height - 180;
+                sound.playHit();
+                
+                for (let i = 0; i < 15; i++) {
+                  state.particles.push({
+                    x: fbX + Math.random() * 40 - 20,
+                    y: fbY + Math.random() * 20 - 10,
+                    vx: Math.random() * 10 - 5,
+                    vy: Math.random() * -12 - 3,
+                    color: '#f97316', // orange sparks
+                    size: 4 + Math.random() * 5,
+                    alpha: 1,
+                    life: 0,
+                    maxLife: 40
+                  });
+                }
+                
+                // Blast radius check
+                if (state.playerSide === state.bossFireballSide) {
+                  triggerDeath('burned');
+                }
+                
+                // Reset fireball
+                state.bossFireballActive = false;
+                state.bossFireballSide = 'none';
+              }
             }
           }
         }
