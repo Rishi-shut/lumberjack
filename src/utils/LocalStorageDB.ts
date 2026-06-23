@@ -84,6 +84,7 @@ export interface LeaderboardEntry {
   title: string;
   frame: string;
   city?: string;
+  stats?: any;
 }
 
 export interface ShopItem {
@@ -1062,7 +1063,8 @@ class LocalStorageDB {
         avatar: p.equipped_character || 'char_lumberjack',
         title: p.equipped_title || 'Chop Cadet',
         frame: p.equipped_frame || 'Standard',
-        city: city
+        city: city,
+        stats: stats
       };
     });
   }

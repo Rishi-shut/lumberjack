@@ -30,74 +30,29 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
 
   // Get mapped entries based on timeframe
   const getMappedEntries = () => {
-    if (timeframe === 'all') {
+    // Since the game has started for less than a week, weekly and all-time are identical
+    if (timeframe === 'all' || timeframe === 'weekly') {
       return leaderboard;
     }
 
+    // Daily timeframe: only show players who actually played today (stats.lastDailyKey === todayKey)
     const now = new Date();
-    // Calculate calendar info
     const startOfYear = new Date(now.getFullYear(), 0, 0);
     const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
-    
-    const oneJan = new Date(now.getFullYear(), 0, 1);
-    const weekNumber = Math.ceil((Math.floor((now.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000)) + oneJan.getDay() + 1) / 7);
-    
-    const seed = timeframe === 'weekly' 
-      ? weekNumber + now.getFullYear() * 100 
-      : dayOfYear + now.getFullYear() * 1000;
-
-    // Simple deterministic hash function
-    const getDeterministicHash = (str: string, seedVal: number) => {
-      let hash = seedVal;
-      for (let i = 0; i < str.length; i++) {
-        hash = (hash << 5) - hash + str.charCodeAt(i);
-        hash |= 0;
-      }
-      return Math.abs(hash);
-    };
+    const todayKey = `${now.getFullYear()}-${dayOfYear}`;
 
     const mapped = leaderboard.map(entry => {
       const isMe = entry.username === user.username;
-      
-      // Multiplier logic
-      const hashVal = getDeterministicHash(entry.username, seed);
-      const minMult = timeframe === 'weekly' ? 0.45 : 0.15;
-      const maxMultRange = 40;
-      const multiplier = minMult + (hashVal % maxMultRange) / 100;
+      const playerStats = isMe ? (user.stats || {}) : (entry.stats || {});
       
       let score = 0;
       let coins = 0;
       let maxCombo = 0;
 
-      if (isMe) {
-        const stats = user.stats || {};
-        const todayKey = `${now.getFullYear()}-${dayOfYear}`;
-        const weekKey = `${now.getFullYear()}-${weekNumber}`;
-
-        if (timeframe === 'daily') {
-          if (stats.lastDailyKey === todayKey && stats.dailyScores && stats.dailyScores.score > 0) {
-            score = stats.dailyScores.score;
-            coins = stats.dailyScores.coins;
-            maxCombo = stats.dailyScores.combo;
-          }
-        } else if (timeframe === 'weekly') {
-          if (stats.lastWeeklyKey === weekKey && stats.weeklyScores && stats.weeklyScores.score > 0) {
-            score = stats.weeklyScores.score;
-            coins = stats.weeklyScores.coins;
-            maxCombo = stats.weeklyScores.combo;
-          }
-        }
-      } else {
-        // Deterministic check: did this player play today/this week?
-        const hasPlayed = timeframe === 'weekly' 
-          ? (hashVal % 10) < 7 // 70% active rate this week
-          : (hashVal % 10) < 3; // 30% active rate today
-
-        if (hasPlayed) {
-          score = Math.round(entry.score * multiplier);
-          coins = Math.round(entry.coins * multiplier);
-          maxCombo = Math.round(entry.maxCombo * multiplier);
-        }
+      if (playerStats.lastDailyKey === todayKey && playerStats.dailyScores && playerStats.dailyScores.score > 0) {
+        score = playerStats.dailyScores.score;
+        coins = playerStats.dailyScores.coins;
+        maxCombo = playerStats.dailyScores.combo;
       }
 
       return {
