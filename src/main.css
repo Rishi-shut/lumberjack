@@ -687,7 +687,7 @@ body {
 }
 @media (min-width: 992px) {
   .book-layout {
-    grid-template-columns: 1fr 1.3fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
