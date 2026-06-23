@@ -762,7 +762,7 @@ body {
   display: block !important;
 }
 
-@media (min-width: 992px) {
+@media (min-width: 1200px) {
   .desktop-only-nav {
     display: flex !important;
   }
