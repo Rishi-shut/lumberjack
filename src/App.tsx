@@ -800,7 +800,7 @@ export const App: React.FC = () => {
             style={{
               position: 'absolute',
               top: '20px',
-              left: '20px',
+              right: '20px',
               zIndex: 10000,
               padding: '8px 16px',
               fontSize: '0.65rem'
@@ -811,7 +811,7 @@ export const App: React.FC = () => {
               refreshState();
             }}
           >
-            ← EXIT RUN
+            EXIT RUN →
           </button>
         )}
 
