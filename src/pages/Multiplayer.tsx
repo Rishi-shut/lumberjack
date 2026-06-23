@@ -582,13 +582,30 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
               {isHost ? (
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 'bold' }}>Choose Mode</label>
+                    <select 
+                      value={lobbyMode} 
+                      onChange={e => {
+                        sound.playCoin();
+                        const nextMode = e.target.value as 'vs' | 'boss';
+                        setLobbyMode(nextMode);
+                        broadcastRoomConfig(friendlyWorldId, friendlyDifficulty, nextMode);
+                      }}
+                      className="form-input"
+                      style={{ width: '150px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: 'var(--bg-color)' }}
+                    >
+                      <option value="vs">1v1 VS Duel</option>
+                      <option value="boss">Co-op Boss Raid</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 'bold' }}>Choose Map</label>
                     <select 
                       value={friendlyWorldId} 
                       onChange={e => {
                         sound.playCoin();
                         setFriendlyWorldId(e.target.value);
-                        broadcastRoomConfig(e.target.value, friendlyDifficulty);
+                        broadcastRoomConfig(e.target.value, friendlyDifficulty, lobbyMode);
                       }}
                       className="form-input"
                       style={{ width: '170px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: 'var(--bg-color)' }}
@@ -620,7 +637,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                       onChange={e => {
                         sound.playCoin();
                         setFriendlyDifficulty(e.target.value);
-                        broadcastRoomConfig(friendlyWorldId, e.target.value);
+                        broadcastRoomConfig(friendlyWorldId, e.target.value, lobbyMode);
                       }}
                       className="form-input"
                       style={{ width: '150px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: 'var(--bg-color)' }}
@@ -635,7 +652,8 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                   </div>
                 </>
               ) : (
-                <div style={{ display: 'flex', gap: '24px', fontSize: '0.82rem', color: 'var(--text-primary)', justifySelf: 'center' }}>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '0.82rem', color: 'var(--text-primary)', justifyContent: 'center' }}>
+                  <span>🛡️ Mode: <strong style={{ color: 'var(--neon-magenta)' }}>{lobbyMode === 'boss' ? 'CO-OP BOSS RAID' : '1V1 VS DUEL'}</strong></span>
                   <span>🗺️ Map: <strong style={{ color: 'var(--neon-cyan)' }}>{friendlyWorldId.replace('world_', '').toUpperCase()}</strong></span>
                   <span>⚔️ Difficulty: <strong style={{ color: 'var(--neon-yellow)' }}>{friendlyDifficulty.toUpperCase()}</strong></span>
                 </div>
