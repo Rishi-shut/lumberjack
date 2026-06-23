@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Home as HomeIcon, User, ShoppingCart, Trophy, Settings as SettingsIcon, ShieldAlert, Coins, Sparkles, LogOut, CheckSquare, Users } from 'lucide-react';
 import { db, UserProfile, ShopItem, Achievement, GameMission, LeaderboardEntry } from './utils/LocalStorageDB';
 import { supabase } from './utils/supabaseClient';
@@ -281,6 +281,10 @@ export const App: React.FC = () => {
   const [multiplayerWagerType, setMultiplayerWagerType] = useState<'free' | 'coins' | 'diamonds'>('free');
   const [multiplayerWagerAmount, setMultiplayerWagerAmount] = useState<number>(0);
   const [multiplayerMode, setMultiplayerMode] = useState<'vs' | 'boss'>('vs');
+  const [opponentScore, setOpponentScore] = useState<number>(0);
+  const [opponentDead, setOpponentDead] = useState<boolean>(false);
+  const [wagerResolved, setWagerResolved] = useState<boolean>(false);
+  const playerFinalScoreRef = useRef<number>(-1);
   
   // Scroll tracker for navigation hiding
   const [showNav, setShowNav] = useState(true);
@@ -685,8 +689,39 @@ export const App: React.FC = () => {
     setGameStartTime(Date.now());
   };
 
+  const resolveMultiplayerMatch = (myFinalScore: number, oppFinalScore: number) => {
+    if (wagerResolved) return;
+    setWagerResolved(true);
+
+    if (multiplayerWagerAmount <= 0 || multiplayerWagerType === 'free') {
+      return;
+    }
+
+    if (myFinalScore > oppFinalScore) {
+      const winAmount = multiplayerWagerAmount * 2;
+      if (multiplayerWagerType === 'coins') {
+        db.addCoins(winAmount);
+      } else if (multiplayerWagerType === 'diamonds') {
+        db.addDiamonds(winAmount);
+      }
+    } else if (myFinalScore === oppFinalScore) {
+      if (multiplayerWagerType === 'coins') {
+        db.addCoins(multiplayerWagerAmount);
+      } else if (multiplayerWagerType === 'diamonds') {
+        db.addDiamonds(multiplayerWagerAmount);
+      }
+    }
+    refreshState();
+  };
+
   // Capture Score and submit session
   const handleGameOver = (score: number, maxCombo: number, coinsCollected: number, diamondsCollected: number, ticketsCollected: number = 0) => {
+    playerFinalScoreRef.current = score;
+    if (multiplayerRoomId) {
+      if (opponentDead) {
+        resolveMultiplayerMatch(score, opponentScore);
+      }
+    }
     if (!activeWorld) return;
 
     const timeSpent = (Date.now() - gameStartTime) / 1000;
@@ -839,6 +874,15 @@ export const App: React.FC = () => {
           wagerType={multiplayerWagerType}
           wagerAmount={multiplayerWagerAmount}
           mode={multiplayerMode}
+          onOpponentScoreUpdate={(oppScore, isDead) => {
+            setOpponentScore(oppScore);
+            if (isDead) {
+              setOpponentDead(true);
+              if (playerFinalScoreRef.current !== -1) {
+                resolveMultiplayerMatch(playerFinalScoreRef.current, oppScore);
+              }
+            }
+          }}
         />
 
         {/* Post-Game Summary Modal Overlay inside active gameplay overlay */}
@@ -870,6 +914,50 @@ export const App: React.FC = () => {
                 <span className="rarity-tag rarity-legendary" style={{ display: 'inline-block', marginBottom: '16px', animation: 'pulseNeon 1s infinite' }}>
                   ★ NEW HIGH SCORE ★
                 </span>
+              )}
+
+              {/* Multiplayer VS Arena Results */}
+              {multiplayerRoomId && multiplayerMode === 'vs' && (
+                <div style={{ margin: '14px 0', border: '1px solid var(--neon-magenta)', borderRadius: '8px', background: 'rgba(236,72,153,0.04)', padding: '16px', textAlign: 'center' }}>
+                  <h3 className="retro-title" style={{ fontSize: '0.8rem', color: 'var(--neon-magenta)', marginBottom: '12px' }}>
+                    ⚔️ 1v1 DUEL STATUS ⚔️
+                  </h3>
+                  
+                  {!opponentDead ? (
+                    <div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Waiting for {opponentUsername || 'Opponent'} to finish...
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem' }}>
+                        <span>Your Score: <strong>{gameSummary.score}</strong></span>
+                        <span>Opponent Score: <strong>{opponentScore}</strong></span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: '8px 0', color: gameSummary.score > opponentScore ? 'var(--neon-green)' : gameSummary.score === opponentScore ? 'var(--neon-yellow)' : 'var(--neon-red)' }}>
+                        {gameSummary.score > opponentScore ? '🏆 VICTORY! 🏆' : gameSummary.score === opponentScore ? '🤝 DRAW! 🤝' : '💀 DEFEAT! 💀'}
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', borderTop: '1px dashed var(--panel-border)', paddingTop: '8px', marginTop: '8px' }}>
+                        <span>Your Score: <strong>{gameSummary.score}</strong></span>
+                        <span>{opponentUsername || 'Opponent'}: <strong>{opponentScore}</strong></span>
+                      </div>
+
+                      {multiplayerWagerAmount > 0 && (
+                        <div style={{ marginTop: '10px', fontSize: '0.78rem', color: 'var(--neon-yellow)', fontWeight: 'bold' }}>
+                          {gameSummary.score > opponentScore ? (
+                            <span>Wager Won: +{multiplayerWagerType === 'coins' ? `🪙 ${multiplayerWagerAmount * 2}` : `💎 ${multiplayerWagerAmount * 2}`}</span>
+                          ) : gameSummary.score === opponentScore ? (
+                            <span>Wager Refunded: +{multiplayerWagerType === 'coins' ? `🪙 ${multiplayerWagerAmount}` : `💎 ${multiplayerWagerAmount}`}</span>
+                          ) : (
+                            <span>Wager Lost: -{multiplayerWagerType === 'coins' ? `🪙 ${multiplayerWagerAmount}` : `💎 ${multiplayerWagerAmount}`}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
               <div style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid var(--panel-border)', borderRadius: '8px', padding: '16px', margin: '20px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -920,7 +1008,7 @@ export const App: React.FC = () => {
                 <button className="neon-btn-magenta" style={{ flex: 1 }} onClick={handleCloseSummary}>
                   RETURN TO HUB
                 </button>
-                {!gameSummary.banned && (
+                {!gameSummary.banned && !multiplayerRoomId && (
                   <button 
                     className="neon-btn-cyan" 
                     style={{ flex: 1 }} 
@@ -1222,6 +1310,10 @@ export const App: React.FC = () => {
               setMultiplayerWagerType(wType);
               setMultiplayerWagerAmount(wAmount);
               setMultiplayerMode(mode);
+              setOpponentScore(0);
+              setOpponentDead(false);
+              setWagerResolved(false);
+              playerFinalScoreRef.current = -1;
               setActiveWorld('world_forest'); // default forest world for vs match
               setRunId(prev => prev + 1);
               setCurrentPage('multiplayer');
