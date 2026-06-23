@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home as HomeIcon, User, ShoppingCart, Trophy, Settings as SettingsIcon, ShieldAlert, Coins, Sparkles, LogOut, CheckSquare } from 'lucide-react';
+import { Home as HomeIcon, User, ShoppingCart, Trophy, Settings as SettingsIcon, ShieldAlert, Coins, Sparkles, LogOut, CheckSquare, Users } from 'lucide-react';
 import { db, UserProfile, ShopItem, Achievement, GameMission, LeaderboardEntry } from './utils/LocalStorageDB';
 import { supabase } from './utils/supabaseClient';
 import { sound } from './utils/AudioEngine';
@@ -12,6 +12,7 @@ import Leaderboard from './pages/Leaderboard';
 import Settings from './pages/Settings';
 import Admin from './pages/Admin';
 import Missions from './pages/Missions';
+import Multiplayer from './pages/Multiplayer';
 
 import './main.css';
 import { checkCdnReachability } from './utils/AssetManager';
@@ -270,8 +271,16 @@ export const App: React.FC = () => {
   };
 
   // Routing State
-  const [currentPage, setCurrentPage] = useState<'home' | 'dashboard' | 'shop' | 'leaderboard' | 'missions' | 'settings' | 'admin' | '404'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'dashboard' | 'shop' | 'leaderboard' | 'missions' | 'settings' | 'admin' | 'multiplayer' | '404'>('home');
   const [runId, setRunId] = useState(0);
+
+  // Multiplayer Play states
+  const [multiplayerRoomId, setMultiplayerRoomId] = useState<string | null>(null);
+  const [opponentUsername, setOpponentUsername] = useState<string | null>(null);
+  const [isMultiplayerHost, setIsMultiplayerHost] = useState<boolean>(false);
+  const [multiplayerWagerType, setMultiplayerWagerType] = useState<'free' | 'coins' | 'diamonds'>('free');
+  const [multiplayerWagerAmount, setMultiplayerWagerAmount] = useState<number>(0);
+  const [multiplayerMode, setMultiplayerMode] = useState<'vs' | 'boss'>('vs');
   
   // Scroll tracker for navigation hiding
   const [showNav, setShowNav] = useState(true);
@@ -824,6 +833,12 @@ export const App: React.FC = () => {
           difficulty={difficulty}
           onGameOver={handleGameOver}
           onScoreUpdate={() => {}}
+          multiplayerRoomId={multiplayerRoomId || undefined}
+          opponentUsername={opponentUsername || undefined}
+          isHost={isMultiplayerHost}
+          wagerType={multiplayerWagerType}
+          wagerAmount={multiplayerWagerAmount}
+          mode={multiplayerMode}
         />
 
         {/* Post-Game Summary Modal Overlay inside active gameplay overlay */}
@@ -995,6 +1010,7 @@ export const App: React.FC = () => {
 
   const navItems = [
     { id: 'home', label: 'PLAY', icon: <HomeIcon size={16} /> },
+    { id: 'multiplayer', label: 'MULTIPLAYER', icon: <Users size={16} /> },
     { id: 'dashboard', label: 'JOURNAL', icon: <User size={16} /> },
     { id: 'shop', label: 'MERCHANT', icon: <ShoppingCart size={16} /> },
     { id: 'missions', label: 'BULLETIN', icon: <CheckSquare size={16} /> },
@@ -1194,6 +1210,23 @@ export const App: React.FC = () => {
           <Leaderboard
             user={user}
             leaderboard={leaderboard}
+          />
+        )}
+        {currentPage === 'multiplayer' && (
+          <Multiplayer
+            user={user}
+            onStartMatch={(roomId, opponentName, isHost, wType, wAmount, mode) => {
+              setMultiplayerRoomId(roomId);
+              setOpponentUsername(opponentName);
+              setIsMultiplayerHost(isHost);
+              setMultiplayerWagerType(wType);
+              setMultiplayerWagerAmount(wAmount);
+              setMultiplayerMode(mode);
+              setActiveWorld('world_forest'); // default forest world for vs match
+              setRunId(prev => prev + 1);
+              setCurrentPage('play');
+            }}
+            showAlert={showAlert}
           />
         )}
         {currentPage === 'settings' && (

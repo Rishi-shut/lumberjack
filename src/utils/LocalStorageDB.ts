@@ -1355,6 +1355,20 @@ class LocalStorageDB {
     return { success: true };
   }
 
+  public addCoins(amount: number) {
+    const user = this.getUser();
+    user.coins += amount;
+    this.saveUser(user);
+    this.syncActiveProfileToCloud();
+  }
+
+  public addDiamonds(amount: number) {
+    const user = this.getUser();
+    user.diamonds += amount;
+    this.saveUser(user);
+    this.syncActiveProfileToCloud();
+  }
+
   public equipItem(itemId: string, itemType: 'character' | 'weapon' | 'trail' | 'title'): boolean {
     const shop = this.getShop();
     const item = shop.find(i => i.id === itemId);
