@@ -149,6 +149,12 @@ interface CanvasGameProps {
   difficulty: string;
   onGameOver: (score: number, maxCombo: number, coins: number, diamonds: number, tickets?: number) => void;
   onScoreUpdate: (score: number, combo: number) => void;
+  multiplayerRoomId?: string;
+  opponentUsername?: string;
+  isHost?: boolean;
+  wagerType?: 'free' | 'coins' | 'diamonds';
+  wagerAmount?: number;
+  mode?: 'vs' | 'boss';
 }
 
 // Pixel art definitions for characters (16x16 matrices)
