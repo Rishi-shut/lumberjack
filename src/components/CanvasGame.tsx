@@ -724,6 +724,56 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
   const [showReviveConfirm, setShowReviveConfirm] = useState(false);
   const [reviveCountdown, setReviveCountdown] = useState(5);
 
+  const opponentStateRef = useRef<{
+    username: string;
+    avatar: string;
+    side: 'left' | 'right';
+    score: number;
+    isDead: boolean;
+    attackTimer: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!multiplayerRoomId) return;
+
+    opponentStateRef.current = {
+      username: opponentUsername || 'Opponent',
+      avatar: 'char_lumberjack',
+      side: 'right',
+      score: 0,
+      isDead: false,
+      attackTimer: 0
+    };
+
+    const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
+
+    chan
+      .on('broadcast', { event: 'chop' }, (payload: any) => {
+        if (opponentStateRef.current) {
+          opponentStateRef.current.side = payload.payload.side;
+          opponentStateRef.current.score = payload.payload.score;
+          opponentStateRef.current.attackTimer = 0.12; // 120ms animation swing
+        }
+        if (onOpponentScoreUpdate) {
+          onOpponentScoreUpdate(payload.payload.score, false);
+        }
+      })
+      .on('broadcast', { event: 'death' }, (payload: any) => {
+        if (opponentStateRef.current) {
+          opponentStateRef.current.isDead = true;
+          opponentStateRef.current.score = payload.payload.score;
+        }
+        if (onOpponentScoreUpdate) {
+          onOpponentScoreUpdate(payload.payload.score, true);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(chan);
+    };
+  }, [multiplayerRoomId]);
+
   const handleRevive = () => {
     const state = stateRef.current;
     const res = db.useReviveTicket(state.reviveTicketCost);
