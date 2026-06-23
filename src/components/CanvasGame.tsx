@@ -897,6 +897,15 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     steampunkSteamActive: false,
     steampunkSteamTimer: 0,
     steamHitCounted: false,
+    // Boss battle specific states
+    bossMaxHp: 100,
+    bossHp: 100,
+    bossPhase: 'tree' as 'tree' | 'fight' | 'dead',
+    bossActionTimer: 0, // timer for boss actions/attacks
+    bossAttackSide: 'none' as 'left' | 'right' | 'none', // where boss will strike
+    bossAttackWarningTimer: 0, // time left for player to dodge
+    bossFlashRedTimer: 0, // flash monster red when hit
+    bossMonsterY: 0, // y coordinate of monster
   });
 
   // World configs
@@ -1108,13 +1117,37 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
   // Initialize blocks procedurally
   const generateInitialTree = () => {
     const list: GameBlock[] = [];
-    // Start with 4 clean segments at bottom
-    for (let i = 0; i < 5; i++) {
-      list.push({ obstacle: 'none', coin: 'none', chest: 'none', diamond: 'none', ticket: 'none' });
-    }
-    // Add procedural segments
-    for (let i = 0; i < 15; i++) {
-      list.push(generateNewSegment(list[list.length - 1]));
+    if (mode === 'boss') {
+      // Finite 40-segment tree for boss fight
+      for (let i = 0; i < 4; i++) {
+        list.push({ obstacle: 'none', coin: 'none', chest: 'none', diamond: 'none', ticket: 'none' });
+      }
+      for (let i = 0; i < 36; i++) {
+        const block = generateNewSegment(list[list.length - 1]);
+        if (Math.random() < 0.22) { // easier obstacles
+          block.obstacle = Math.random() < 0.5 ? 'left' : 'right';
+        } else {
+          block.obstacle = 'none';
+        }
+        list.push(block);
+      }
+      list[list.length - 1].obstacle = 'none'; // safe top segment
+      
+      stateRef.current.bossHp = 100;
+      stateRef.current.bossMaxHp = 100;
+      stateRef.current.bossPhase = 'tree';
+      stateRef.current.bossActionTimer = 0;
+      stateRef.current.bossAttackSide = 'none';
+      stateRef.current.bossAttackWarningTimer = 0;
+      stateRef.current.bossFlashRedTimer = 0;
+    } else {
+      // Normal infinite tree
+      for (let i = 0; i < 5; i++) {
+        list.push({ obstacle: 'none', coin: 'none', chest: 'none', diamond: 'none', ticket: 'none' });
+      }
+      for (let i = 0; i < 15; i++) {
+        list.push(generateNewSegment(list[list.length - 1]));
+      }
     }
     stateRef.current.blocks = list;
   };
@@ -1376,9 +1409,72 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       }
     }
 
-    // Remove bottom block, generate next block at top
-    state.blocks.shift();
-    state.blocks.push(generateNewSegment(state.blocks[state.blocks.length - 1]));
+    if (mode === 'boss') {
+      if (state.bossPhase === 'tree') {
+        state.blocks.shift();
+        state.score += 1;
+        state.bossHp = Math.max(40, Math.round(100 * (state.blocks.length / 40)));
+
+        if (state.blocks.length === 0) {
+          state.bossPhase = 'fight';
+          state.bossActionTimer = 1.0;
+          sound.playComboUp(2);
+          createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, 'MONSTER DEPLOYED!', '#ef4444');
+        }
+      } else if (state.bossPhase === 'fight') {
+        state.bossFlashRedTimer = 0.15;
+        state.bossHp = Math.max(0, state.bossHp - 4);
+        
+        const hitX = canvasRef.current!.width / 2 + (side === 'left' ? -60 : 60);
+        const hitY = canvasRef.current!.height - 180;
+        for (let i = 0; i < 8; i++) {
+          createSpark(hitX, hitY, '#ef4444');
+        }
+        
+        sound.playHit();
+        state.score += 2;
+        
+        state.scoreTexts.push({
+          x: canvasRef.current!.width / 2 + (side === 'left' ? -50 : 50),
+          y: canvasRef.current!.height - 240,
+          text: '-4 HP',
+          color: '#f43f5e',
+          life: 40,
+          alpha: 1
+        });
+
+        if (state.bossHp <= 0) {
+          state.bossPhase = 'dead';
+          sound.playChest();
+          const monsterX = canvasRef.current!.width / 2;
+          const monsterY = canvasRef.current!.height - 180;
+          for (let i = 0; i < 50; i++) {
+            state.particles.push({
+              x: monsterX + Math.random() * 80 - 40,
+              y: monsterY + Math.random() * 100 - 50,
+              vx: Math.random() * 24 - 12,
+              vy: Math.random() * -20 - 5,
+              color: i % 2 === 0 ? '#ffff00' : '#ff00ff',
+              size: 4 + Math.random() * 6,
+              alpha: 1,
+              life: 0,
+              maxLife: 80 + Math.random() * 40
+            });
+          }
+          createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, 'BOSS DEFEATED!', '#22c55e');
+          
+          setTimeout(() => {
+            db.addCoins(200);
+            db.addDiamonds(5);
+            onGameOver(state.score + 50, state.maxCombo, state.coinsCollected + 200, state.diamondsCollected + 5, state.ticketsCollected);
+          }, 2000);
+        }
+      }
+    } else {
+      // Remove bottom block, generate next block at top
+      state.blocks.shift();
+      state.blocks.push(generateNewSegment(state.blocks[state.blocks.length - 1]));
+    }
 
     // Animate tree drop
     state.treeOffset = 80; // height of block
@@ -1388,9 +1484,11 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     onScoreUpdate(state.score, state.combo);
 
     // Collision check post-chop: Did the new segment that slid down crush the player?
-    const nextLowestBlock = state.blocks[0];
-    if (nextLowestBlock.obstacle === side) {
-      triggerDeath('crushed');
+    if (state.blocks.length > 0) {
+      const nextLowestBlock = state.blocks[0];
+      if (nextLowestBlock.obstacle === side) {
+        triggerDeath('crushed');
+      }
     }
   };
 
@@ -1588,7 +1686,7 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     }
 
     // Timer tick down
-    if (state.isPlaying && !state.isDead) {
+    if (state.isPlaying && !state.isDead && mode !== 'boss') {
       // Speed up decay rate based on difficulty and score
       let decayMultiplier = 1.0;
       if (difficulty === 'easy') decayMultiplier = 0.6;
@@ -1707,6 +1805,54 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       if (state.timeRemaining <= 0) {
         state.timeRemaining = 0;
         triggerDeath('time_out');
+      }
+    }
+
+    // Boss battle logic updates
+    if (mode === 'boss' && state.isPlaying && !state.isDead) {
+      if (state.bossFlashRedTimer > 0) {
+        state.bossFlashRedTimer -= dt;
+      }
+
+      if (state.bossPhase === 'fight') {
+        state.bossActionTimer -= dt;
+        if (state.bossActionTimer <= 0) {
+          state.bossAttackSide = Math.random() < 0.5 ? 'left' : 'right';
+          state.bossAttackWarningTimer = 0.95;
+          state.bossActionTimer = 2.4;
+        }
+
+        if (state.bossAttackSide !== 'none') {
+          state.bossAttackWarningTimer -= dt;
+          if (state.bossAttackWarningTimer <= 0) {
+            const side = state.bossAttackSide;
+            state.bossAttackSide = 'none';
+
+            const slashX = canvasRef.current!.width / 2 + (side === 'left' ? -80 : 80);
+            const slashY = canvasRef.current!.height - 180;
+            sound.playHit();
+            
+            for (let i = 0; i < 15; i++) {
+              state.particles.push({
+                x: slashX + Math.random() * 40 - 20,
+                y: slashY + Math.random() * 60 - 30,
+                vx: Math.random() * 12 - 6,
+                vy: Math.random() * -10 - 2,
+                color: '#ff0033',
+                size: 3 + Math.random() * 4,
+                alpha: 1,
+                life: 0,
+                maxLife: 45
+              });
+            }
+
+            state.screenShake = 10;
+
+            if (state.playerSide === side) {
+              triggerDeath('crushed');
+            }
+          }
+        }
       }
     }
 
@@ -2165,6 +2311,25 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
 
     // 4. Draw Tree Column
     drawTree(ctx, canvas);
+
+    if (mode === 'boss' && state.bossPhase !== 'dead') {
+      const blockHeight = 80;
+      const startY = canvas.height - 180;
+      const centerX = Math.round(canvas.width / 2);
+      
+      const monsterY = state.bossPhase === 'tree'
+        ? startY - state.blocks.length * blockHeight + state.treeOffset - 40
+        : startY - 65;
+
+      drawVectorMonster(
+        ctx,
+        centerX,
+        monsterY,
+        state.bossFlashRedTimer > 0,
+        state.bossAttackSide,
+        state.bossAttackWarningTimer
+      );
+    }
 
     // 5. Draw Flying chopped blocks
     drawFlyingSegments(ctx);
@@ -5088,6 +5253,205 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     ctx.restore();
   };
 
+  const drawVectorMonster = (
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    flashRed: boolean,
+    warningSide: 'left' | 'right' | 'none',
+    warningTimer: number
+  ) => {
+    ctx.save();
+    
+    // Bounce slightly
+    const bounce = Math.sin(Date.now() / 120) * 5;
+    ctx.translate(x, y + bounce);
+
+    // Apply red tint if hit
+    if (flashRed) {
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 25;
+    } else {
+      ctx.shadowColor = '#000';
+      ctx.shadowBlur = 15;
+    }
+
+    // Draw Monster Body (Giant tree golem skull)
+    ctx.fillStyle = flashRed ? '#ef4444' : '#27170f';
+    ctx.strokeStyle = '#110a06';
+    ctx.lineWidth = 4;
+    
+    // Draw thick wooden head
+    ctx.beginPath();
+    ctx.moveTo(-60, 40);
+    ctx.lineTo(-70, -30);
+    // Horns
+    ctx.lineTo(-90, -70);
+    ctx.lineTo(-60, -50);
+    ctx.lineTo(0, -30);
+    ctx.lineTo(60, -50);
+    ctx.lineTo(90, -70);
+    ctx.lineTo(70, -30);
+    ctx.lineTo(60, 40);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw glowing lava bark cracks
+    ctx.strokeStyle = '#f97316'; // Neon orange
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-30, -10);
+    ctx.lineTo(-10, 10);
+    ctx.lineTo(20, -5);
+    ctx.moveTo(30, 20);
+    ctx.lineTo(0, 30);
+    ctx.stroke();
+
+    // Glowing Neon Red Eyes
+    ctx.fillStyle = '#ff0033';
+    ctx.shadowColor = '#ff0033';
+    ctx.shadowBlur = 20;
+    
+    // Left Eye
+    ctx.beginPath();
+    ctx.arc(-25, -15, 12, 0, Math.PI, true);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right Eye
+    ctx.beginPath();
+    ctx.arc(25, -15, 12, 0, Math.PI, true);
+    ctx.closePath();
+    ctx.fill();
+
+    // Angry Eyebrows
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.moveTo(-45, -25);
+    ctx.lineTo(-10, -18);
+    ctx.moveTo(45, -25);
+    ctx.lineTo(10, -18);
+    ctx.stroke();
+
+    // Sharp Mouth/Teeth
+    ctx.fillStyle = '#110a06';
+    ctx.beginPath();
+    ctx.rect(-30, 15, 60, 15);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#f97316'; // Glowing teeth
+    ctx.beginPath();
+    ctx.moveTo(-25, 15);
+    ctx.lineTo(-20, 22);
+    ctx.lineTo(-15, 15);
+    ctx.lineTo(-10, 22);
+    ctx.lineTo(-5, 15);
+    ctx.lineTo(0, 22);
+    ctx.lineTo(5, 15);
+    ctx.lineTo(10, 22);
+    ctx.lineTo(15, 15);
+    ctx.lineTo(20, 22);
+    ctx.lineTo(25, 15);
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw Left and Right Arm/Claw
+    // Left Arm
+    ctx.save();
+    if (warningSide === 'left') {
+      // Raised/charging position
+      ctx.translate(-75, 10);
+      const angle = Math.sin(Date.now() / 80) * 0.15 - 0.5;
+      ctx.rotate(angle);
+      ctx.fillStyle = '#ef4444'; // Glow red
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 30 + Math.sin(Date.now() / 50) * 10;
+    } else {
+      ctx.translate(-75, 25);
+      ctx.fillStyle = '#27170f';
+    }
+    ctx.beginPath();
+    ctx.rect(-30, -10, 40, 50);
+    ctx.fill();
+    ctx.stroke();
+    // Claw spikes
+    ctx.fillStyle = '#ff0033';
+    ctx.beginPath();
+    ctx.moveTo(-30, 40);
+    ctx.lineTo(-40, 55);
+    ctx.lineTo(-20, 40);
+    ctx.lineTo(-25, 55);
+    ctx.lineTo(-10, 40);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Right Arm
+    ctx.save();
+    if (warningSide === 'right') {
+      // Raised/charging position
+      ctx.translate(75, 10);
+      const angle = Math.sin(Date.now() / 80) * -0.15 + 0.5;
+      ctx.rotate(angle);
+      ctx.fillStyle = '#ef4444'; // Glow red
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 30 + Math.sin(Date.now() / 50) * 10;
+    } else {
+      ctx.translate(75, 25);
+      ctx.fillStyle = '#27170f';
+    }
+    ctx.beginPath();
+    ctx.rect(-10, -10, 40, 50);
+    ctx.fill();
+    ctx.stroke();
+    // Claw spikes
+    ctx.fillStyle = '#ff0033';
+    ctx.beginPath();
+    ctx.moveTo(10, 40);
+    ctx.lineTo(20, 55);
+    ctx.lineTo(20, 40);
+    ctx.lineTo(35, 55);
+    ctx.lineTo(30, 40);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Draw telegraphed alert indicator on targeted side
+    if (warningSide !== 'none') {
+      ctx.restore(); // restore to clear shadow/bounce
+      ctx.save();
+      const blink = Math.floor(Date.now() / 150) % 2 === 0;
+      if (blink) {
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 3;
+        
+        const alertX = warningSide === 'left' ? -180 : 180;
+        const alertWidth = 120;
+        
+        ctx.beginPath();
+        ctx.rect(alertX - alertWidth / 2, 40, alertWidth, 120);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw alert exclamation
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 36px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠', alertX, 110);
+      }
+      ctx.restore();
+      ctx.save();
+      ctx.translate(x, y + bounce);
+    }
+
+    ctx.restore();
+  };
+
   const drawOpponent = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     const opponent = opponentStateRef.current;
     if (!opponent || opponent.isDead) return;
@@ -5195,25 +5559,62 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
   const drawHud = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     const state = stateRef.current;
 
-    // 1. Timer Bar at top center
-    const barW = Math.min(300, canvas.width * 0.7);
-    const barH = 14;
-    const barX = canvas.width / 2 - barW / 2;
-    const barY = 60;
+    // 1. Timer Bar at top center / Boss HP Bar
+    if (mode === 'boss') {
+      const barW = Math.min(400, canvas.width * 0.85);
+      const barH = 22;
+      const barX = canvas.width / 2 - barW / 2;
+      const barY = 55;
 
-    // Base bar backing
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(barX, barY, barW, barH);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(barX, barY, barW, barH);
+      // Boss Name label
+      ctx.fillStyle = '#ff3366';
+      ctx.font = '10px "Press Start 2P", monospace, sans-serif';
+      ctx.textAlign = 'center';
+      setShadow(ctx, '#000000', 4);
+      ctx.fillText('BARKGORGON, THE BEHEMOTH (BOSS)', canvas.width / 2, barY - 14);
 
-    // Timer fill
-    const pct = state.timeRemaining / state.maxTime;
-    let fill = config.accentColor;
-    if (pct < 0.25) fill = '#ff3300'; // danger red
-    ctx.fillStyle = fill;
-    ctx.fillRect(barX + 2, barY + 2, Math.max(0, (barW - 4) * pct), barH - 4);
+      // HP Bar background
+      ctx.fillStyle = 'rgba(17, 24, 39, 0.8)';
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeStyle = '#ff3366';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(barX, barY, barW, barH);
+
+      // HP Bar fill
+      const hpPct = state.bossHp / state.bossMaxHp;
+      const fillW = Math.max(0, (barW - 6) * hpPct);
+      
+      const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+      grad.addColorStop(0, '#f43f5e'); // rose
+      grad.addColorStop(1, '#ff0033'); // hot crimson
+      ctx.fillStyle = grad;
+      ctx.fillRect(barX + 3, barY + 3, fillW, barH - 6);
+
+      // Draw HP Text on top of bar
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 9px monospace, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${state.bossHp} / ${state.bossMaxHp} HP`, canvas.width / 2, barY + 15);
+    } else {
+      const barW = Math.min(300, canvas.width * 0.7);
+      const barH = 14;
+      const barX = canvas.width / 2 - barW / 2;
+      const barY = 60;
+
+      // Base bar backing
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(barX, barY, barW, barH);
+
+      // Timer fill
+      const pct = state.timeRemaining / state.maxTime;
+      let fill = config.accentColor;
+      if (pct < 0.25) fill = '#ff3300'; // danger red
+      ctx.fillStyle = fill;
+      ctx.fillRect(barX + 2, barY + 2, Math.max(0, (barW - 4) * pct), barH - 4);
+    }
 
     // 2. Score Center Display
     ctx.fillStyle = '#ffffff';
@@ -5295,13 +5696,30 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
   return (
     <div 
       className="game-container" 
-      style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', cursor: 'pointer', userSelect: 'none', touchAction: 'none' }}
+      style={{ 
+        position: 'relative', 
+        width: '100%', 
+        height: '100%', 
+        overflow: 'hidden', 
+        cursor: 'pointer', 
+        userSelect: 'none', 
+        touchAction: 'none',
+        perspective: mode === 'boss' ? '1200px' : 'none'
+      }}
       onTouchStart={handleTouch}
       onMouseDown={handleTouch}
     >
       <canvas 
         ref={canvasRef} 
-        style={{ display: 'block', width: '100%', height: '100%' }}
+        style={{ 
+          display: 'block', 
+          width: '100%', 
+          height: '100%',
+          transform: mode === 'boss' ? 'perspective(800px) rotateX(15deg) translateY(20px) scale(0.95)' : 'none',
+          transformOrigin: 'bottom center',
+          transition: 'transform 1.2s ease-in-out',
+          boxShadow: mode === 'boss' ? '0 30px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(236, 72, 153, 0.25)' : 'none'
+        }}
       />
       {showReviveConfirm && (
         <div style={{
