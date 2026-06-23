@@ -34,3 +34,6 @@ src/config/adminConfig.ts
 
 # CDN Images
 public/images/
+
+# Documentation flowchart
+docs/
