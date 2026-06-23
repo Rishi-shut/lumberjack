@@ -2657,6 +2657,133 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       ctx.restore();
     }
 
+    // --- Draw Fireballs & Warnings ---
+    if (mode === 'boss' && state.bossFireballActive) {
+      const fbX = canvas.width / 2 + (state.bossFireballSide === 'left' ? -100 : 100);
+      const fbY = canvas.height - 180;
+      
+      if (state.bossFireballWarningTimer > 0) {
+        // Warning circle on ground
+        ctx.save();
+        const pulse = Math.sin(Date.now() / 80) * 5;
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(fbX, fbY + 20, 30 + pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+        ctx.beginPath();
+        ctx.arc(fbX, fbY + 20, 30 + pulse, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Flashing text warning
+        if (Math.floor(Date.now() / 250) % 2 === 0) {
+          ctx.fillStyle = '#ff3300';
+          ctx.font = 'bold 9px "Press Start 2P", monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('⚠️ METEOR WARNING!', fbX, fbY - 80);
+        }
+        ctx.restore();
+      } else {
+        // Drawing the falling meteor
+        ctx.save();
+        const curY = state.bossFireballY;
+        
+        // Fireball tail
+        const grad = ctx.createLinearGradient(fbX, curY, fbX, curY - 50);
+        grad.addColorStop(0, '#f97316');
+        grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(fbX - 18, curY);
+        ctx.lineTo(fbX, curY - 50);
+        ctx.lineTo(fbX + 18, curY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Fireball core
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(fbX, curY, 18, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Yellow core highlights
+        ctx.fillStyle = '#eab308';
+        ctx.beginPath();
+        ctx.arc(fbX - 4, curY - 4, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(fbX, curY, 18, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.restore();
+      }
+    }
+
+    // --- Draw Match Start Countdown Overlay ---
+    if (state.isCountdownActive && state.countdown > -0.5) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      setShadow(ctx, '#000000', 8);
+
+      if (state.countdown > 0) {
+        const val = Math.ceil(state.countdown);
+        const frac = state.countdown % 1.0 || 1.0;
+        const scale = 1.0 + frac * 0.4;
+        
+        ctx.font = `${Math.round(48 * scale)}px "Press Start 2P", monospace, sans-serif`;
+        ctx.fillStyle = '#00ffff'; // Neon cyan
+        ctx.fillText(val.toString(), canvas.width / 2, canvas.height / 2 - 30);
+        
+        ctx.font = '10px "Press Start 2P", monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('DUEL STARTING...', canvas.width / 2, canvas.height / 2 + 50);
+      } else {
+        const frac = (state.countdown + 0.5) / 0.5;
+        const scale = 1.0 + frac * 0.5;
+        
+        ctx.font = `${Math.round(64 * scale)}px "Press Start 2P", monospace, sans-serif`;
+        ctx.fillStyle = '#00ff66'; // Neon green
+        ctx.fillText('GO!', canvas.width / 2, canvas.height / 2 - 30);
+      }
+      ctx.restore();
+    }
+
+    // --- Draw Coop Spectating Overlay ---
+    if (state.isSpectating) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      setShadow(ctx, '#000000', 6);
+
+      ctx.font = 'bold 22px "Press Start 2P", monospace, sans-serif';
+      ctx.fillStyle = '#ef4444'; // Red
+      ctx.fillText('DEFEATED!', canvas.width / 2, canvas.height / 2 - 40);
+
+      ctx.font = '10px "Press Start 2P", monospace';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('SPECTATING TEAMMATE...', canvas.width / 2, canvas.height / 2 + 10);
+      
+      // Flashing text to show waiting
+      if (Math.floor(Date.now() / 500) % 2 === 0) {
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.fillStyle = '#a1a1aa';
+        ctx.fillText('Waiting for Boss Raid to finish...', canvas.width / 2, canvas.height / 2 + 40);
+      }
+      ctx.restore();
+    }
+
     // 9. Draw HUD Overlay (Score, Combo, Timer Bar)
     drawHud(ctx, canvas);
   };
