@@ -56,43 +56,48 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
       return Math.abs(hash);
     };
 
-    return leaderboard.map(entry => {
+    const mapped = leaderboard.map(entry => {
       const isMe = entry.username === user.username;
       
       // Multiplier logic
       const hashVal = getDeterministicHash(entry.username, seed);
       const minMult = timeframe === 'weekly' ? 0.45 : 0.15;
-      const maxMultRange = timeframe === 'weekly' ? 40 : 40;
+      const maxMultRange = 40;
       const multiplier = minMult + (hashVal % maxMultRange) / 100;
       
-      // Calculate scores
-      let score = Math.round(entry.score * multiplier);
-      let coins = Math.round(entry.coins * multiplier);
-      let maxCombo = Math.round(entry.maxCombo * multiplier);
+      let score = 0;
+      let coins = 0;
+      let maxCombo = 0;
 
-      // If it's me, and we have daily/weekly stats in localStorage, we can use them!
       if (isMe) {
         const stats = user.stats || {};
         const todayKey = `${now.getFullYear()}-${dayOfYear}`;
         const weekKey = `${now.getFullYear()}-${weekNumber}`;
 
-        let userBaseScore = score;
-        let userBaseCoins = coins;
-        let userBaseCombo = maxCombo;
-
-        if (timeframe === 'daily' && stats.lastDailyKey === todayKey && stats.dailyScores) {
-          userBaseScore = Math.max(userBaseScore, stats.dailyScores.score || 0);
-          userBaseCoins = Math.max(userBaseCoins, stats.dailyScores.coins || 0);
-          userBaseCombo = Math.max(userBaseCombo, stats.dailyScores.combo || 0);
-        } else if (timeframe === 'weekly' && stats.lastWeeklyKey === weekKey && stats.weeklyScores) {
-          userBaseScore = Math.max(userBaseScore, stats.weeklyScores.score || 0);
-          userBaseCoins = Math.max(userBaseCoins, stats.weeklyScores.coins || 0);
-          userBaseCombo = Math.max(userBaseCombo, stats.weeklyScores.combo || 0);
+        if (timeframe === 'daily') {
+          if (stats.lastDailyKey === todayKey && stats.dailyScores && stats.dailyScores.score > 0) {
+            score = stats.dailyScores.score;
+            coins = stats.dailyScores.coins;
+            maxCombo = stats.dailyScores.combo;
+          }
+        } else if (timeframe === 'weekly') {
+          if (stats.lastWeeklyKey === weekKey && stats.weeklyScores && stats.weeklyScores.score > 0) {
+            score = stats.weeklyScores.score;
+            coins = stats.weeklyScores.coins;
+            maxCombo = stats.weeklyScores.combo;
+          }
         }
+      } else {
+        // Deterministic check: did this player play today/this week?
+        const hasPlayed = timeframe === 'weekly' 
+          ? (hashVal % 10) < 7 // 70% active rate this week
+          : (hashVal % 10) < 3; // 30% active rate today
 
-        score = userBaseScore;
-        coins = userBaseCoins;
-        maxCombo = userBaseCombo;
+        if (hasPlayed) {
+          score = Math.round(entry.score * multiplier);
+          coins = Math.round(entry.coins * multiplier);
+          maxCombo = Math.round(entry.maxCombo * multiplier);
+        }
       }
 
       return {
@@ -102,6 +107,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
         maxCombo
       };
     });
+
+    return mapped.filter(entry => entry.score > 0);
   };
 
   const getSortedEntries = (list: LeaderboardEntry[]) => {
