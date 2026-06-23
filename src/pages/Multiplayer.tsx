@@ -43,17 +43,20 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
   const [wagerAmount, setWagerAmount] = useState<number>(0);
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [activeRooms, setActiveRooms] = useState<ActiveRoom[]>([]);
+  const [lobbyMode, setLobbyMode] = useState<'vs' | 'boss'>('vs');
+  const [bossDifficulty, setBossDifficulty] = useState<string>('normal');
   const [friendlyWorldId, setFriendlyWorldId] = useState<string>('world_forest');
   const [friendlyDifficulty, setFriendlyDifficulty] = useState<string>('normal');
 
-  const broadcastRoomConfig = (wId: string, diff: string) => {
+  const broadcastRoomConfig = (wId: string, diff: string, md: 'vs' | 'boss' = 'vs') => {
     if (roomChannelRef.current) {
       roomChannelRef.current.send({
         type: 'broadcast',
         event: 'room-config-change',
         payload: {
           worldId: wId,
-          difficulty: diff
+          difficulty: diff,
+          mode: md
         }
       });
     }
@@ -217,7 +220,8 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
             wagerAmount: wagerAmount,
             opponentReady: myReady,
             friendlyWorldId: friendlyWorldId,
-            friendlyDifficulty: friendlyDifficulty
+            friendlyDifficulty: friendlyDifficulty,
+            mode: lobbyMode
           }
         });
         
@@ -299,10 +303,16 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
         if (payload.payload.friendlyDifficulty) {
           setFriendlyDifficulty(payload.payload.friendlyDifficulty);
         }
+        if (payload.payload.mode) {
+          setLobbyMode(payload.payload.mode);
+        }
       })
       .on('broadcast', { event: 'room-config-change' }, (payload: any) => {
         setFriendlyWorldId(payload.payload.worldId);
         setFriendlyDifficulty(payload.payload.difficulty);
+        if (payload.payload.mode) {
+          setLobbyMode(payload.payload.mode);
+        }
       })
       .on('broadcast', { event: 'state-change' }, (payload: any) => {
         if (payload.payload.username !== user.username) {
@@ -329,7 +339,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
           false,
           roomWagerType,
           roomWagerAmount,
-          'vs',
+          payload.payload.mode || 'vs',
           payload.payload.worldId || friendlyWorldId,
           payload.payload.difficulty || friendlyDifficulty
         );
@@ -427,7 +437,8 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
         payload: {
           opponentUsername: user.username,
           worldId: friendlyWorldId,
-          difficulty: friendlyDifficulty
+          difficulty: friendlyDifficulty,
+          mode: lobbyMode
         }
       });
     }
@@ -437,7 +448,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
       lobbyChannelRef.current.untrack();
     }
 
-    onStartMatch(currentRoom.roomCode, opponentInfo.username, true, currentRoom.wagerType, currentRoom.wagerAmount, 'vs', friendlyWorldId, friendlyDifficulty);
+    onStartMatch(currentRoom.roomCode, opponentInfo.username, true, currentRoom.wagerType, currentRoom.wagerAmount, lobbyMode, friendlyWorldId, friendlyDifficulty);
   };
 
   // Send lobby chat message
