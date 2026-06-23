@@ -915,6 +915,12 @@ input, select, textarea {
   touch-action: auto !important;
 }
 
+select option {
+  color: #0c0f16 !important;
+  background-color: #ffffff !important;
+}
+
+
 /* Premium Footer Styling */
 .game-footer {
   margin: 80px -12px 0;
