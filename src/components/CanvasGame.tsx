@@ -5994,7 +5994,7 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     }
 
     // 4. Instructions overlay if game has not started
-    if (!state.isPlaying && !state.isDead) {
+    if (!state.isPlaying && !state.isDead && !state.isCountdownActive) {
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
