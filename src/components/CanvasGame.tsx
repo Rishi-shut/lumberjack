@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { sound } from '../utils/AudioEngine';
 import { db } from '../utils/LocalStorageDB';
+import { supabase } from '../utils/supabaseClient';
 
 import { getAssetUrl, getLocalFallbackUrl } from '../utils/AssetManager';
 
@@ -1245,6 +1246,19 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
 
     // Score and time updates
     state.score += 1;
+
+    if (multiplayerRoomId) {
+      const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
+      chan.send({
+        type: 'broadcast',
+        event: 'chop',
+        payload: {
+          side: side,
+          score: state.score
+        }
+      });
+    }
+
     state.combo += 1;
     if (state.combo > state.maxCombo) state.maxCombo = state.combo;
 
