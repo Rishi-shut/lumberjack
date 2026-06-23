@@ -759,6 +759,55 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
           onOpponentScoreUpdate(payload.payload.score, false);
         }
       })
+      .on('broadcast', { event: 'boss-damage' }, (payload: any) => {
+        if (mode === 'boss') {
+          const state = stateRef.current;
+          state.bossHp = payload.payload.currentBossHp;
+          state.bossFlashRedTimer = 0.15;
+          
+          if (opponentStateRef.current) {
+            opponentStateRef.current.attackTimer = 0.12;
+          }
+          
+          // Display teammate damage floating text
+          state.scoreTexts.push({
+            x: canvasRef.current!.width / 2 + (Math.random() * 80 - 40),
+            y: canvasRef.current!.height - 240 - (Math.random() * 40),
+            text: `${payload.payload.username}: -${payload.payload.damageDealt} HP`,
+            color: '#d946ef', // purple magenta for teammate
+            life: 50,
+            alpha: 1
+          });
+
+          // Check if teammate just defeated the boss!
+          if (state.bossHp <= 0 && state.bossPhase !== 'dead') {
+            state.bossPhase = 'dead';
+            sound.playChest();
+            // Spawn victory explosion particles
+            const monsterX = canvasRef.current!.width / 2;
+            const monsterY = canvasRef.current!.height - 180;
+            for (let i = 0; i < 50; i++) {
+              state.particles.push({
+                x: monsterX + Math.random() * 80 - 40,
+                y: monsterY + Math.random() * 100 - 50,
+                vx: Math.random() * 24 - 12,
+                vy: Math.random() * -20 - 5,
+                color: i % 2 === 0 ? '#00ffff' : '#ff00ff',
+                size: 4 + Math.random() * 6,
+                alpha: 1,
+                life: 0,
+                maxLife: 80 + Math.random() * 40
+              });
+            }
+            createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, 'BOSS DEFEATED!', '#22c55e');
+            
+            setTimeout(() => {
+              // Teammate won it for us! Submit victory rewards
+              onGameOver(state.score + 50, state.maxCombo, state.coinsCollected + 200, state.diamondsCollected + 5, state.ticketsCollected);
+            }, 2000);
+          }
+        }
+      })
       .on('broadcast', { event: 'death' }, (payload: any) => {
         if (opponentStateRef.current) {
           opponentStateRef.current.isDead = true;
@@ -766,6 +815,12 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
         }
         if (onOpponentScoreUpdate) {
           onOpponentScoreUpdate(payload.payload.score, true);
+        }
+        
+        // If we are spectating (already dead) and teammate also dies, trigger Game Over (failed)
+        const state = stateRef.current;
+        if (state.isSpectating && mode === 'boss') {
+          onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
         }
       })
       .subscribe();
