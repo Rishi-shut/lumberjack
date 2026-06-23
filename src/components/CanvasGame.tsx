@@ -1757,6 +1757,34 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       }
     }
 
+    // Update countdown timer if active
+    if (state.isCountdownActive) {
+      const prevSec = Math.ceil(state.countdown);
+      state.countdown -= dt;
+      const currSec = Math.ceil(state.countdown);
+      
+      // Play beeps on second boundaries
+      if (prevSec !== currSec && currSec >= 0) {
+        if (currSec === 0) {
+          sound.playComboUp(1); // high pitch GO! beep
+        } else {
+          sound.playCoin(); // low pitch count beep
+        }
+      }
+
+      if (state.countdown <= -0.5) {
+        state.isCountdownActive = false;
+        state.isPlaying = true;
+        
+        // Start music loop when countdown finishes
+        sound.startMusic(worldId.replace('world_', ''));
+      }
+      
+      // Keep weather particles updating during countdown
+      updateWeather(dt);
+      return;
+    }
+
     if (state.isReviving) {
       // Update particles
       for (let i = state.particles.length - 1; i >= 0; i--) {
