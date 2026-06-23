@@ -1182,7 +1182,7 @@ class LocalStorageDB {
 
   // --- Game Submission Transaction ---
 
-  public submitGameSession(score: number, maxCombo: number, coinsEarned: number, diamondsEarned: number, worldName: string, timeSpentSeconds: number, ticketsEarned: number = 0) {
+  public submitGameSession(score: number, maxCombo: number, coinsEarned: number, diamondsEarned: number, worldName: string, timeSpentSeconds: number, ticketsEarned: number = 0, xpEarnedOverride?: number) {
     const user = this.getUser();
     
     if (user.isBanned) {
@@ -1253,7 +1253,7 @@ class LocalStorageDB {
     if (maxCombo > user.stats.weeklyScores.combo) user.stats.weeklyScores.combo = maxCombo;
 
     // 3. XP Leveling (1 chop = 1 XP, survival time boosts XP)
-    const xpEarned = score + Math.floor(timeSpentSeconds * 2);
+    const xpEarned = xpEarnedOverride !== undefined ? xpEarnedOverride : (score + Math.floor(timeSpentSeconds * 2));
     user.xp += xpEarned;
     
     // Safety check for corrupt or zero xpNeeded
