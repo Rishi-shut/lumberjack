@@ -702,7 +702,7 @@ const setShadow = (ctx: CanvasRenderingContext2D, color: string, blur: number) =
   ctx.shadowBlur = blur;
 };
 
-export const CanvasGame: React.FC<CanvasGameProps> = ({
+export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (score: number, isDead: boolean) => void }> = ({
   worldId,
   characterId,
   weaponId,
@@ -710,6 +710,13 @@ export const CanvasGame: React.FC<CanvasGameProps> = ({
   difficulty,
   onGameOver,
   onScoreUpdate,
+  multiplayerRoomId,
+  opponentUsername,
+  isHost,
+  wagerType,
+  wagerAmount,
+  mode,
+  onOpponentScoreUpdate
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastTouchTimeRef = useRef<number>(0);
