@@ -1224,10 +1224,12 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
   const handleChop = (side: 'left' | 'right') => {
     const state = stateRef.current;
     if (state.isDead) return;
+    if (state.isCountdownActive) return; // Block input during countdown
+    if (state.isSpectating) return; // Block input during spectating
     if (state.spaceStunTimer > 0) return; // Block input if stunned in space station
     
     // Start music loop if it's the first swing of the game
-    if (!state.isPlaying) {
+    if (!state.isPlaying && !state.isCountdownActive) {
       state.isPlaying = true;
       sound.startMusic(worldId.replace('world_', ''));
     }
@@ -1243,7 +1245,7 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     // Collision check: Did we hit a branch before chopping?
     // In woodchopping, the branch on the segment IMMEDIATELY above us can squash us if we walk under it.
     // So we must check collision before removing the segment.
-    if (lowestBlock.obstacle === side) {
+    if (lowestBlock && lowestBlock.obstacle === side) {
       triggerDeath('squashed');
       return;
     }
@@ -1432,7 +1434,24 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
         }
       } else if (state.bossPhase === 'fight') {
         state.bossFlashRedTimer = 0.15;
-        state.bossHp = Math.max(0, state.bossHp - 4);
+        
+        // Damage deals 10 + combo to reward quick slashing!
+        const dmg = 10 + state.combo;
+        state.bossHp = Math.max(0, state.bossHp - dmg);
+        
+        // Broadcast boss HP update to teammate if multiplayer
+        if (multiplayerRoomId) {
+          const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
+          chan.send({
+            type: 'broadcast',
+            event: 'boss-damage',
+            payload: {
+              damageDealt: dmg,
+              currentBossHp: state.bossHp,
+              username: db.getUser().username
+            }
+          });
+        }
         
         const hitX = canvasRef.current!.width / 2 + (side === 'left' ? -60 : 60);
         const hitY = canvasRef.current!.height - 180;
@@ -1446,8 +1465,8 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
         state.scoreTexts.push({
           x: canvasRef.current!.width / 2 + (side === 'left' ? -50 : 50),
           y: canvasRef.current!.height - 240,
-          text: '-4 HP',
-          color: '#f43f5e',
+          text: `-${dmg} HP`,
+          color: '#ffcc00', // Gold color for damage dealt
           life: 40,
           alpha: 1
         });
@@ -1473,8 +1492,7 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
           createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, 'BOSS DEFEATED!', '#22c55e');
           
           setTimeout(() => {
-            db.addCoins(200);
-            db.addDiamonds(5);
+            // Base PVE reward is 200 gold and 5 gems, which gets multiplied by difficulty in App.tsx!
             onGameOver(state.score + 50, state.maxCombo, state.coinsCollected + 200, state.diamondsCollected + 5, state.ticketsCollected);
           }, 2000);
         }
