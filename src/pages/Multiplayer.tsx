@@ -472,7 +472,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
   // Launch cooperative guild boss raid run
   const handleLaunchRaid = () => {
     sound.playChest();
-    onStartMatch('boss-raid-room', 'Barkgorgon', true, 'free', 0, 'boss');
+    onStartMatch('boss-raid-room', 'Barkgorgon', true, 'free', 0, 'boss', undefined, bossDifficulty);
   };
 
   return (
@@ -972,6 +972,24 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                     }}
                   ></div>
                 </div>
+              </div>
+
+              {/* Select Raid Difficulty */}
+              <div style={{ width: '100%', maxWidth: '320px', marginTop: '16px', textAlign: 'left' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
+                  Select Raid Difficulty
+                </label>
+                <select
+                  value={bossDifficulty}
+                  onChange={e => { sound.playCoin(); setBossDifficulty(e.target.value); }}
+                  className="form-input"
+                  style={{ width: '100%', height: '38px', fontSize: '0.8rem', background: 'var(--bg-color)', border: '2px solid var(--panel-border)', borderRadius: '6px' }}
+                >
+                  <option value="easy">Easy (0.5x Rewards)</option>
+                  <option value="normal">Normal (1.0x Rewards)</option>
+                  <option value="hard">Hard (1.5x Rewards - Hazards Active)</option>
+                  <option value="nightmare">Nightmare (3.0x Rewards - Faster Hazards)</option>
+                </select>
               </div>
 
               <button 
