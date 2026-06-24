@@ -277,6 +277,7 @@ export const App: React.FC = () => {
   // Multiplayer Play states
   const [multiplayerRoomId, setMultiplayerRoomId] = useState<string | null>(null);
   const [opponentUsername, setOpponentUsername] = useState<string | null>(null);
+  const [opponentAvatar, setOpponentAvatar] = useState<string | null>(null);
   const [isMultiplayerHost, setIsMultiplayerHost] = useState<boolean>(false);
   const [multiplayerWagerType, setMultiplayerWagerType] = useState<'free' | 'coins' | 'diamonds'>('free');
   const [multiplayerWagerAmount, setMultiplayerWagerAmount] = useState<number>(0);
@@ -873,6 +874,7 @@ export const App: React.FC = () => {
           onScoreUpdate={() => {}}
           multiplayerRoomId={multiplayerRoomId || undefined}
           opponentUsername={opponentUsername || undefined}
+          opponentAvatar={opponentAvatar || undefined}
           isHost={isMultiplayerHost}
           wagerType={multiplayerWagerType}
           wagerAmount={multiplayerWagerAmount}
@@ -1306,9 +1308,10 @@ export const App: React.FC = () => {
         {currentPage === 'multiplayer' && (
           <Multiplayer
             user={user}
-            onStartMatch={(roomId, opponentName, isHost, wType, wAmount, mode, wId, diff) => {
+            onStartMatch={(roomId, opponentName, isHost, wType, wAmount, mode, wId, diff, oppAvatar) => {
               setMultiplayerRoomId(roomId);
               setOpponentUsername(opponentName);
+              setOpponentAvatar(oppAvatar || null);
               setIsMultiplayerHost(isHost);
               setMultiplayerWagerType(wType);
               setMultiplayerWagerAmount(wAmount);

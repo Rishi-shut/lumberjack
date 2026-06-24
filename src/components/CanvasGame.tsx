@@ -152,6 +152,7 @@ interface CanvasGameProps {
   onScoreUpdate: (score: number, combo: number) => void;
   multiplayerRoomId?: string;
   opponentUsername?: string;
+  opponentAvatar?: string;
   isHost?: boolean;
   wagerType?: 'free' | 'coins' | 'diamonds';
   wagerAmount?: number;
@@ -713,6 +714,7 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
   onScoreUpdate,
   multiplayerRoomId,
   opponentUsername,
+  opponentAvatar,
   isHost,
   wagerType,
   wagerAmount,
@@ -721,6 +723,7 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastTouchTimeRef = useRef<number>(0);
+  const playChannelRef = useRef<any>(null);
 
   const [showReviveConfirm, setShowReviveConfirm] = useState(false);
   const [reviveCountdown, setReviveCountdown] = useState(5);
@@ -739,7 +742,7 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
 
     opponentStateRef.current = {
       username: opponentUsername || 'Opponent',
-      avatar: 'char_lumberjack',
+      avatar: opponentAvatar || 'char_lumberjack',
       side: 'right',
       score: 0,
       isDead: false,
@@ -747,6 +750,7 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     };
 
     const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
+    playChannelRef.current = chan;
 
     chan
       .on('broadcast', { event: 'chop' }, (payload: any) => {
@@ -926,16 +930,27 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
           onOpponentScoreUpdate(payload.payload.score, true);
         }
         
-        // If we are spectating (already dead) and teammate also dies, trigger Game Over (failed)
         const state = stateRef.current;
-        if (state.isSpectating && mode === 'boss') {
-          onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
+        if (mode === 'vs') {
+          // If we are already dead (spectating) and the opponent now also dies, both are dead!
+          if (state.isDead) {
+            // Delay slightly to let opponent's final death animation / text render
+            setTimeout(() => {
+              onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
+            }, 1500);
+          }
+        } else if (mode === 'boss') {
+          // Coop Boss mode
+          if (state.isSpectating) {
+            onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
+          }
         }
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(chan);
+      playChannelRef.current = null;
     };
   }, [multiplayerRoomId]);
 
@@ -1496,9 +1511,8 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
           createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, '100 DMG DEALT TO BOSS!', '#eab308');
           
           // Broadcast pylon break event to teammate if multiplayer
-          if (multiplayerRoomId) {
-            const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
-            chan.send({
+          if (multiplayerRoomId && playChannelRef.current) {
+            playChannelRef.current.send({
               type: 'broadcast',
               event: 'pylon-break',
               payload: {
@@ -1610,9 +1624,8 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     // Score and time updates
     state.score += 1;
 
-    if (multiplayerRoomId) {
-      const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
-      chan.send({
+    if (multiplayerRoomId && playChannelRef.current) {
+      playChannelRef.current.send({
         type: 'broadcast',
         event: 'chop',
         payload: {
@@ -1808,9 +1821,8 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
 
     const state = stateRef.current;
     
-    if (multiplayerRoomId) {
-      const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
-      chan.send({
+    if (multiplayerRoomId && playChannelRef.current) {
+      playChannelRef.current.send({
         type: 'broadcast',
         event: 'death',
         payload: {
@@ -2364,20 +2376,35 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       if (state.deathTimer <= 0) {
         state.deathTimer = 0;
         
-        // Check if player has tickets and can afford the current revive cost
-        const userProfile = db.getUser();
-        const tickets = userProfile.tickets || 0;
-        if (tickets >= state.reviveTicketCost) {
-          state.isReviving = true;
-          setShowReviveConfirm(true);
-          setReviveCountdown(5);
+        if (multiplayerRoomId) {
+          if (mode === 'vs') {
+            const opponentAlive = !!(opponentStateRef.current && !opponentStateRef.current.isDead);
+            if (opponentAlive) {
+              state.isSpectating = true;
+              state.isReviving = false;
+              setShowReviveConfirm(false);
+            } else {
+              onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
+            }
+          } else {
+            // Coop Boss mode
+            const teammateAlive = !!(opponentStateRef.current && !opponentStateRef.current.isDead);
+            if (teammateAlive) {
+              state.isSpectating = true;
+              state.isReviving = false;
+              setShowReviveConfirm(false);
+            } else {
+              onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
+            }
+          }
         } else {
-          // Check if teammate is still alive in Coop Boss mode
-          const teammateAlive = !!(multiplayerRoomId && mode === 'boss' && opponentStateRef.current && !opponentStateRef.current.isDead);
-          if (teammateAlive) {
-            state.isSpectating = true;
-            state.isReviving = false;
-            setShowReviveConfirm(false);
+          // Single player: check if player has tickets and can afford the current revive cost
+          const userProfile = db.getUser();
+          const tickets = userProfile.tickets || 0;
+          if (tickets >= state.reviveTicketCost) {
+            state.isReviving = true;
+            setShowReviveConfirm(true);
+            setReviveCountdown(5);
           } else {
             onGameOver(state.score, state.maxCombo, state.coinsCollected, state.diamondsCollected, state.ticketsCollected);
           }
@@ -2893,6 +2920,19 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
         grad.addColorStop(1, `rgba(0,0,0,${state.hauntedVignetteAlpha})`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      if (state.isDead) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+        ctx.fillRect(canvas.width / 4, 0, halfWidth, canvas.height);
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '16px "Press Start 2P", monospace';
+        setShadow(ctx, '#000000', 4);
+        ctx.fillText('CRUSHED!', canvas.width / 2, canvas.height / 2);
         ctx.restore();
       }
       ctx.restore();
@@ -2938,6 +2978,19 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
         grad.addColorStop(1, `rgba(0,0,0,${state.hauntedVignetteAlpha})`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      if (opponent && opponent.isDead) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+        ctx.fillRect(canvas.width / 4, 0, halfWidth, canvas.height);
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '16px "Press Start 2P", monospace';
+        setShadow(ctx, '#000000', 4);
+        ctx.fillText('DEFEATED', canvas.width / 2, canvas.height / 2);
         ctx.restore();
       }
       ctx.restore();
@@ -6385,7 +6438,8 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     const py = Math.round(canvas.height - 180);
 
     ctx.save();
-    ctx.globalAlpha = 0.55; // Render transparently
+    const isSplitScreen = !!(multiplayerRoomId && mode === 'vs');
+    ctx.globalAlpha = isSplitScreen ? 1.0 : 0.55;
 
     // Mirror sprite if on right side
     if (!isLeft) {
@@ -6482,91 +6536,184 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
 
   const drawHud = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     const state = stateRef.current;
+    const isSplitScreen = !!(multiplayerRoomId && mode === 'vs');
 
-    // 1. Timer Bar at top center / Boss HP Bar
-    if (mode === 'boss') {
-      const barW = Math.min(400, canvas.width * 0.85);
-      const barH = 22;
-      const barX = canvas.width / 2 - barW / 2;
-      const barY = 55;
+    if (isSplitScreen) {
+      const halfWidth = canvas.width / 2;
+      const opponent = opponentStateRef.current;
 
-      // Boss Name label
-      ctx.fillStyle = '#ff3366';
-      ctx.font = '10px "Press Start 2P", monospace, sans-serif';
-      ctx.textAlign = 'center';
-      setShadow(ctx, '#000000', 4);
-      ctx.fillText('BARKGORGON, THE BEHEMOTH (BOSS)', canvas.width / 2, barY - 14);
-
-      // HP Bar background
-      ctx.fillStyle = 'rgba(17, 24, 39, 0.8)';
-      ctx.fillRect(barX, barY, barW, barH);
-      ctx.strokeStyle = '#ff3366';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(barX, barY, barW, barH);
-
-      // HP Bar fill
-      const hpPct = state.bossHp / state.bossMaxHp;
-      const fillW = Math.max(0, (barW - 6) * hpPct);
-      
-      const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-      grad.addColorStop(0, '#f43f5e'); // rose
-      grad.addColorStop(1, '#ff0033'); // hot crimson
-      ctx.fillStyle = grad;
-      ctx.fillRect(barX + 3, barY + 3, fillW, barH - 6);
-
-      // Draw HP Text on top of bar
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 9px monospace, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${state.bossHp} / ${state.bossMaxHp} HP`, canvas.width / 2, barY + 15);
-    } else {
-      const barW = Math.min(300, canvas.width * 0.7);
-      const barH = 14;
-      const barX = canvas.width / 2 - barW / 2;
+      // ----------------- PLAYER HUD (LEFT SIDE) -----------------
+      const pCenter = canvas.width / 4;
+      const barW = Math.min(180, halfWidth * 0.7);
+      const barH = 12;
+      const barX = pCenter - barW / 2;
       const barY = 60;
 
-      // Base bar backing
+      // Timer background
+      ctx.save();
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(barX, barY, barW, barH);
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.5;
       ctx.strokeRect(barX, barY, barW, barH);
 
       // Timer fill
       const pct = state.timeRemaining / state.maxTime;
       let fill = config.accentColor;
-      if (pct < 0.25) fill = '#ff3300'; // danger red
+      if (pct < 0.25) fill = '#ff3300';
       ctx.fillStyle = fill;
-      ctx.fillRect(barX + 2, barY + 2, Math.max(0, (barW - 4) * pct), barH - 4);
-    }
+      ctx.fillRect(barX + 1.5, barY + 1.5, Math.max(0, (barW - 3) * pct), barH - 3);
+      ctx.restore();
 
-    // 2. Score Center Display
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '28px "Press Start 2P", monospace, sans-serif';
-    ctx.textAlign = 'center';
-    setShadow(ctx, '#000', 6);
-    ctx.fillText(state.score.toString(), canvas.width / 2, 120);
+      // Username / YOU label
+      ctx.save();
+      ctx.fillStyle = 'var(--neon-cyan)';
+      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.textAlign = 'center';
+      setShadow(ctx, '#000000', 4);
+      ctx.fillText('YOU', pCenter, 48);
+      ctx.restore();
 
-    // 3. Combo Display
-    if (state.combo > 0) {
-      let comboColor = '#ffffff';
-      let animScale = 1.0;
-      if (state.comboLevel === 1) {
-        comboColor = '#ff8c00'; // Orange fire
-        animScale = 1.1 + Math.sin(Date.now() / 100) * 0.05;
-      } else if (state.comboLevel === 2) {
-        comboColor = '#ffcc00'; // Sparkling Gold
-        animScale = 1.2 + Math.sin(Date.now() / 50) * 0.08;
+      // Score
+      ctx.save();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '22px "Press Start 2P", monospace, sans-serif';
+      ctx.textAlign = 'center';
+      setShadow(ctx, '#000', 6);
+      ctx.fillText(state.score.toString(), pCenter, 110);
+      ctx.restore();
+
+      // Combo Display (left-centered)
+      if (state.combo > 0) {
+        let comboColor = '#ffffff';
+        let animScale = 1.0;
+        if (state.comboLevel === 1) {
+          comboColor = '#ff8c00';
+          animScale = 1.1 + Math.sin(Date.now() / 100) * 0.05;
+        } else if (state.comboLevel === 2) {
+          comboColor = '#ffcc00';
+          animScale = 1.2 + Math.sin(Date.now() / 50) * 0.08;
+        }
+
+        ctx.save();
+        ctx.translate(pCenter, 140);
+        ctx.scale(animScale, animScale);
+        ctx.fillStyle = comboColor;
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${state.combo}x COMBO`, 0, 0);
+        ctx.restore();
       }
 
+      // ----------------- OPPONENT HUD (RIGHT SIDE) -----------------
+      const oppCenter = 3 * canvas.width / 4;
+      const oppUsername = opponent ? opponent.username.toUpperCase() : 'OPPONENT';
+      const oppScore = opponent ? opponent.score : 0;
+
+      // Opponent label
       ctx.save();
-      ctx.translate(canvas.width / 2, 150);
-      ctx.scale(animScale, animScale);
-      
-      ctx.fillStyle = comboColor;
-      ctx.font = '10px "Press Start 2P", monospace';
-      ctx.fillText(`${state.combo}x COMBO`, 0, 0);
+      ctx.fillStyle = 'var(--neon-magenta)';
+      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.textAlign = 'center';
+      setShadow(ctx, '#000000', 4);
+      ctx.fillText(oppUsername, oppCenter, 48);
       ctx.restore();
+
+      // Score
+      ctx.save();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '22px "Press Start 2P", monospace, sans-serif';
+      ctx.textAlign = 'center';
+      setShadow(ctx, '#000', 6);
+      ctx.fillText(oppScore.toString(), oppCenter, 110);
+      ctx.restore();
+
+    } else {
+      // 1. Timer Bar at top center / Boss HP Bar
+      if (mode === 'boss') {
+        const barW = Math.min(400, canvas.width * 0.85);
+        const barH = 22;
+        const barX = canvas.width / 2 - barW / 2;
+        const barY = 55;
+
+        // Boss Name label
+        ctx.fillStyle = '#ff3366';
+        ctx.font = '10px "Press Start 2P", monospace, sans-serif';
+        ctx.textAlign = 'center';
+        setShadow(ctx, '#000000', 4);
+        ctx.fillText('BARKGORGON, THE BEHEMOTH (BOSS)', canvas.width / 2, barY - 14);
+
+        // HP Bar background
+        ctx.fillStyle = 'rgba(17, 24, 39, 0.8)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.strokeStyle = '#ff3366';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(barX, barY, barW, barH);
+
+        // HP Bar fill
+        const hpPct = state.bossHp / state.bossMaxHp;
+        const fillW = Math.max(0, (barW - 6) * hpPct);
+        
+        const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+        grad.addColorStop(0, '#f43f5e'); // rose
+        grad.addColorStop(1, '#ff0033'); // hot crimson
+        ctx.fillStyle = grad;
+        ctx.fillRect(barX + 3, barY + 3, fillW, barH - 6);
+
+        // Draw HP Text on top of bar
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px monospace, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${state.bossHp} / ${state.bossMaxHp} HP`, canvas.width / 2, barY + 15);
+      } else {
+        const barW = Math.min(300, canvas.width * 0.7);
+        const barH = 14;
+        const barX = canvas.width / 2 - barW / 2;
+        const barY = 60;
+
+        // Base bar backing
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(barX, barY, barW, barH);
+
+        // Timer fill
+        const pct = state.timeRemaining / state.maxTime;
+        let fill = config.accentColor;
+        if (pct < 0.25) fill = '#ff3300'; // danger red
+        ctx.fillStyle = fill;
+        ctx.fillRect(barX + 2, barY + 2, Math.max(0, (barW - 4) * pct), barH - 4);
+      }
+
+      // 2. Score Center Display
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '28px "Press Start 2P", monospace, sans-serif';
+      ctx.textAlign = 'center';
+      setShadow(ctx, '#000', 6);
+      ctx.fillText(state.score.toString(), canvas.width / 2, 120);
+
+      // 3. Combo Display
+      if (state.combo > 0) {
+        let comboColor = '#ffffff';
+        let animScale = 1.0;
+        if (state.comboLevel === 1) {
+          comboColor = '#ff8c00'; // Orange fire
+          animScale = 1.1 + Math.sin(Date.now() / 100) * 0.05;
+        } else if (state.comboLevel === 2) {
+          comboColor = '#ffcc00'; // Sparkling Gold
+          animScale = 1.2 + Math.sin(Date.now() / 50) * 0.08;
+        }
+
+        ctx.save();
+        ctx.translate(canvas.width / 2, 150);
+        ctx.scale(animScale, animScale);
+        
+        ctx.fillStyle = comboColor;
+        ctx.font = '10px "Press Start 2P", monospace';
+        ctx.fillText(`${state.combo}x COMBO`, 0, 0);
+        ctx.restore();
+      }
     }
 
     // 4. Instructions overlay if game has not started
@@ -6610,7 +6757,10 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       clickX = e.clientX - rect.left;
     }
 
-    if (clickX < canvas.width / 2) {
+    const isSplitScreen = !!(multiplayerRoomId && mode === 'vs');
+    const divider = isSplitScreen ? canvas.width / 4 : canvas.width / 2;
+
+    if (clickX < divider) {
       handleChop('left');
     } else {
       handleChop('right');

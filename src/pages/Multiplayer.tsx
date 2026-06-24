@@ -14,7 +14,8 @@ interface MultiplayerProps {
     wagerAmount: number,
     mode: 'vs' | 'boss',
     worldId?: string,
-    difficulty?: string
+    difficulty?: string,
+    opponentAvatar?: string
   ) => void;
   showAlert: (title: string, message: string) => void;
 }
@@ -341,7 +342,8 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
           roomWagerAmount,
           payload.payload.mode || 'vs',
           payload.payload.worldId || friendlyWorldId,
-          payload.payload.difficulty || friendlyDifficulty
+          payload.payload.difficulty || friendlyDifficulty,
+          payload.payload.opponentAvatar
         );
       })
       .on('broadcast', { event: 'leave-lobby' }, (payload: any) => {
@@ -438,7 +440,8 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
           opponentUsername: user.username,
           worldId: friendlyWorldId,
           difficulty: friendlyDifficulty,
-          mode: lobbyMode
+          mode: lobbyMode,
+          opponentAvatar: user.equippedCharacter
         }
       });
     }
@@ -448,7 +451,17 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
       lobbyChannelRef.current.untrack();
     }
 
-    onStartMatch(currentRoom.roomCode, opponentInfo.username, true, currentRoom.wagerType, currentRoom.wagerAmount, lobbyMode, friendlyWorldId, friendlyDifficulty);
+    onStartMatch(
+      currentRoom.roomCode, 
+      opponentInfo.username, 
+      true, 
+      currentRoom.wagerType, 
+      currentRoom.wagerAmount, 
+      lobbyMode, 
+      friendlyWorldId, 
+      friendlyDifficulty,
+      opponentInfo.avatar
+    );
   };
 
   // Send lobby chat message
@@ -554,21 +567,32 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
 
             {/* Opponent Card */}
             <div className="material-paper" style={{ padding: '20px', width: '220px', height: '220px', border: !isHost ? '2px solid var(--neon-yellow)' : '1px solid var(--panel-border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center', textAlign: 'center' }}>
-              {!isHost && opponentInfo === null ? (
-                // We are not host, but host info is not loaded yet
-                <div style={{ margin: 'auto', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Syncing host details...</div>
+              {!isHost ? (
+                // Guest side: Opponent Card represents the player themselves (guest)
+                <>
+                  <div style={{ fontSize: '2.5rem' }}>{getCharacterEmoji(user.equippedCharacter)}</div>
+                  <div>
+                    <h4 style={{ fontWeight: 'bold', margin: '4px 0 0', fontSize: '0.9rem' }}>{user.username}</h4>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)' }}>{user.equippedTitle}</span>
+                  </div>
+                  <span className={myReady ? 'rarity-tag rarity-legendary' : 'rarity-tag'} style={{ fontSize: '9px' }}>
+                    {myReady ? 'READY ✓' : 'PREPARING'}
+                  </span>
+                </>
               ) : opponentInfo ? (
+                // Host side: Opponent Card represents the guest who joined
                 <>
                   <div style={{ fontSize: '2.5rem' }}>{getCharacterEmoji(opponentInfo.avatar)}</div>
                   <div>
                     <h4 style={{ fontWeight: 'bold', margin: '4px 0 0', fontSize: '0.9rem' }}>{opponentInfo.username}</h4>
                     <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)' }}>{opponentInfo.title}</span>
                   </div>
-                  <span className={!isHost ? (myReady ? 'rarity-tag rarity-legendary' : 'rarity-tag') : (opponentReady ? 'rarity-tag rarity-legendary' : 'rarity-tag')} style={{ fontSize: '9px' }}>
-                    {!isHost ? (myReady ? 'READY ✓' : 'PREPARING') : (opponentReady ? 'READY ✓' : 'PREPARING')}
+                  <span className={opponentReady ? 'rarity-tag rarity-legendary' : 'rarity-tag'} style={{ fontSize: '9px' }}>
+                    {opponentReady ? 'READY ✓' : 'PREPARING'}
                   </span>
                 </>
               ) : (
+                // Host side: No opponent has joined yet
                 <div style={{ margin: 'auto', textAlign: 'center' }}>
                   <div style={{ fontSize: '1.8rem', animation: 'spin 3s linear infinite', marginBottom: '8px' }}>⏳</div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Waiting for opponent...</div>
