@@ -494,6 +494,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
             ⚔️ Live 1v1 Arena
           </button>
           
+          {/* 
           <button 
             className="neon-btn-magenta"
             style={{
@@ -506,6 +507,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
           >
             👹 Boss Raid
           </button>
+          */}
         </div>
       )}
 
@@ -581,6 +583,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
             <div style={{ margin: '12px auto', padding: '12px 20px', background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--panel-border)', borderRadius: '8px', width: '100%', maxWidth: '520px', display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', alignItems: 'center' }}>
               {isHost ? (
                 <>
+                  {/* 
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 'bold' }}>Choose Mode</label>
                     <select 
@@ -592,12 +595,13 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                         broadcastRoomConfig(friendlyWorldId, friendlyDifficulty, nextMode);
                       }}
                       className="form-input"
-                      style={{ width: '150px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: 'var(--bg-color)' }}
+                      style={{ width: '150px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: '#1a110a', color: '#ffffff' }}
                     >
                       <option value="vs">1v1 VS Duel</option>
                       <option value="boss">Co-op Boss Raid</option>
                     </select>
                   </div>
+                  */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 'bold' }}>Choose Map</label>
                     <select 
@@ -608,7 +612,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                         broadcastRoomConfig(e.target.value, friendlyDifficulty, lobbyMode);
                       }}
                       className="form-input"
-                      style={{ width: '170px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: 'var(--bg-color)' }}
+                      style={{ width: '170px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: '#1a110a', color: '#ffffff' }}
                     >
                       <option value="world_forest">Pine Forest</option>
                       <option value="world_city">Metro Heights</option>
@@ -640,7 +644,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                         broadcastRoomConfig(friendlyWorldId, e.target.value, lobbyMode);
                       }}
                       className="form-input"
-                      style={{ width: '150px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: 'var(--bg-color)' }}
+                      style={{ width: '150px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: '#1a110a', color: '#ffffff' }}
                     >
                       <option value="easy">Easy (0.5x)</option>
                       <option value="normal">Normal (1.0x)</option>
@@ -983,7 +987,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                   value={bossDifficulty}
                   onChange={e => { sound.playCoin(); setBossDifficulty(e.target.value); }}
                   className="form-input"
-                  style={{ width: '100%', height: '38px', fontSize: '0.8rem', background: 'var(--bg-color)', border: '2px solid var(--panel-border)', borderRadius: '6px' }}
+                  style={{ width: '100%', height: '38px', fontSize: '0.8rem', background: '#1a110a', color: '#ffffff', border: '2px solid var(--panel-border)', borderRadius: '6px' }}
                 >
                   <option value="easy">Easy (0.5x Rewards)</option>
                   <option value="normal">Normal (1.0x Rewards)</option>
