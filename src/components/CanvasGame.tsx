@@ -808,6 +808,79 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
           }
         }
       })
+      .on('broadcast', { event: 'pylon-break' }, (payload: any) => {
+        if (mode === 'boss') {
+          const state = stateRef.current;
+          state.bossHp = payload.payload.currentBossHp;
+          state.bossFlashRedTimer = 0.15;
+          state.activePylonSide = payload.payload.nextActiveSide;
+          state.pylonHp = 30; // reset pylon HP
+          
+          const overloadDuration = difficulty === 'hard' ? 5.0 : 
+                                   ['extreme', 'nightmare', 'impossible'].includes(difficulty) ? 4.0 : 6.0;
+          state.pylonOverloadTimer = overloadDuration; // reset overload timer
+          
+          if (opponentStateRef.current) {
+            opponentStateRef.current.attackTimer = 0.12;
+          }
+          
+          // Display teammate pylon break floating text
+          const hitSide = payload.payload.nextActiveSide === 'left' ? 'right' : 'left'; // the one they just broke
+          const hitX = canvasRef.current!.width / 2 + (hitSide === 'left' ? -120 : 120);
+          const hitY = canvasRef.current!.height - 180;
+          
+          state.scoreTexts.push({
+            x: hitX,
+            y: hitY - 40,
+            text: `${payload.payload.username} BROKE PYLON!`,
+            color: '#eab308',
+            life: 50,
+            alpha: 1
+          });
+
+          // Explosion particles
+          for (let i = 0; i < 25; i++) {
+            state.particles.push({
+              x: hitX + Math.random() * 60 - 30,
+              y: hitY + Math.random() * 40 - 20,
+              vx: Math.random() * 18 - 9,
+              vy: Math.random() * -15 - 5,
+              color: i % 2 === 0 ? '#ff007f' : '#00ffff',
+              size: 4 + Math.random() * 5,
+              alpha: 1,
+              life: 0,
+              maxLife: 45
+            });
+          }
+
+          // Check if teammate just defeated the boss!
+          if (state.bossHp <= 0 && state.bossPhase !== 'dead') {
+            state.bossPhase = 'dead';
+            sound.playChest();
+            // Spawn victory explosion particles
+            const monsterX = canvasRef.current!.width / 2;
+            const monsterY = canvasRef.current!.height - 180;
+            for (let i = 0; i < 50; i++) {
+              state.particles.push({
+                x: monsterX + Math.random() * 80 - 40,
+                y: monsterY + Math.random() * 100 - 50,
+                vx: Math.random() * 24 - 12,
+                vy: Math.random() * -20 - 5,
+                color: i % 2 === 0 ? '#00ffff' : '#ff00ff',
+                size: 4 + Math.random() * 6,
+                alpha: 1,
+                life: 0,
+                maxLife: 80 + Math.random() * 40
+              });
+            }
+            createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, 'BOSS DEFEATED!', '#22c55e');
+            
+            setTimeout(() => {
+              onGameOver(state.score + 100, state.maxCombo, state.coinsCollected + 200, state.diamondsCollected + 5, state.ticketsCollected);
+            }, 2000);
+          }
+        }
+      })
       .on('broadcast', { event: 'death' }, (payload: any) => {
         if (opponentStateRef.current) {
           opponentStateRef.current.isDead = true;
@@ -974,6 +1047,10 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     bossAttackWarningTimer: 0, // time left for player to dodge
     bossFlashRedTimer: 0, // flash monster red when hit
     bossMonsterY: 0, // y coordinate of monster
+    activePylonSide: 'left' as 'left' | 'right',
+    pylonHp: 30,
+    pylonMaxHp: 30,
+    pylonOverloadTimer: 6.0,
   });
 
   // World configs
@@ -1211,6 +1288,10 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       stateRef.current.bossFlashRedTimer = 0;
       stateRef.current.bossFireballActive = false;
       stateRef.current.bossFireballSide = 'none';
+      stateRef.current.activePylonSide = 'left';
+      stateRef.current.pylonHp = 30;
+      stateRef.current.pylonMaxHp = 30;
+      stateRef.current.pylonOverloadTimer = 6.0;
     } else {
       // Normal infinite tree
       for (let i = 0; i < 5; i++) {
@@ -1300,6 +1381,128 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     state.chopAnimTime = 0.08; // 80ms animation frame
     state.trailFade = 1.0;
     state.trailSide = side;
+
+    if (mode === 'boss') {
+      // Pylon Siege Chop Logic!
+      // Check if chopping on the ACTIVE side
+      if (side === state.activePylonSide) {
+        // Correct side! Deal damage to pylon
+        const weapon = WEAPONS[weaponId] || WEAPONS.weap_axe_wood;
+        sound.playChop(weapon.shape);
+        
+        state.combo += 1;
+        if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+        
+        const dmg = 10 + state.combo;
+        state.pylonHp = Math.max(0, state.pylonHp - dmg);
+        
+        // Spawn sparks on the active pylon
+        const hitX = canvasRef.current!.width / 2 + (side === 'left' ? -120 : 120);
+        const hitY = canvasRef.current!.height - 180;
+        for (let i = 0; i < 8; i++) {
+          createSpark(hitX, hitY, '#00FFFF');
+        }
+        
+        state.scoreTexts.push({
+          x: hitX,
+          y: hitY - 40,
+          text: `-${dmg} HP`,
+          color: '#06b6d4',
+          life: 30,
+          alpha: 1
+        });
+        
+        // Check if pylon destroyed
+        if (state.pylonHp <= 0) {
+          sound.playChest();
+          // Deal 100 damage to boss!
+          state.bossHp = Math.max(0, state.bossHp - 100);
+          state.bossFlashRedTimer = 0.15;
+          
+          // Switch active side
+          state.activePylonSide = state.activePylonSide === 'left' ? 'right' : 'left';
+          state.pylonHp = 30; // reset pylon hp
+          state.pylonOverloadTimer = 6.0; // reset overload timer
+          
+          // Spawn massive explosion particles on the destroyed pylon
+          for (let i = 0; i < 30; i++) {
+            state.particles.push({
+              x: hitX + Math.random() * 60 - 30,
+              y: hitY + Math.random() * 40 - 20,
+              vx: Math.random() * 18 - 9,
+              vy: Math.random() * -15 - 5,
+              color: i % 2 === 0 ? '#ff007f' : '#00ffff',
+              size: 4 + Math.random() * 5,
+              alpha: 1,
+              life: 0,
+              maxLife: 45
+            });
+          }
+          
+          createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, '100 DMG DEALT TO BOSS!', '#eab308');
+          
+          // Broadcast pylon break event to teammate if multiplayer
+          if (multiplayerRoomId) {
+            const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
+            chan.send({
+              type: 'broadcast',
+              event: 'pylon-break',
+              payload: {
+                currentBossHp: state.bossHp,
+                nextActiveSide: state.activePylonSide,
+                username: db.getUser().username
+              }
+            });
+          }
+          
+          if (state.bossHp <= 0) {
+            state.bossPhase = 'dead';
+            sound.playChest();
+            const monsterX = canvasRef.current!.width / 2;
+            const monsterY = canvasRef.current!.height - 180;
+            for (let i = 0; i < 50; i++) {
+              state.particles.push({
+                x: monsterX + Math.random() * 80 - 40,
+                y: monsterY + Math.random() * 100 - 50,
+                vx: Math.random() * 24 - 12,
+                vy: Math.random() * -20 - 5,
+                color: i % 2 === 0 ? '#ffff00' : '#ff00ff',
+                size: 4 + Math.random() * 6,
+                alpha: 1,
+                life: 0,
+                maxLife: 80 + Math.random() * 40
+              });
+            }
+            createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, 'BOSS DEFEATED!', '#22c55e');
+            
+            setTimeout(() => {
+              onGameOver(state.score + 100, state.maxCombo, state.coinsCollected + 200, state.diamondsCollected + 5, state.ticketsCollected);
+            }, 2000);
+          }
+        }
+      } else {
+        // Chopped the wrong/inactive pylon!
+        sound.playHit();
+        state.combo = 0;
+        
+        const hitX = canvasRef.current!.width / 2 + (side === 'left' ? -120 : 120);
+        const hitY = canvasRef.current!.height - 180;
+        state.scoreTexts.push({
+          x: hitX,
+          y: hitY - 40,
+          text: 'SHIELDED!',
+          color: '#ef4444',
+          life: 30,
+          alpha: 1
+        });
+        
+        for (let i = 0; i < 6; i++) {
+          createSpark(hitX, hitY, '#d946ef');
+        }
+      }
+      
+      return;
+    }
 
     // Get lowest block
     const lowestBlock = state.blocks[0];
@@ -1482,88 +1685,9 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       }
     }
 
-    if (mode === 'boss') {
-      if (state.bossPhase === 'tree') {
-        state.blocks.shift();
-        state.score += 1;
-        state.bossHp = Math.max(40, Math.round(100 * (state.blocks.length / 40)));
-
-        if (state.blocks.length === 0) {
-          state.bossPhase = 'fight';
-          state.bossActionTimer = 1.0;
-          sound.playComboUp(2);
-          createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, 'MONSTER DEPLOYED!', '#ef4444');
-        }
-      } else if (state.bossPhase === 'fight') {
-        state.bossFlashRedTimer = 0.15;
-        
-        // Damage deals 10 + combo to reward quick slashing!
-        const dmg = 10 + state.combo;
-        state.bossHp = Math.max(0, state.bossHp - dmg);
-        
-        // Broadcast boss HP update to teammate if multiplayer
-        if (multiplayerRoomId) {
-          const chan = supabase.channel(`room-play-${multiplayerRoomId}`);
-          chan.send({
-            type: 'broadcast',
-            event: 'boss-damage',
-            payload: {
-              damageDealt: dmg,
-              currentBossHp: state.bossHp,
-              username: db.getUser().username
-            }
-          });
-        }
-        
-        const hitX = canvasRef.current!.width / 2 + (side === 'left' ? -60 : 60);
-        const hitY = canvasRef.current!.height - 180;
-        for (let i = 0; i < 8; i++) {
-          createSpark(hitX, hitY, '#ef4444');
-        }
-        
-        sound.playHit();
-        state.score += 2;
-        
-        state.scoreTexts.push({
-          x: canvasRef.current!.width / 2 + (side === 'left' ? -50 : 50),
-          y: canvasRef.current!.height - 240,
-          text: `-${dmg} HP`,
-          color: '#ffcc00', // Gold color for damage dealt
-          life: 40,
-          alpha: 1
-        });
-
-        if (state.bossHp <= 0) {
-          state.bossPhase = 'dead';
-          sound.playChest();
-          const monsterX = canvasRef.current!.width / 2;
-          const monsterY = canvasRef.current!.height - 180;
-          for (let i = 0; i < 50; i++) {
-            state.particles.push({
-              x: monsterX + Math.random() * 80 - 40,
-              y: monsterY + Math.random() * 100 - 50,
-              vx: Math.random() * 24 - 12,
-              vy: Math.random() * -20 - 5,
-              color: i % 2 === 0 ? '#ffff00' : '#ff00ff',
-              size: 4 + Math.random() * 6,
-              alpha: 1,
-              life: 0,
-              maxLife: 80 + Math.random() * 40
-            });
-          }
-          createFloatingText(canvasRef.current!.width / 2, canvasRef.current!.height / 2 - 100, 'BOSS DEFEATED!', '#22c55e');
-          
-          setTimeout(() => {
-            // Base PVE reward is 200 gold and 5 gems, which gets multiplied by difficulty in App.tsx!
-            onGameOver(state.score + 50, state.maxCombo, state.coinsCollected + 200, state.diamondsCollected + 5, state.ticketsCollected);
-          }, 2000);
-        }
-      }
-    } else {
-      // Remove bottom block, generate next block at top
-      state.blocks.shift();
-      state.blocks.push(generateNewSegment(state.blocks[state.blocks.length - 1]));
-    }
+    // Remove bottom block, generate next block at top
+    state.blocks.shift();
+    state.blocks.push(generateNewSegment(state.blocks[state.blocks.length - 1]));
 
     // Animate tree drop
     state.treeOffset = 80; // height of block
@@ -2025,6 +2149,49 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
                 state.bossFireballSide = 'none';
               }
             }
+          }
+        }
+
+        // --- Pylon Overload Timer ---
+        const overloadDuration = difficulty === 'hard' ? 5.0 : 
+                                 ['extreme', 'nightmare', 'impossible'].includes(difficulty) ? 4.0 : 6.0;
+        
+        state.pylonOverloadTimer -= dt;
+        if (state.pylonOverloadTimer <= 0) {
+          state.pylonOverloadTimer = overloadDuration; // reset
+          const side = state.activePylonSide;
+          
+          // Explode the active pylon!
+          const blastX = canvasRef.current!.width / 2 + (side === 'left' ? -120 : 120);
+          const blastY = canvasRef.current!.height - 180;
+          sound.playHit();
+          state.screenShake = 15;
+          
+          for (let i = 0; i < 25; i++) {
+            state.particles.push({
+              x: blastX + Math.random() * 60 - 30,
+              y: blastY + Math.random() * 40 - 20,
+              vx: Math.random() * 16 - 8,
+              vy: Math.random() * -15 - 5,
+              color: '#ef4444', // fiery red blast
+              size: 5 + Math.random() * 6,
+              alpha: 1,
+              life: 0,
+              maxLife: 50
+            });
+          }
+          
+          state.scoreTexts.push({
+            x: blastX,
+            y: blastY - 40,
+            text: 'OVERLOAD BLAST!',
+            color: '#ef4444',
+            life: 50,
+            alpha: 1
+          });
+          
+          if (state.playerSide === side) {
+            triggerDeath('crushed');
           }
         }
       }
@@ -3727,40 +3894,144 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     ctx.save();
     
     if (mode === 'boss') {
-      // Draw a glowing high-tech energy shield core at the center instead of a normal tree trunk
-      ctx.save();
-      const coreW = 60;
-      const coreH = canvas.height - startY + 240; // tall pillar
-      const coreX = centerX - coreW / 2;
-      const coreY = startY - 240;
+      // Pylon Siege Rework: Draw two separate pylons at centerX - 120 and centerX + 120
+      const pylonWidth = 50;
+      const pylonHeight = 100;
+      const leftCenterX = centerX - 120;
+      const rightCenterX = centerX + 120;
+      const leftX = leftCenterX - pylonWidth / 2;
+      const rightX = rightCenterX - pylonWidth / 2;
+      const pY = startY - pylonHeight;
 
-      // Outer glow
-      ctx.shadowColor = '#d946ef'; // Magenta neon glow
-      ctx.shadowBlur = 20;
+      // Helper to draw a single pylon
+      const drawPylon = (pCenterX: number, pX: number, side: 'left' | 'right') => {
+        const isActive = state.activePylonSide === side;
+        ctx.save();
 
-      // Linear Gradient for energy pillar
-      const grad = ctx.createLinearGradient(coreX, coreY, coreX + coreW, coreY);
-      grad.addColorStop(0, '#f43f5e'); // rose
-      grad.addColorStop(0.5, '#ef4444'); // red core
-      grad.addColorStop(1, '#d946ef'); // magenta edge
-      ctx.fillStyle = grad;
-      
-      // Draw pillar shape
-      ctx.fillRect(coreX, coreY, coreW, coreH);
-
-      // Draw horizontal energy rings climbing up the pillar
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3;
-      ctx.shadowColor = '#00ffff';
-      ctx.shadowBlur = 10;
-      const pulseY = Math.floor(Date.now() / 15) % 120;
-      for (let y = coreY + 20; y < startY + 100; y += 80) {
-        const ringY = y + (pulseY % 80);
-        if (ringY > startY + 100) continue;
+        // 1. Draw Pylon Body with volcanic/obsidian details
+        const grad = ctx.createLinearGradient(pX, pY, pX + pylonWidth, pY);
+        if (isActive) {
+          grad.addColorStop(0, '#1e293b'); // lit obsidian
+          grad.addColorStop(0.5, '#334155');
+          grad.addColorStop(1, '#1e293b');
+        } else {
+          grad.addColorStop(0, '#0f172a'); // dark inactive obsidian
+          grad.addColorStop(0.5, '#1e293b');
+          grad.addColorStop(1, '#0f172a');
+        }
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = isActive ? '#06b6d4' : '#475569';
+        ctx.lineWidth = isActive ? 3 : 1;
+        if (isActive) {
+          ctx.shadowColor = '#06b6d4';
+          ctx.shadowBlur = 10;
+        }
+        
+        // Rounded/slanted top pylon shape
         ctx.beginPath();
-        ctx.ellipse(centerX, ringY, coreW / 2 + 10, 8, 0, 0, Math.PI * 2);
+        ctx.moveTo(pX + 10, pY);
+        ctx.lineTo(pX + pylonWidth - 10, pY);
+        ctx.lineTo(pX + pylonWidth, pY + pylonHeight);
+        ctx.lineTo(pX, pY + pylonHeight);
+        ctx.closePath();
+        ctx.fill();
         ctx.stroke();
-      }
+
+        // 2. Draw glowing magma cracks/energy lines inside pylon
+        ctx.strokeStyle = isActive ? '#06b6d4' : '#b45309'; // bright cyan vs dim warm orange
+        ctx.lineWidth = isActive ? 2 : 1;
+        ctx.shadowBlur = isActive ? 8 : 0;
+        ctx.shadowColor = isActive ? '#06b6d4' : 'transparent';
+        
+        // Left diagonal crack
+        ctx.beginPath();
+        ctx.moveTo(pX + 15, pY + 20);
+        ctx.lineTo(pX + 30, pY + 50);
+        ctx.lineTo(pX + 20, pY + 80);
+        ctx.stroke();
+        
+        // Right diagonal crack
+        ctx.beginPath();
+        ctx.moveTo(pX + 35, pY + 30);
+        ctx.lineTo(pX + 25, pY + 60);
+        ctx.lineTo(pX + 35, pY + 85);
+        ctx.stroke();
+
+        // 3. Active-only effects: Vertical Light Pillar and Selection Floor Ring
+        if (isActive) {
+          ctx.restore();
+          ctx.save();
+          // Vertical pillar of neon light reaching to top
+          const beamW = 35 + Math.sin(Date.now() / 80) * 8;
+          const beamGrad = ctx.createLinearGradient(pCenterX - beamW / 2, 0, pCenterX + beamW / 2, 0);
+          beamGrad.addColorStop(0, 'rgba(6, 182, 212, 0)');
+          beamGrad.addColorStop(0.3, 'rgba(6, 182, 212, 0.35)');
+          beamGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.85)');
+          beamGrad.addColorStop(0.7, 'rgba(6, 182, 212, 0.35)');
+          beamGrad.addColorStop(1, 'rgba(6, 182, 212, 0)');
+          ctx.fillStyle = beamGrad;
+          ctx.fillRect(pCenterX - beamW / 2, 0, beamW, startY);
+
+          // Pulsing targeting ring on floor
+          ctx.strokeStyle = '#06b6d4';
+          ctx.shadowColor = '#06b6d4';
+          ctx.shadowBlur = 15;
+          ctx.lineWidth = 3 + Math.sin(Date.now() / 60) * 1.5;
+          ctx.beginPath();
+          ctx.ellipse(pCenterX, startY, 45, 12, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+          ctx.save();
+
+          // Pylon Health Bar above it
+          const barW = 90;
+          const barH = 6;
+          const barX = pCenterX - barW / 2;
+          const barY = pY - 32;
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(barX, barY, barW, barH);
+          const hpRatio = Math.max(0, state.pylonHp / state.pylonMaxHp);
+          ctx.fillStyle = '#06b6d4';
+          ctx.fillRect(barX, barY, barW * hpRatio, barH);
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(barX, barY, barW, barH);
+
+          // Pylon Hp Text
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 9px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`PYLON: ${state.pylonHp}/${state.pylonMaxHp} HP`, pCenterX, barY - 6);
+
+          // Overload Countdown Timer
+          const ovW = 90;
+          const ovH = 4;
+          const ovX = pCenterX - ovW / 2;
+          const ovY = barY + 12;
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(ovX, ovY, ovW, ovH);
+          const timeRatio = Math.max(0, state.pylonOverloadTimer / 6.0);
+          const timerColor = timeRatio > 0.5 ? '#22c55e' : timeRatio > 0.25 ? '#eab308' : '#ef4444';
+          ctx.fillStyle = timerColor;
+          ctx.fillRect(ovX, ovY, ovW * timeRatio, ovH);
+          
+          if (timeRatio < 0.35) {
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 9px monospace';
+            if (Math.floor(Date.now() / 150) % 2 === 0) {
+              ctx.fillText('CRITICAL OVERLOAD!', pCenterX, ovY + 14);
+            }
+          }
+        }
+
+        ctx.restore();
+      };
+
+      // Draw left and right pylons
+      drawPylon(leftCenterX, leftX, 'left');
+      drawPylon(rightCenterX, rightX, 'right');
 
       ctx.restore();
       return; // Skip standard block drawing
