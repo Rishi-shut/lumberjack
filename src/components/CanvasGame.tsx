@@ -754,6 +754,42 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
           opponentStateRef.current.side = payload.payload.side;
           opponentStateRef.current.score = payload.payload.score;
           opponentStateRef.current.attackTimer = 0.12; // 120ms animation swing
+          
+          const state = stateRef.current;
+          if (mode === 'vs' && state.opponentBlocks && state.opponentBlocks.length > 0) {
+            state.opponentBlocks.shift();
+            state.opponentBlocks.push(generateNewSegment(state.opponentBlocks[state.opponentBlocks.length - 1]));
+            
+            // Spawn flying segment for opponent
+            state.opponentFlyingSegments.push({
+              y: canvasRef.current!.height - 180,
+              vx: payload.payload.side === 'left' ? 12 : -12,
+              vy: -8 - Math.random() * 4,
+              rotation: 0,
+              vRotation: payload.payload.side === 'left' ? 0.2 : -0.2,
+              side: payload.payload.side,
+              type: config.blockType
+            });
+            
+            // Spawn wood chips particles for opponent
+            const chipColor = config.treeColor;
+            const particleX = canvasRef.current!.width / 2 + (payload.payload.side === 'left' ? -30 : 30);
+            const particleY = canvasRef.current!.height - 180;
+            
+            for (let i = 0; i < 6; i++) {
+              state.opponentParticles.push({
+                x: particleX,
+                y: particleY,
+                vx: (payload.payload.side === 'left' ? 3 : -3) + (Math.random() * 8 - 4),
+                vy: -3 - Math.random() * 6,
+                color: chipColor,
+                size: 3 + Math.random() * 4,
+                alpha: 1,
+                life: 0,
+                maxLife: 30 + Math.random() * 20
+              });
+            }
+          }
         }
         if (onOpponentScoreUpdate) {
           onOpponentScoreUpdate(payload.payload.score, false);
@@ -986,9 +1022,13 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     chopAnimTime: 0,
     deathTimer: 0,
     blocks: [] as GameBlock[],
+    opponentBlocks: [] as GameBlock[],
     flyingSegments: [] as FlyingSegment[],
+    opponentFlyingSegments: [] as FlyingSegment[],
     particles: [] as Particle[],
+    opponentParticles: [] as Particle[],
     scoreTexts: [] as ScoreText[],
+    opponentScoreTexts: [] as ScoreText[],
     coinsCollected: 0,
     diamondsCollected: 0,
     ticketsCollected: 0,
@@ -1299,6 +1339,20 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       }
       for (let i = 0; i < 15; i++) {
         list.push(generateNewSegment(list[list.length - 1]));
+      }
+
+      if (multiplayerRoomId && mode === 'vs') {
+        const oppList: GameBlock[] = [];
+        for (let i = 0; i < 5; i++) {
+          oppList.push({ obstacle: 'none', coin: 'none', chest: 'none', diamond: 'none', ticket: 'none' });
+        }
+        for (let i = 0; i < 15; i++) {
+          oppList.push(generateNewSegment(oppList[oppList.length - 1]));
+        }
+        stateRef.current.opponentBlocks = oppList;
+        stateRef.current.opponentFlyingSegments = [];
+        stateRef.current.opponentParticles = [];
+        stateRef.current.opponentScoreTexts = [];
       }
     }
     stateRef.current.blocks = list;
@@ -2257,6 +2311,50 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       }
     }
 
+    // Update opponent's floating score/combo texts
+    if (state.opponentScoreTexts) {
+      for (let i = state.opponentScoreTexts.length - 1; i >= 0; i--) {
+        const txt = state.opponentScoreTexts[i];
+        txt.y -= dt * 40;
+        txt.life -= 1;
+        txt.alpha = txt.life / 40;
+        if (txt.life <= 0) {
+          state.opponentScoreTexts.splice(i, 1);
+        }
+      }
+    }
+
+    // Update opponent's flying tree segments
+    if (state.opponentFlyingSegments) {
+      for (let i = state.opponentFlyingSegments.length - 1; i >= 0; i--) {
+        const fs = state.opponentFlyingSegments[i];
+        fs.y += fs.vy;
+        fs.vy += 0.8; // gravity
+        fs.vx += fs.vx > 0 ? -0.1 : 0.1; // drag
+        fs.rotation += fs.vRotation;
+
+        if (fs.y > canvasRef.current!.height + 100) {
+          state.opponentFlyingSegments.splice(i, 1);
+        }
+      }
+    }
+
+    // Update opponent's particles
+    if (state.opponentParticles) {
+      for (let i = state.opponentParticles.length - 1; i >= 0; i--) {
+        const p = state.opponentParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.3; // minor gravity
+        p.life += 1;
+        p.alpha = 1.0 - (p.life / p.maxLife);
+
+        if (p.life >= p.maxLife) {
+          state.opponentParticles.splice(i, 1);
+        }
+      }
+    }
+
     // Update Weather
     updateWeather(dt);
 
@@ -2646,182 +2744,391 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       const dy = (Math.random() * 2 - 1) * state.screenShake;
       ctx.translate(dx, dy);
     }
-    */
+    */    const isSplitScreen = !!(multiplayerRoomId && mode === 'vs');
+    const halfWidth = canvas.width / 2;
 
-    // 1. Draw Background
-    drawBackground(ctx, canvas);
-
-    // 2. Draw Parallax Hills / Cyber buildings
-    drawParallaxLayers(ctx, canvas);
-
-    // 3. Draw Weather Backdrop
-    drawWeather(ctx, canvas);
-
-    // 4. Draw Tree Column
-    drawTree(ctx, canvas);
-
-    if (mode === 'boss' && state.bossPhase !== 'dead') {
-      const blockHeight = 80;
-      const startY = canvas.height - 180;
-      const centerX = Math.round(canvas.width / 2);
+    if (isSplitScreen) {
+      // ----------------------------------------------------
+      // DRAW PLAYER VIEWPORT (LEFT HALF)
+      // ----------------------------------------------------
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, halfWidth, canvas.height);
+      ctx.clip();
       
-      const monsterY = state.bossPhase === 'tree'
-        ? startY - state.blocks.length * blockHeight + state.treeOffset - 40
-        : startY - 65;
+      // Shift so the center of the canvas aligns with the center of the left half
+      ctx.translate(-canvas.width / 4, 0);
 
-      drawVectorMonster(
-        ctx,
-        centerX,
-        monsterY,
-        state.bossFlashRedTimer > 0,
-        state.bossAttackSide,
-        state.bossAttackWarningTimer
-      );
-    }
+      drawBackground(ctx, canvas);
+      drawParallaxLayers(ctx, canvas);
+      drawWeather(ctx, canvas);
+      drawTree(ctx, canvas);
+      drawFlyingSegments(ctx, state.flyingSegments);
+      if (!state.isDead) {
+        drawPlayer(ctx, canvas);
+      }
+      drawParticles(ctx, state.particles);
+      drawScoreTexts(ctx, state.scoreTexts);
 
-    // 5. Draw Flying chopped blocks
-    drawFlyingSegments(ctx);
+      // Space Station Asteroid Alert & Flying Asteroid
+      if (worldId === 'world_space' && state.spaceAsteroidActive) {
+        if (state.spaceAsteroidWarningTimer > 0) {
+          const blink = Math.floor(Date.now() / 200) % 2 === 0;
+          if (blink) {
+            ctx.fillStyle = '#ff3300';
+            ctx.font = '24px "Press Start 2P", monospace';
+            ctx.textAlign = 'center';
+            const alertX = state.spaceAsteroidSide === 'left' ? 40 : canvas.width - 40;
+            ctx.fillText('⚠', alertX, state.spaceAsteroidY);
+          }
+        } else {
+          ctx.save();
+          ctx.fillStyle = '#4b5563';
+          ctx.strokeStyle = '#1f2937';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(state.spaceAsteroidX, state.spaceAsteroidY, 18, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
 
-    // 6. Draw Player
-    if (!state.isDead) {
-      drawPlayer(ctx, canvas);
-    }
-    if (multiplayerRoomId) {
-      drawOpponent(ctx, canvas);
-    }
-
-    // 7. Draw Particles
-    drawParticles(ctx);
-
-    // 8. Draw Score Floating Texts
-    drawScoreTexts(ctx);
-
-    // Space Station Asteroid Alert & Flying Asteroid
-    if (worldId === 'world_space' && state.spaceAsteroidActive) {
-      if (state.spaceAsteroidWarningTimer > 0) {
-        const blink = Math.floor(Date.now() / 200) % 2 === 0;
-        if (blink) {
-          ctx.fillStyle = '#ff3300';
-          ctx.font = '24px "Press Start 2P", monospace';
-          ctx.textAlign = 'center';
-          const alertX = state.spaceAsteroidSide === 'left' ? 40 : canvas.width - 40;
-          ctx.fillText('⚠', alertX, state.spaceAsteroidY);
+          ctx.fillStyle = '#374151';
+          ctx.beginPath();
+          ctx.arc(state.spaceAsteroidX - 6, state.spaceAsteroidY - 4, 4, 0, Math.PI * 2);
+          ctx.arc(state.spaceAsteroidX + 4, state.spaceAsteroidY + 5, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
         }
-      } else {
-        ctx.save();
-        ctx.fillStyle = '#4b5563'; // dark grey asteroid
-        ctx.strokeStyle = '#1f2937';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(state.spaceAsteroidX, state.spaceAsteroidY, 18, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+      }
 
-        ctx.fillStyle = '#374151';
-        ctx.beginPath();
-        ctx.arc(state.spaceAsteroidX - 6, state.spaceAsteroidY - 4, 4, 0, Math.PI * 2);
-        ctx.arc(state.spaceAsteroidX + 4, state.spaceAsteroidY + 5, 5, 0, Math.PI * 2);
-        ctx.fill();
+      // Space Stun stars above player
+      if (worldId === 'world_space' && state.spaceStunTimer > 0 && !state.isDead) {
+        ctx.save();
+        ctx.fillStyle = '#eab308';
+        const playerX = canvas.width / 2 + (state.playerSide === 'left' ? -100 : 100);
+        const playerY = canvas.height - 180 - 60;
+        const starCount = 3;
+        const spin = Date.now() * 0.01;
+        for (let s = 0; s < starCount; s++) {
+          const angle = spin + (s * (Math.PI * 2)) / starCount;
+          const sx = playerX + Math.cos(angle) * 20;
+          const sy = playerY + Math.sin(angle) * 8;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       }
-    }
 
-    // Space Stun stars above player
-    if (worldId === 'world_space' && state.spaceStunTimer > 0 && !state.isDead) {
-      ctx.save();
-      ctx.fillStyle = '#eab308';
-      const playerX = canvas.width / 2 + (state.playerSide === 'left' ? -100 : 100);
-      const playerY = canvas.height - 180 - 60;
-      const starCount = 3;
-      const spin = Date.now() * 0.01;
-      for (let s = 0; s < starCount; s++) {
-        const angle = spin + (s * (Math.PI * 2)) / starCount;
-        const sx = playerX + Math.cos(angle) * 20;
-        const sy = playerY + Math.sin(angle) * 8;
-        ctx.beginPath();
-        ctx.arc(sx, sy, 3, 0, Math.PI * 2);
-        ctx.fill();
+      // Steampunk steam warning & steam clouds
+      if (worldId === 'world_steampunk') {
+        if (state.steampunkWarningSide !== 'none' && !state.steampunkSteamActive) {
+          const blink = Math.floor(Date.now() / 200) % 2 === 0;
+          if (blink) {
+            ctx.fillStyle = '#ffaa66';
+            ctx.font = '24px "Press Start 2P", monospace';
+            ctx.textAlign = 'center';
+            const alertX = state.steampunkWarningSide === 'left' ? 40 : canvas.width - 40;
+            ctx.fillText('⚠', alertX, canvas.height - 180);
+          }
+        } else if (state.steampunkSteamActive) {
+          ctx.save();
+          const steamX = state.steampunkWarningSide === 'left' ? 0 : canvas.width / 2;
+          const steamW = canvas.width / 2;
+          const grad = ctx.createLinearGradient(steamX, 0, steamX + steamW, 0);
+          if (state.steampunkWarningSide === 'left') {
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          } else {
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0.45)');
+          }
+          ctx.fillStyle = grad;
+          ctx.fillRect(steamX, 0, steamW, canvas.height);
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+          for (let sy = 50; sy < canvas.height; sy += 60) {
+            const size = 30 + (sy % 20);
+            const ox = Math.sin((Date.now() * 0.005) + sy) * 15;
+            const px = state.steampunkWarningSide === 'left' 
+              ? 40 + ox 
+              : canvas.width - 40 + ox;
+            ctx.beginPath();
+            ctx.arc(px, sy, size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
       }
-      ctx.restore();
-    }
 
-    // Steampunk steam warning & steam clouds
-    if (worldId === 'world_steampunk') {
-      if (state.steampunkWarningSide !== 'none' && !state.steampunkSteamActive) {
-        const blink = Math.floor(Date.now() / 200) % 2 === 0;
-        if (blink) {
-          ctx.fillStyle = '#ffaa66';
-          ctx.font = '24px "Press Start 2P", monospace';
-          ctx.textAlign = 'center';
-          const alertX = state.steampunkWarningSide === 'left' ? 40 : canvas.width - 40;
-          ctx.fillText('⚠', alertX, canvas.height - 180);
-        }
-      } else if (state.steampunkSteamActive) {
+      // Toxic Sludge pool rising from bottom
+      if (worldId === 'world_wasteland' && state.toxicSludgeHeight > 0) {
         ctx.save();
-        const steamX = state.steampunkWarningSide === 'left' ? 0 : canvas.width / 2;
-        const steamW = canvas.width / 2;
-        const grad = ctx.createLinearGradient(steamX, 0, steamX + steamW, 0);
-        if (state.steampunkWarningSide === 'left') {
-          grad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-          grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        } else {
-          grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-          grad.addColorStop(1, 'rgba(255, 255, 255, 0.45)');
-        }
-        ctx.fillStyle = grad;
-        ctx.fillRect(steamX, 0, steamW, canvas.height);
+        const sludgeGrad = ctx.createLinearGradient(0, canvas.height - state.toxicSludgeHeight, 0, canvas.height);
+        sludgeGrad.addColorStop(0, 'rgba(174, 229, 13, 0.85)');
+        sludgeGrad.addColorStop(1, 'rgba(40, 92, 16, 0.95)');
+        ctx.fillStyle = sludgeGrad;
+        ctx.fillRect(0, canvas.height - state.toxicSludgeHeight, canvas.width, state.toxicSludgeHeight);
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-        for (let sy = 50; sy < canvas.height; sy += 60) {
-          const size = 30 + (sy % 20);
-          const ox = Math.sin((Date.now() * 0.005) + sy) * 15;
-          const px = state.steampunkWarningSide === 'left' 
-            ? 40 + ox 
-            : canvas.width - 40 + ox;
+        const time = Date.now() * 0.003;
+        for (let bx = 20; bx < canvas.width; bx += 40) {
+          const bubbleY = canvas.height - state.toxicSludgeHeight + 10 + (Math.sin(time + bx) * 8);
+          if (bubbleY < canvas.height) {
+            ctx.beginPath();
+            ctx.arc(bx + (Math.cos(time + bx) * 6), bubbleY, 3 + (bx % 3), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+
+      // Haunted Graveyard vignette overlay
+      if (worldId === 'world_haunted') {
+        ctx.save();
+        const grad = ctx.createRadialGradient(
+          canvas.width / 2, canvas.height - 180, 60,
+          canvas.width / 2, canvas.height - 180, canvas.height * 0.7
+        );
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, `rgba(0,0,0,${state.hauntedVignetteAlpha})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // ----------------------------------------------------
+      // DRAW OPPONENT VIEWPORT (RIGHT HALF)
+      // ----------------------------------------------------
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(halfWidth, 0, halfWidth, canvas.height);
+      ctx.clip();
+      
+      // Shift so the center of the canvas aligns with the center of the right half
+      ctx.translate(halfWidth - canvas.width / 4, 0);
+
+      drawBackground(ctx, canvas);
+      drawParallaxLayers(ctx, canvas);
+      drawWeather(ctx, canvas);
+      
+      // Swap tree blocks temporarily
+      const originalBlocks = state.blocks;
+      state.blocks = state.opponentBlocks;
+      drawTree(ctx, canvas);
+      state.blocks = originalBlocks;
+
+      drawFlyingSegments(ctx, state.opponentFlyingSegments);
+      
+      const opponent = opponentStateRef.current;
+      if (opponent && !opponent.isDead) {
+        drawOpponent(ctx, canvas);
+      }
+      drawParticles(ctx, state.opponentParticles);
+      drawScoreTexts(ctx, state.opponentScoreTexts);
+
+      // Haunted Graveyard vignette overlay for opponent side
+      if (worldId === 'world_haunted') {
+        ctx.save();
+        const grad = ctx.createRadialGradient(
+          canvas.width / 2, canvas.height - 180, 60,
+          canvas.width / 2, canvas.height - 180, canvas.height * 0.7
+        );
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, `rgba(0,0,0,${state.hauntedVignetteAlpha})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // ----------------------------------------------------
+      // DRAW VIEWPORT DIVISION BORDER
+      // ----------------------------------------------------
+      ctx.save();
+      ctx.strokeStyle = 'var(--neon-cyan)';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = 'var(--neon-cyan)';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(halfWidth, 0);
+      ctx.lineTo(halfWidth, canvas.height);
+      ctx.stroke();
+      ctx.restore();
+
+    } else {
+      // ----------------------------------------------------
+      // NORMAL SINGLE VIEWPORT DRAWING
+      // ----------------------------------------------------
+      ctx.save();
+      drawBackground(ctx, canvas);
+      drawParallaxLayers(ctx, canvas);
+      drawWeather(ctx, canvas);
+      drawTree(ctx, canvas);
+
+      if (mode === 'boss' && state.bossPhase !== 'dead') {
+        const blockHeight = 80;
+        const startY = canvas.height - 180;
+        const centerX = Math.round(canvas.width / 2);
+        
+        const monsterY = state.bossPhase === 'tree'
+          ? startY - state.blocks.length * blockHeight + state.treeOffset - 40
+          : startY - 65;
+
+        drawVectorMonster(
+          ctx,
+          centerX,
+          monsterY,
+          state.bossFlashRedTimer > 0,
+          state.bossAttackSide,
+          state.bossAttackWarningTimer
+        );
+      }
+
+      // 5. Draw Flying chopped blocks
+      drawFlyingSegments(ctx, state.flyingSegments);
+
+      // 6. Draw Player
+      if (!state.isDead) {
+        drawPlayer(ctx, canvas);
+      }
+      if (multiplayerRoomId) {
+        drawOpponent(ctx, canvas);
+      }
+
+      // 7. Draw Particles
+      drawParticles(ctx, state.particles);
+
+      // 8. Draw Score Floating Texts
+      drawScoreTexts(ctx, state.scoreTexts);
+
+      // Space Station Asteroid Alert & Flying Asteroid
+      if (worldId === 'world_space' && state.spaceAsteroidActive) {
+        if (state.spaceAsteroidWarningTimer > 0) {
+          const blink = Math.floor(Date.now() / 200) % 2 === 0;
+          if (blink) {
+            ctx.fillStyle = '#ff3300';
+            ctx.font = '24px "Press Start 2P", monospace';
+            ctx.textAlign = 'center';
+            const alertX = state.spaceAsteroidSide === 'left' ? 40 : canvas.width - 40;
+            ctx.fillText('⚠', alertX, state.spaceAsteroidY);
+          }
+        } else {
+          ctx.save();
+          ctx.fillStyle = '#4b5563'; // dark grey asteroid
+          ctx.strokeStyle = '#1f2937';
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(px, sy, size, 0, Math.PI * 2);
+          ctx.arc(state.spaceAsteroidX, state.spaceAsteroidY, 18, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#374151';
+          ctx.beginPath();
+          ctx.arc(state.spaceAsteroidX - 6, state.spaceAsteroidY - 4, 4, 0, Math.PI * 2);
+          ctx.arc(state.spaceAsteroidX + 4, state.spaceAsteroidY + 5, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // Space Stun stars above player
+      if (worldId === 'world_space' && state.spaceStunTimer > 0 && !state.isDead) {
+        ctx.save();
+        ctx.fillStyle = '#eab308';
+        const playerX = canvas.width / 2 + (state.playerSide === 'left' ? -100 : 100);
+        const playerY = canvas.height - 180 - 60;
+        const starCount = 3;
+        const spin = Date.now() * 0.01;
+        for (let s = 0; s < starCount; s++) {
+          const angle = spin + (s * (Math.PI * 2)) / starCount;
+          const sx = playerX + Math.cos(angle) * 20;
+          const sy = playerY + Math.sin(angle) * 8;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 3, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.restore();
       }
-    }
 
-    // Toxic Sludge pool rising from bottom
-    if (worldId === 'world_wasteland' && state.toxicSludgeHeight > 0) {
-      ctx.save();
-      const sludgeGrad = ctx.createLinearGradient(0, canvas.height - state.toxicSludgeHeight, 0, canvas.height);
-      sludgeGrad.addColorStop(0, 'rgba(174, 229, 13, 0.85)');
-      sludgeGrad.addColorStop(1, 'rgba(40, 92, 16, 0.95)');
-      ctx.fillStyle = sludgeGrad;
-      ctx.fillRect(0, canvas.height - state.toxicSludgeHeight, canvas.width, state.toxicSludgeHeight);
+      // Steampunk steam warning & steam clouds
+      if (worldId === 'world_steampunk') {
+        if (state.steampunkWarningSide !== 'none' && !state.steampunkSteamActive) {
+          const blink = Math.floor(Date.now() / 200) % 2 === 0;
+          if (blink) {
+            ctx.fillStyle = '#ffaa66';
+            ctx.font = '24px "Press Start 2P", monospace';
+            ctx.textAlign = 'center';
+            const alertX = state.steampunkWarningSide === 'left' ? 40 : canvas.width - 40;
+            ctx.fillText('⚠', alertX, canvas.height - 180);
+          }
+        } else if (state.steampunkSteamActive) {
+          ctx.save();
+          const steamX = state.steampunkWarningSide === 'left' ? 0 : canvas.width / 2;
+          const steamW = canvas.width / 2;
+          const grad = ctx.createLinearGradient(steamX, 0, steamX + steamW, 0);
+          if (state.steampunkWarningSide === 'left') {
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          } else {
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0.45)');
+          }
+          ctx.fillStyle = grad;
+          ctx.fillRect(steamX, 0, steamW, canvas.height);
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-      const time = Date.now() * 0.003;
-      for (let bx = 20; bx < canvas.width; bx += 40) {
-        const bubbleY = canvas.height - state.toxicSludgeHeight + 10 + (Math.sin(time + bx) * 8);
-        if (bubbleY < canvas.height) {
-          ctx.beginPath();
-          ctx.arc(bx + (Math.cos(time + bx) * 6), bubbleY, 3 + (bx % 3), 0, Math.PI * 2);
-          ctx.fill();
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+          for (let sy = 50; sy < canvas.height; sy += 60) {
+            const size = 30 + (sy % 20);
+            const ox = Math.sin((Date.now() * 0.005) + sy) * 15;
+            const px = state.steampunkWarningSide === 'left' 
+              ? 40 + ox 
+              : canvas.width - 40 + ox;
+            ctx.beginPath();
+            ctx.arc(px, sy, size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
         }
       }
-      ctx.restore();
-    }
 
-    ctx.restore();
+      // Toxic Sludge pool rising from bottom
+      if (worldId === 'world_wasteland' && state.toxicSludgeHeight > 0) {
+        ctx.save();
+        const sludgeGrad = ctx.createLinearGradient(0, canvas.height - state.toxicSludgeHeight, 0, canvas.height);
+        sludgeGrad.addColorStop(0, 'rgba(174, 229, 13, 0.85)');
+        sludgeGrad.addColorStop(1, 'rgba(40, 92, 16, 0.95)');
+        ctx.fillStyle = sludgeGrad;
+        ctx.fillRect(0, canvas.height - state.toxicSludgeHeight, canvas.width, state.toxicSludgeHeight);
 
-    // Haunted Graveyard vignette overlay
-    if (worldId === 'world_haunted') {
-      ctx.save();
-      const grad = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height - 180, 60,
-        canvas.width / 2, canvas.height - 180, canvas.height * 0.7
-      );
-      grad.addColorStop(0, 'rgba(0,0,0,0)');
-      grad.addColorStop(1, `rgba(0,0,0,${state.hauntedVignetteAlpha})`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        const time = Date.now() * 0.003;
+        for (let bx = 20; bx < canvas.width; bx += 40) {
+          const bubbleY = canvas.height - state.toxicSludgeHeight + 10 + (Math.sin(time + bx) * 8);
+          if (bubbleY < canvas.height) {
+            ctx.beginPath();
+            ctx.arc(bx + (Math.cos(time + bx) * 6), bubbleY, 3 + (bx % 3), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+
       ctx.restore();
+
+      // Haunted Graveyard vignette overlay
+      if (worldId === 'world_haunted') {
+        ctx.save();
+        const grad = ctx.createRadialGradient(
+          canvas.width / 2, canvas.height - 180, 60,
+          canvas.width / 2, canvas.height - 180, canvas.height * 0.7
+        );
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, `rgba(0,0,0,${state.hauntedVignetteAlpha})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
     }
 
     // --- Draw Fireballs & Warnings ---
@@ -5052,10 +5359,8 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     ctx.fillText('T', x - 3, y + 3);
   };
 
-  const drawFlyingSegments = (ctx: CanvasRenderingContext2D) => {
-    const state = stateRef.current;
-    
-    state.flyingSegments.forEach(fs => {
+  const drawFlyingSegments = (ctx: CanvasRenderingContext2D, segments: FlyingSegment[]) => {
+    segments.forEach(fs => {
       ctx.save();
       ctx.translate(Math.round(canvasRef.current!.width / 2 + (fs.side === 'left' ? -40 : 40)), Math.round(fs.y));
       ctx.rotate(fs.rotation);
@@ -6153,8 +6458,8 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     ctx.restore();
   };
 
-  const drawParticles = (ctx: CanvasRenderingContext2D) => {
-    stateRef.current.particles.forEach(p => {
+  const drawParticles = (ctx: CanvasRenderingContext2D, particles: Particle[]) => {
+    particles.forEach(p => {
       ctx.save();
       ctx.globalAlpha = p.alpha;
       ctx.fillStyle = p.color;
@@ -6163,8 +6468,8 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     });
   };
 
-  const drawScoreTexts = (ctx: CanvasRenderingContext2D) => {
-    stateRef.current.scoreTexts.forEach(t => {
+  const drawScoreTexts = (ctx: CanvasRenderingContext2D, texts: ScoreText[]) => {
+    texts.forEach(t => {
       ctx.save();
       ctx.globalAlpha = t.alpha;
       ctx.fillStyle = t.color;
