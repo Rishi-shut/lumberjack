@@ -1041,4 +1041,59 @@ select option {
   border-color: var(--neon-cyan) !important;
 }
 
+/* Lobby Customizations and Select styling */
+.lobby-customizations {
+  margin: 12px auto;
+  padding: 16px 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed var(--panel-border);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+}
+
+.lobby-customization-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.lobby-customization-select {
+  width: 100%;
+  height: 42px;
+  font-size: 0.85rem;
+  padding: 0 12px;
+  background: #1a110a;
+  color: #ffffff;
+  border: 2px solid var(--panel-border);
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.lobby-customization-select:focus {
+  border-color: var(--neon-cyan);
+}
+
+@media (max-width: 576px) {
+  .lobby-customizations {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+  }
+  .lobby-customization-item {
+    width: 100% !important;
+  }
+}
+
+
 

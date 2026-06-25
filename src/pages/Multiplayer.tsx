@@ -86,6 +86,23 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
   const lobbyChannelRef = useRef<any>(null);
   const roomChannelRef = useRef<any>(null);
 
+  // Refs to avoid stale closures in Supabase callbacks
+  const userRef = useRef(user);
+  const wagerTypeRef = useRef(wagerType);
+  const wagerAmountRef = useRef(wagerAmount);
+  const lobbyModeRef = useRef(lobbyMode);
+  const friendlyWorldIdRef = useRef(friendlyWorldId);
+  const friendlyDifficultyRef = useRef(friendlyDifficulty);
+  const myReadyRef = useRef(myReady);
+
+  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => { wagerTypeRef.current = wagerType; }, [wagerType]);
+  useEffect(() => { wagerAmountRef.current = wagerAmount; }, [wagerAmount]);
+  useEffect(() => { lobbyModeRef.current = lobbyMode; }, [lobbyMode]);
+  useEffect(() => { friendlyWorldIdRef.current = friendlyWorldId; }, [friendlyWorldId]);
+  useEffect(() => { friendlyDifficultyRef.current = friendlyDifficulty; }, [friendlyDifficulty]);
+  useEffect(() => { myReadyRef.current = myReady; }, [myReady]);
+
   // Wager amounts suggestions
   const coinOptions = [100, 500, 1000];
   const diamondOptions = [5, 10, 50];
@@ -120,6 +137,11 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
           });
           setActiveRooms(rooms);
         })
+        .on('broadcast', { event: 'room-cancelled' }, (payload: any) => {
+          if (payload?.payload?.roomCode) {
+            setActiveRooms(prev => prev.filter(r => r.roomCode !== payload.payload.roomCode));
+          }
+        })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             // Logged in user listens, but does not publish room unless hosting
@@ -141,13 +163,13 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
     if (lobbyChannelRef.current) {
       await lobbyChannelRef.current.track({
         roomCode: code,
-        hostUsername: user.username,
-        hostAvatar: user.equippedCharacter,
-        hostTitle: user.equippedTitle,
-        hostCity: user.stats.location?.city || 'Mumbai',
-        hostCountry: user.stats.location?.countryCode || 'IN',
-        wagerType: wagerType,
-        wagerAmount: wagerAmount,
+        hostUsername: userRef.current.username,
+        hostAvatar: userRef.current.equippedCharacter,
+        hostTitle: userRef.current.equippedTitle,
+        hostCity: userRef.current.stats.location?.city || 'Mumbai',
+        hostCountry: userRef.current.stats.location?.countryCode || 'IN',
+        wagerType: wagerTypeRef.current,
+        wagerAmount: wagerAmountRef.current,
         status: status,
         online_at: new Date().toISOString()
       });
@@ -212,24 +234,24 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
           type: 'broadcast',
           event: 'sync-lobby',
           payload: {
-            hostUsername: user.username,
-            hostAvatar: user.equippedCharacter,
-            hostTitle: user.equippedTitle,
-            hostCity: user.stats.location?.city || 'Mumbai',
-            hostCountry: user.stats.location?.countryCode || 'IN',
-            wagerType: wagerType,
-            wagerAmount: wagerAmount,
-            opponentReady: myReady,
-            friendlyWorldId: friendlyWorldId,
-            friendlyDifficulty: friendlyDifficulty,
-            mode: lobbyMode
+            hostUsername: userRef.current.username,
+            hostAvatar: userRef.current.equippedCharacter,
+            hostTitle: userRef.current.equippedTitle,
+            hostCity: userRef.current.stats.location?.city || 'Mumbai',
+            hostCountry: userRef.current.stats.location?.countryCode || 'IN',
+            wagerType: wagerTypeRef.current,
+            wagerAmount: wagerAmountRef.current,
+            opponentReady: myReadyRef.current,
+            friendlyWorldId: friendlyWorldIdRef.current,
+            friendlyDifficulty: friendlyDifficultyRef.current,
+            mode: lobbyModeRef.current
           }
         });
         
         publishRoomOnLobby(code, 'ready');
       })
       .on('broadcast', { event: 'state-change' }, (payload: any) => {
-        if (payload.payload.username !== user.username) {
+        if (payload.payload.username !== userRef.current.username) {
           setOpponentReady(payload.payload.ready);
         }
       })
@@ -316,7 +338,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
         }
       })
       .on('broadcast', { event: 'state-change' }, (payload: any) => {
-        if (payload.payload.username !== user.username) {
+        if (payload.payload.username !== userRef.current.username) {
           setOpponentReady(payload.payload.ready);
         }
       })
@@ -341,8 +363,8 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
           roomWagerType,
           roomWagerAmount,
           payload.payload.mode || 'vs',
-          payload.payload.worldId || friendlyWorldId,
-          payload.payload.difficulty || friendlyDifficulty,
+          payload.payload.worldId || friendlyWorldIdRef.current,
+          payload.payload.difficulty || friendlyDifficultyRef.current,
           payload.payload.opponentAvatar
         );
       })
@@ -373,6 +395,8 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
   // Leave active room
   const handleLeaveRoom = () => {
     sound.playCoin();
+    const roomCodeToCancel = currentRoom?.roomCode;
+
     if (roomChannelRef.current) {
       roomChannelRef.current.send({
         type: 'broadcast',
@@ -386,10 +410,20 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
       roomChannelRef.current = null;
     }
 
-    if (isHost && currentRoom) {
-      // Remove from global lobby
-      if (lobbyChannelRef.current) {
-        lobbyChannelRef.current.untrack();
+    if (roomCodeToCancel) {
+      // Filter out locally first
+      setActiveRooms(prev => prev.filter(r => r.roomCode !== roomCodeToCancel));
+
+      if (isHost) {
+        // Broadcast cancellation to global lobby so all other players remove it immediately
+        if (lobbyChannelRef.current) {
+          lobbyChannelRef.current.send({
+            type: 'broadcast',
+            event: 'room-cancelled',
+            payload: { roomCode: roomCodeToCancel }
+          });
+          lobbyChannelRef.current.untrack();
+        }
       }
     }
 
@@ -448,6 +482,13 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
 
     // Remove room from global lobbies
     if (lobbyChannelRef.current) {
+      if (currentRoom) {
+        lobbyChannelRef.current.send({
+          type: 'broadcast',
+          event: 'room-cancelled',
+          payload: { roomCode: currentRoom.roomCode }
+        });
+      }
       lobbyChannelRef.current.untrack();
     }
 
@@ -604,29 +645,10 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
 
           {/* Friendly Match Customizations */}
           {currentRoom.wagerType === 'free' && (
-            <div style={{ margin: '12px auto', padding: '12px 20px', background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--panel-border)', borderRadius: '8px', width: '100%', maxWidth: '520px', display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', alignItems: 'center' }}>
+            <div className="lobby-customizations">
               {isHost ? (
                 <>
-                  {/* 
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 'bold' }}>Choose Mode</label>
-                    <select 
-                      value={lobbyMode} 
-                      onChange={e => {
-                        sound.playCoin();
-                        const nextMode = e.target.value as 'vs' | 'boss';
-                        setLobbyMode(nextMode);
-                        broadcastRoomConfig(friendlyWorldId, friendlyDifficulty, nextMode);
-                      }}
-                      className="form-input"
-                      style={{ width: '150px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: '#1a110a', color: '#ffffff' }}
-                    >
-                      <option value="vs">1v1 VS Duel</option>
-                      <option value="boss">Co-op Boss Raid</option>
-                    </select>
-                  </div>
-                  */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <div className="lobby-customization-item">
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 'bold' }}>Choose Map</label>
                     <select 
                       value={friendlyWorldId} 
@@ -635,8 +657,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                         setFriendlyWorldId(e.target.value);
                         broadcastRoomConfig(e.target.value, friendlyDifficulty, lobbyMode);
                       }}
-                      className="form-input"
-                      style={{ width: '170px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: '#1a110a', color: '#ffffff' }}
+                      className="lobby-customization-select"
                     >
                       <option value="world_forest">Pine Forest</option>
                       <option value="world_city">Metro Heights</option>
@@ -658,7 +679,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                       <option value="world_arcade">Retro Arcade</option>
                     </select>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <div className="lobby-customization-item">
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 'bold' }}>Choose Difficulty</label>
                     <select 
                       value={friendlyDifficulty} 
@@ -667,8 +688,7 @@ export const Multiplayer: React.FC<MultiplayerProps> = ({
                         setFriendlyDifficulty(e.target.value);
                         broadcastRoomConfig(friendlyWorldId, e.target.value, lobbyMode);
                       }}
-                      className="form-input"
-                      style={{ width: '150px', height: '34px', fontSize: '0.75rem', padding: '0 8px', background: '#1a110a', color: '#ffffff' }}
+                      className="lobby-customization-select"
                     >
                       <option value="easy">Easy (0.5x)</option>
                       <option value="normal">Normal (1.0x)</option>
