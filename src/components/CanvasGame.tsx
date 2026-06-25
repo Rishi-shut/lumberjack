@@ -2772,19 +2772,27 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       ctx.translate(dx, dy);
     }
     */    const isSplitScreen = !!(multiplayerRoomId && mode === 'vs');
+    const isVerticalSplit = isSplitScreen && (canvas.width < 768 || canvas.height > canvas.width);
     const halfWidth = canvas.width / 2;
+    const halfHeight = canvas.height / 2;
 
     if (isSplitScreen) {
       // ----------------------------------------------------
-      // DRAW PLAYER VIEWPORT (LEFT HALF)
+      // DRAW PLAYER VIEWPORT (LEFT HALF OR BOTTOM HALF)
       // ----------------------------------------------------
       ctx.save();
       ctx.beginPath();
-      ctx.rect(0, 0, halfWidth, canvas.height);
+      if (isVerticalSplit) {
+        ctx.rect(0, halfHeight, canvas.width, halfHeight);
+      } else {
+        ctx.rect(0, 0, halfWidth, canvas.height);
+      }
       ctx.clip();
       
-      // Shift so the center of the canvas aligns with the center of the left half
-      ctx.translate(-canvas.width / 4, 0);
+      if (!isVerticalSplit) {
+        // Shift so the center of the canvas aligns with the center of the left half
+        ctx.translate(-canvas.width / 4, 0);
+      }
 
       drawBackground(ctx, canvas);
       drawParallaxLayers(ctx, canvas);
@@ -2925,28 +2933,42 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       if (state.isDead) {
         ctx.save();
         ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
-        ctx.fillRect(canvas.width / 4, 0, halfWidth, canvas.height);
+        if (isVerticalSplit) {
+          ctx.fillRect(0, halfHeight, canvas.width, halfHeight);
+        } else {
+          ctx.fillRect(canvas.width / 4, 0, halfWidth, canvas.height);
+        }
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#ef4444';
         ctx.font = '16px "Press Start 2P", monospace';
         setShadow(ctx, '#000000', 4);
-        ctx.fillText('CRUSHED!', canvas.width / 2, canvas.height / 2);
+        
+        const textY = isVerticalSplit ? halfHeight + halfHeight / 2 : canvas.height / 2;
+        ctx.fillText('CRUSHED!', canvas.width / 2, textY);
         ctx.restore();
       }
       ctx.restore();
 
       // ----------------------------------------------------
-      // DRAW OPPONENT VIEWPORT (RIGHT HALF)
+      // DRAW OPPONENT VIEWPORT (RIGHT HALF OR TOP HALF)
       // ----------------------------------------------------
       ctx.save();
       ctx.beginPath();
-      ctx.rect(halfWidth, 0, halfWidth, canvas.height);
+      if (isVerticalSplit) {
+        ctx.rect(0, 0, canvas.width, halfHeight);
+      } else {
+        ctx.rect(halfWidth, 0, halfWidth, canvas.height);
+      }
       ctx.clip();
       
-      // Shift so the center of the canvas aligns with the center of the right half
-      ctx.translate(halfWidth - canvas.width / 4, 0);
+      if (isVerticalSplit) {
+        ctx.translate(0, -halfHeight);
+      } else {
+        // Shift so the center of the canvas aligns with the center of the right half
+        ctx.translate(halfWidth - canvas.width / 4, 0);
+      }
 
       drawBackground(ctx, canvas);
       drawParallaxLayers(ctx, canvas);
@@ -2983,14 +3005,20 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       if (opponent && opponent.isDead) {
         ctx.save();
         ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
-        ctx.fillRect(canvas.width / 4, 0, halfWidth, canvas.height);
+        if (isVerticalSplit) {
+          ctx.fillRect(0, halfHeight, canvas.width, halfHeight);
+        } else {
+          ctx.fillRect(canvas.width / 4, 0, halfWidth, canvas.height);
+        }
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#ef4444';
         ctx.font = '16px "Press Start 2P", monospace';
         setShadow(ctx, '#000000', 4);
-        ctx.fillText('DEFEATED', canvas.width / 2, canvas.height / 2);
+        
+        const textY = isVerticalSplit ? halfHeight + halfHeight / 2 : canvas.height / 2;
+        ctx.fillText('DEFEATED', canvas.width / 2, textY);
         ctx.restore();
       }
       ctx.restore();
@@ -3004,8 +3032,13 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
       ctx.shadowColor = 'var(--neon-cyan)';
       ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.moveTo(halfWidth, 0);
-      ctx.lineTo(halfWidth, canvas.height);
+      if (isVerticalSplit) {
+        ctx.moveTo(0, halfHeight);
+        ctx.lineTo(canvas.width, halfHeight);
+      } else {
+        ctx.moveTo(halfWidth, 0);
+        ctx.lineTo(halfWidth, canvas.height);
+      }
       ctx.stroke();
       ctx.restore();
 
@@ -6537,96 +6570,188 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
   const drawHud = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     const state = stateRef.current;
     const isSplitScreen = !!(multiplayerRoomId && mode === 'vs');
+    const isVerticalSplit = isSplitScreen && (canvas.width < 768 || canvas.height > canvas.width);
 
     if (isSplitScreen) {
       const halfWidth = canvas.width / 2;
+      const halfHeight = canvas.height / 2;
       const opponent = opponentStateRef.current;
 
-      // ----------------- PLAYER HUD (LEFT SIDE) -----------------
-      const pCenter = canvas.width / 4;
-      const barW = Math.min(180, halfWidth * 0.7);
-      const barH = 12;
-      const barX = pCenter - barW / 2;
-      const barY = 60;
+      if (isVerticalSplit) {
+        // ----------------- VERTICAL SPLIT SCREEN HUD (UP/DOWN) -----------------
+        const center = canvas.width / 2;
 
-      // Timer background
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(barX, barY, barW, barH);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(barX, barY, barW, barH);
+        // 1. OPPONENT HUD (TOP HALF)
+        const oppUsername = opponent ? opponent.username.toUpperCase() : 'OPPONENT';
+        const oppScore = opponent ? opponent.score : 0;
 
-      // Timer fill
-      const pct = state.timeRemaining / state.maxTime;
-      let fill = config.accentColor;
-      if (pct < 0.25) fill = '#ff3300';
-      ctx.fillStyle = fill;
-      ctx.fillRect(barX + 1.5, barY + 1.5, Math.max(0, (barW - 3) * pct), barH - 3);
-      ctx.restore();
-
-      // Username / YOU label
-      ctx.save();
-      ctx.fillStyle = 'var(--neon-cyan)';
-      ctx.font = '8px "Press Start 2P", monospace';
-      ctx.textAlign = 'center';
-      setShadow(ctx, '#000000', 4);
-      ctx.fillText('YOU', pCenter, 48);
-      ctx.restore();
-
-      // Score
-      ctx.save();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '22px "Press Start 2P", monospace, sans-serif';
-      ctx.textAlign = 'center';
-      setShadow(ctx, '#000', 6);
-      ctx.fillText(state.score.toString(), pCenter, 110);
-      ctx.restore();
-
-      // Combo Display (left-centered)
-      if (state.combo > 0) {
-        let comboColor = '#ffffff';
-        let animScale = 1.0;
-        if (state.comboLevel === 1) {
-          comboColor = '#ff8c00';
-          animScale = 1.1 + Math.sin(Date.now() / 100) * 0.05;
-        } else if (state.comboLevel === 2) {
-          comboColor = '#ffcc00';
-          animScale = 1.2 + Math.sin(Date.now() / 50) * 0.08;
-        }
-
+        // Opponent label
         ctx.save();
-        ctx.translate(pCenter, 140);
-        ctx.scale(animScale, animScale);
-        ctx.fillStyle = comboColor;
+        ctx.fillStyle = 'var(--neon-magenta)';
         ctx.font = '8px "Press Start 2P", monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`${state.combo}x COMBO`, 0, 0);
+        setShadow(ctx, '#000000', 4);
+        ctx.fillText(oppUsername, center, 35);
+        ctx.restore();
+
+        // Opponent Score
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '22px "Press Start 2P", monospace, sans-serif';
+        ctx.textAlign = 'center';
+        setShadow(ctx, '#000', 6);
+        ctx.fillText(oppScore.toString(), center, 75);
+        ctx.restore();
+
+        // 2. PLAYER HUD (BOTTOM HALF)
+        const barW = Math.min(220, canvas.width * 0.75);
+        const barH = 12;
+        const barX = center - barW / 2;
+        const barY = halfHeight + 45;
+
+        // Timer background
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(barX, barY, barW, barH);
+
+        // Timer fill
+        const pct = state.timeRemaining / state.maxTime;
+        let fill = config.accentColor;
+        if (pct < 0.25) fill = '#ff3300';
+        ctx.fillStyle = fill;
+        ctx.fillRect(barX + 1.5, barY + 1.5, Math.max(0, (barW - 3) * pct), barH - 3);
+        ctx.restore();
+
+        // Username / YOU label
+        ctx.save();
+        ctx.fillStyle = 'var(--neon-cyan)';
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        setShadow(ctx, '#000000', 4);
+        ctx.fillText('YOU', center, halfHeight + 30);
+        ctx.restore();
+
+        // Player Score
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '22px "Press Start 2P", monospace, sans-serif';
+        ctx.textAlign = 'center';
+        setShadow(ctx, '#000', 6);
+        ctx.fillText(state.score.toString(), center, halfHeight + 90);
+        ctx.restore();
+
+        // Combo Display (player bottom centered)
+        if (state.combo > 0) {
+          let comboColor = '#ffffff';
+          let animScale = 1.0;
+          if (state.comboLevel === 1) {
+            comboColor = '#ff8c00';
+            animScale = 1.1 + Math.sin(Date.now() / 100) * 0.05;
+          } else if (state.comboLevel === 2) {
+            comboColor = '#ffcc00';
+            animScale = 1.2 + Math.sin(Date.now() / 50) * 0.08;
+          }
+
+          ctx.save();
+          ctx.translate(center, halfHeight + 115);
+          ctx.scale(animScale, animScale);
+          ctx.fillStyle = comboColor;
+          ctx.font = '8px "Press Start 2P", monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${state.combo}x COMBO`, 0, 0);
+          ctx.restore();
+        }
+
+      } else {
+        // ----------------- PLAYER HUD (LEFT SIDE) -----------------
+        const pCenter = canvas.width / 4;
+        const barW = Math.min(180, halfWidth * 0.7);
+        const barH = 12;
+        const barX = pCenter - barW / 2;
+        const barY = 60;
+
+        // Timer background
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(barX, barY, barW, barH);
+
+        // Timer fill
+        const pct = state.timeRemaining / state.maxTime;
+        let fill = config.accentColor;
+        if (pct < 0.25) fill = '#ff3300';
+        ctx.fillStyle = fill;
+        ctx.fillRect(barX + 1.5, barY + 1.5, Math.max(0, (barW - 3) * pct), barH - 3);
+        ctx.restore();
+
+        // Username / YOU label
+        ctx.save();
+        ctx.fillStyle = 'var(--neon-cyan)';
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        setShadow(ctx, '#000000', 4);
+        ctx.fillText('YOU', pCenter, 48);
+        ctx.restore();
+
+        // Score
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '22px "Press Start 2P", monospace, sans-serif';
+        ctx.textAlign = 'center';
+        setShadow(ctx, '#000', 6);
+        ctx.fillText(state.score.toString(), pCenter, 110);
+        ctx.restore();
+
+        // Combo Display (left-centered)
+        if (state.combo > 0) {
+          let comboColor = '#ffffff';
+          let animScale = 1.0;
+          if (state.comboLevel === 1) {
+            comboColor = '#ff8c00';
+            animScale = 1.1 + Math.sin(Date.now() / 100) * 0.05;
+          } else if (state.comboLevel === 2) {
+            comboColor = '#ffcc00';
+            animScale = 1.2 + Math.sin(Date.now() / 50) * 0.08;
+          }
+
+          ctx.save();
+          ctx.translate(pCenter, 140);
+          ctx.scale(animScale, animScale);
+          ctx.fillStyle = comboColor;
+          ctx.font = '8px "Press Start 2P", monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${state.combo}x COMBO`, 0, 0);
+          ctx.restore();
+        }
+
+        // ----------------- OPPONENT HUD (RIGHT SIDE) -----------------
+        const oppCenter = 3 * canvas.width / 4;
+        const oppUsername = opponent ? opponent.username.toUpperCase() : 'OPPONENT';
+        const oppScore = opponent ? opponent.score : 0;
+
+        // Opponent label
+        ctx.save();
+        ctx.fillStyle = 'var(--neon-magenta)';
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        setShadow(ctx, '#000000', 4);
+        ctx.fillText(oppUsername, oppCenter, 48);
+        ctx.restore();
+
+        // Score
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '22px "Press Start 2P", monospace, sans-serif';
+        ctx.textAlign = 'center';
+        setShadow(ctx, '#000', 6);
+        ctx.fillText(oppScore.toString(), oppCenter, 110);
         ctx.restore();
       }
-
-      // ----------------- OPPONENT HUD (RIGHT SIDE) -----------------
-      const oppCenter = 3 * canvas.width / 4;
-      const oppUsername = opponent ? opponent.username.toUpperCase() : 'OPPONENT';
-      const oppScore = opponent ? opponent.score : 0;
-
-      // Opponent label
-      ctx.save();
-      ctx.fillStyle = 'var(--neon-magenta)';
-      ctx.font = '8px "Press Start 2P", monospace';
-      ctx.textAlign = 'center';
-      setShadow(ctx, '#000000', 4);
-      ctx.fillText(oppUsername, oppCenter, 48);
-      ctx.restore();
-
-      // Score
-      ctx.save();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '22px "Press Start 2P", monospace, sans-serif';
-      ctx.textAlign = 'center';
-      setShadow(ctx, '#000', 6);
-      ctx.fillText(oppScore.toString(), oppCenter, 110);
-      ctx.restore();
 
     } else {
       // 1. Timer Bar at top center / Boss HP Bar
@@ -6758,7 +6883,8 @@ export const CanvasGame: React.FC<CanvasGameProps & { onOpponentScoreUpdate?: (s
     }
 
     const isSplitScreen = !!(multiplayerRoomId && mode === 'vs');
-    const divider = isSplitScreen ? canvas.width / 4 : canvas.width / 2;
+    const isVerticalSplit = isSplitScreen && (canvas.width < 768 || canvas.height > canvas.width);
+    const divider = (isSplitScreen && !isVerticalSplit) ? canvas.width / 4 : canvas.width / 2;
 
     if (clickX < divider) {
       handleChop('left');
